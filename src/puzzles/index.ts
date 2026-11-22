@@ -1,4 +1,5 @@
 import { CATEGORIES } from '../core/categories';
+import { setDefaultOff } from '../core/store';
 import type { PuzzleDef } from '../core/types';
 
 /**
@@ -16,3 +17,5 @@ for (const mod of Object.values(modules)) for (const v of Object.values(mod)) if
 const catOrder = (d: PuzzleDef) => CATEGORIES.findIndex((c) => c.id === d.category);
 
 export const PUZZLES: PuzzleDef[] = [...found.values()].sort((a, b) => catOrder(a) - catOrder(b) || a.name.localeCompare(b.name));
+
+setDefaultOff(PUZZLES.filter((d) => d.offByDefault).map((d) => d.id));
