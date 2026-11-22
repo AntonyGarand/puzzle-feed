@@ -1,36 +1,43 @@
-/* On-screen keyboard shared by the word games (word-guess, tower). */
+/* On-screen keyboard shared by the word games (word-guess, tower).
+   It spans the full card width rather than following `--board`: Card.fit() shrinks the board to make
+   room vertically, and a keyboard tied to it ended up a strip of tiny cramped keys on phones. Its height
+   is fixed, so fit() shrinks the letter grid instead. */
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb {
+  --kg: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: min(var(--board), 440px);
+  gap: 8px;
+  width: min(100%, 520px);
   padding: 0 3px 3px 0;
 }
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb-row {
   display: flex;
-  gap: 5px;
+  gap: var(--kg);
   justify-content: center;
 }
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key {
-  /* Ten columns per row (5px gaps), so every row lines up key for key. */
-  flex: 0 1 calc((100% - 45px) / 10);
-  max-width: 40px;
-  height: 40px;
-  font-size: 15px;
+  /* Ten columns per row, so every row lines up key for key. */
+  flex: 0 1 calc((100% - 9 * var(--kg)) / 10);
+  max-width: 48px;
+  height: 52px;
+  font-size: 20px;
   text-transform: uppercase;
   box-shadow: 2px 2px 0 var(--ink);
   border-width: 2px;
   padding: 0;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 /* Erase fills the 10th column of the middle row; Enter spans the last three columns of the bottom row,
    so every row ends flush on the right. */
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key.back {
-  font-size: 17px;
+  font-size: 22px;
 }
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key.wide {
-  flex-basis: calc((100% - 45px) * 0.3 + 10px);
-  max-width: 130px;
-  font-size: 13px;
+  flex-basis: calc((100% - 9 * var(--kg)) * 0.3 + 2 * var(--kg));
+  max-width: 156px;
+  font-size: 15px;
   text-transform: none;
 }
 :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key.k-hit {
@@ -46,8 +53,23 @@
   color: var(--muted);
   box-shadow: none;
 }
+/* Narrow phones: tighter gaps leave more width to each key. */
+@media (max-width: 400px) {
+  :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb {
+    --kg: 4px;
+  }
+}
 @media (max-height: 700px) {
   :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key {
-    height: 34px;
+    height: 44px;
+  }
+}
+@media (max-height: 560px) {
+  :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb {
+    gap: 6px;
+  }
+  :is([data-puzzle='word-guess'], [data-puzzle='tower']) .kb .key {
+    height: 38px;
+    font-size: 17px;
   }
 }
