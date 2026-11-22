@@ -17,6 +17,7 @@ import { renderStats } from './pages/stats';
 import { resolveCode } from './core/share';
 import { PUZZLES } from './puzzles';
 import { setupUpdates } from './core/update';
+import { closeSheet } from './core/sheet';
 
 const app = document.getElementById('app')!;
 telemetry.track('app.open', {
@@ -181,6 +182,9 @@ onChange((kind) => {
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 window.addEventListener('hashchange', route);
+// Android app: the system back button asks here first (MainActivity.java). An open sheet closes;
+// otherwise the WebView goes back through the visited pages, and leaves the app from the first one.
+(window as unknown as { __onBack: () => boolean }).__onBack = closeSheet;
 applyTheme();
 route();
 setupUpdates();

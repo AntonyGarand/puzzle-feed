@@ -3,9 +3,9 @@ import { L, locale, P } from '../core/i18n';
 import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
 import { encodeCode, resolveCode } from '../core/share';
-import { prefs, stats } from '../core/store';
-import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { fmtTime, h } from '../core/ui';
+import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
+import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
+import { fmtTime, h, segmented } from '../core/ui';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -16,62 +16,84 @@ const ago = (t: number) => {
 };
 
 let filter: CategoryId | 'all' = 'all';
+let query = '';
 
-/** Games tab: every game grouped by category; resume the unfinished one or start new at a chosen level. */
+/** Lower-case, accents stripped: "élim" and "Elim" both match "Élimination". */
+const fold = (str: string) => str.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+const weights = (): { label: string; value: Weight }[] => [
+  { label: L('Off', 'Jamais'), value: 0 },
+  { label: L('Less', 'Moins'), value: 1 },
+  { label: L('Normal', 'Normal'), value: 2 },
+  { label: L('More', 'Plus'), value: 3 },
+];
+
+/**
+ * Games tab: every game grouped by category, with search. Each tile resumes the unfinished game or
+ * starts a new one, and holds the game's level and how often it shows up in the feed.
+ */
 export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { input: string; error: string }) {
   // Saves of word games made in the other language can't be resumed here.
   const saves = Object.fromEntries(
     Object.entries(allSaves()).filter(([id, sv]) => !defs.find((d) => d.id === id)?.localized || (sv.locale ?? 'en') === locale()),
   );
   const rerender = () => renderLabs(el, defs);
+  const catName = (d: PuzzleDef) => CATEGORIES.find((c) => c.id === d.category)?.name ?? '';
 
   const tile = (d: PuzzleDef, save: Save | undefined) => {
     const st = stats(d.id);
-    const pr = prefs(d.id);
+    // The same level the feed uses: Auto follows auto-levelling, picking one locks it (like the card's cog).
     const levelSel = h(
       'select',
       { class: 'select', 'aria-label': `${d.name} — ${L('level', 'niveau')}` },
+      h('option', { value: 'auto' }),
       ...LEVELS.map((l) => h('option', { value: String(l) }, LEVEL_NAMES[l])),
     );
-    levelSel.value = String(save?.level ?? pr.level);
-    const best = st.best[pr.level];
-    const startNew = () => (location.hash = `#/game/${d.id}/new/${levelSel.value}`);
+    const meta = h('p', { class: 'lab-meta' });
+    const drawLevel = () => {
+      const pr = prefs(d.id);
+      levelSel.options[0].textContent = pr.manual ? 'Auto' : `Auto · ${LEVEL_NAMES[pr.level]}`;
+      levelSel.value = pr.manual ? String(pr.level) : 'auto';
+      if (save) return;
+      const best = st.best[pr.level];
+      meta.replaceChildren(
+        P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']),
+        best != null ? ` · ${L('best', 'record')} ${fmtTime(best)}` : '',
+      );
+    };
+    levelSel.addEventListener('change', () => {
+      setLevel(d.id, levelSel.value === 'auto' ? 'auto' : (Number(levelSel.value) as Difficulty));
+      drawLevel();
+    });
+    drawLevel();
+    if (save)
+      meta.append(
+        `${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'linkish',
+            onclick: () => {
+              clearSave(d.id);
+              rerender();
+            },
+          },
+          L('discard', 'abandonner'),
+        ),
+      );
+    const startNew = () => (location.hash = `#/game/${d.id}/new/${prefs(d.id).level}`);
 
-    return h(
+    const art = h(
       'article',
-      { class: `lab-tile ${save ? 'has-save' : ''}`, 'data-puzzle': d.id },
-      h(
-        'header',
-        null,
-        h('div', { class: 'title-row' }, h('h2', null, d.name), helpButton(d)),
-        save ? h('span', { class: 'badge' }, L('In progress', 'En cours')) : null,
-      ),
+      {
+        class: `lab-tile ${save ? 'has-save' : ''} ${prefs(d.id).weight === 0 ? 'off' : ''}`,
+        'data-puzzle': d.id,
+        'data-search': fold(`${d.name} ${d.id} ${d.rules} ${catName(d)}`),
+      },
+      h('header', null, h('h2', null, d.name), save ? h('span', { class: 'badge' }, L('In progress', 'En cours')) : null, helpButton(d)),
       h('p', { class: 'rules' }, d.rules),
-      save
-        ? h(
-            'p',
-            { class: 'lab-meta' },
-            `${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
-            h(
-              'button',
-              {
-                type: 'button',
-                class: 'linkish',
-                onclick: () => {
-                  clearSave(d.id);
-                  rerender();
-                },
-              },
-              L('discard', 'abandonner'),
-            ),
-          )
-        : h(
-            'p',
-            { class: 'lab-meta' },
-            P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']),
-            best != null ? ` · ${L('best', 'record')} ${fmtTime(best)}` : '',
-            ` · ${pr.manual ? '' : 'auto '}${LEVEL_NAMES[pr.level]}`,
-          ),
+      meta,
       h(
         'div',
         { class: 'lab-new' },
@@ -82,18 +104,23 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           { type: 'button', class: `btn ${save ? '' : 'primary'}`, onclick: startNew },
           save ? L('New', 'Nouvelle') : L('Play', 'Jouer'),
         ),
-        h(
-          'a',
-          {
-            class: 'btn ghost endless',
-            href: `#/play/${d.id}`,
-            title: L(`Endless feed of ${d.name}`, `Fil sans fin : ${d.name}`),
-            'aria-label': L(`Endless feed of ${d.name}`, `Fil sans fin : ${d.name}`),
+      ),
+      h(
+        'div',
+        { class: 'lab-freq' },
+        h('span', { class: 'lab-freq-label' }, L('In the feed', 'Dans le fil')),
+        segmented(
+          weights(),
+          prefs(d.id).weight,
+          (v) => {
+            setWeight(d.id, v);
+            art.classList.toggle('off', v === 0);
           },
-          '∞',
+          { 'aria-label': `${d.name} — ${L('how often in the feed', 'fréquence dans le fil')}` },
         ),
       ),
     );
+    return art;
   };
 
   // Play a puzzle someone shared: paste a code (or a whole link).
@@ -150,6 +177,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
       {
         type: 'button',
         class: `chip-filter ${filter === id ? 'on' : ''}`,
+        'aria-pressed': String(filter === id),
         onclick: () => {
           filter = id;
           rerender();
@@ -159,26 +187,89 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
       h('span', null, n),
     );
 
+  // Search hides tiles in place, so typing never rebuilds the page or loses focus.
+  const noMatch = h('p', { class: 'muted no-match', hidden: true });
+  const search = h('input', {
+    class: 'input search',
+    type: 'search',
+    name: 'q',
+    value: query,
+    placeholder: L('Search games', 'Chercher un jeu'),
+    autocomplete: 'off',
+    spellcheck: 'false',
+    enterkeyhint: 'search',
+    'aria-label': L('Search games', 'Chercher un jeu'),
+  });
+  const applySearch = () => {
+    const words = fold(query).split(/\s+/).filter(Boolean);
+    let any = false;
+    for (const sec of el.querySelectorAll<HTMLElement>('section.cat')) {
+      let n = 0;
+      for (const t of sec.querySelectorAll<HTMLElement>('.lab-tile')) {
+        const hit = words.every((w) => t.dataset.search!.includes(w));
+        t.hidden = !hit;
+        if (hit) n++;
+      }
+      sec.hidden = !n;
+      any ||= n > 0;
+    }
+    noMatch.hidden = any;
+    noMatch.textContent = L(`No game matches “${query.trim()}”.`, `Aucun jeu ne correspond à « ${query.trim()} ».`);
+  };
+  search.addEventListener('input', () => {
+    query = search.value;
+    applySearch();
+  });
+
+  /** Category heading, with a switch for all of its games in the feed. */
+  const catHead = (c: (typeof cats)[number]) => {
+    const allOff = c.games.every((d) => prefs(d.id).weight === 0);
+    return h(
+      'h3',
+      null,
+      c.name,
+      h('span', { class: 'cat-blurb' }, c.blurb),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'linkish cat-toggle',
+          onclick: () => {
+            c.games.forEach((d) => setWeight(d.id, allOff ? 2 : 0));
+            rerender();
+          },
+        },
+        allOff ? L('Put all in the feed', 'Tout remettre dans le fil') : L('Hide all from the feed', 'Tout retirer du fil'),
+      ),
+    );
+  };
+
   el.replaceChildren(
     h(
       'div',
-      { class: 'page wide' },
+      { class: 'page wide games' },
       h('h1', null, L('Games', 'Jeux')),
       h(
         'p',
         { class: 'muted' },
         L(
-          `${defs.length} games. Pick any game and level — unfinished ones are saved automatically.`,
-          `${defs.length} jeux. Choisissez un jeu et un niveau — les parties en cours sont sauvegardées automatiquement.`,
+          `${defs.length} games. Pick any game and level — unfinished ones are saved automatically. “In the feed” sets how often a game shows up in the Feed tab.`,
+          `${defs.length} jeux. Choisissez un jeu et un niveau — les parties en cours sont sauvegardées automatiquement. « Dans le fil » règle la fréquence d’un jeu dans l’onglet Fil.`,
         ),
       ),
       codeForm,
       h(
         'div',
-        { class: 'filters', role: 'toolbar', 'aria-label': L('Categories', 'Catégories') },
-        chip('all', L('All', 'Tous'), defs.length),
-        ...cats.map((c) => chip(c.id, c.name, c.games.length)),
+        { class: 'games-bar' },
+        search,
+        h(
+          'div',
+          { class: 'filters', role: 'toolbar', 'aria-label': L('Categories', 'Catégories') },
+          chip('all', L('All', 'Tous'), defs.length),
+          ...cats.map((c) => chip(c.id, c.name, c.games.length)),
+        ),
       ),
+      noMatch,
       inProgress.length && filter === 'all'
         ? h(
             'section',
@@ -191,10 +282,11 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         h(
           'section',
           { class: 'cat', id: `cat-${c.id}` },
-          h('h3', null, c.name, h('span', { class: 'cat-blurb' }, c.blurb)),
+          catHead(c),
           h('div', { class: 'lab-grid' }, ...c.games.map((d) => tile(d, saves[d.id]))),
         ),
       ),
     ),
   );
+  applySearch();
 }

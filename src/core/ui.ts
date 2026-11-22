@@ -138,3 +138,34 @@ export function setCountClue(el: HTMLElement, have: number, want: number): boole
   el.setAttribute('aria-label', L(`${have} of ${want}`, `${have} sur ${want}`));
   return have === want;
 }
+
+/** Pill-shaped radio group; redraws itself on pick. */
+export function segmented<T extends string | number>(
+  options: { label: string; value: T }[],
+  current: T,
+  onpick: (v: T) => void,
+  attrs: Record<string, string> = {},
+) {
+  const el = h('div', { class: 'seg', role: 'radiogroup', ...attrs });
+  const draw = (cur: T) =>
+    el.replaceChildren(
+      ...options.map((o) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(o.value === cur),
+            class: o.value === cur ? 'on' : '',
+            onclick: () => {
+              onpick(o.value);
+              draw(o.value);
+            },
+          },
+          o.label,
+        ),
+      ),
+    );
+  draw(current);
+  return el;
+}
