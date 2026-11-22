@@ -7,7 +7,21 @@ the TWA in `../android/` instead.
 The WebView serves the bundled files as `https://puzzle.garand.dev` (`capacitor.config.json`), so
 storage and analytics behave like the website. Analytics events carry `app.platform = android`,
 and players can turn them off in Settings. The service worker and source maps are left out
-(`vite build --mode android`): updates arrive as app releases.
+(`vite build --mode android`).
+
+## Updates
+
+- **Game (web) changes update themselves.** Every deploy to Pages also publishes the same commit built in
+  android mode as `https://puzzle.garand.dev/android/bundle-<sha>.zip`, along with `version.json`
+  (`{sha, url, checksum}`). On launch, on resume, and every 30 minutes, the app (`src/core/update.ts`)
+  compares that sha with its own. If they differ, it downloads the zip with
+  [@capgo/capacitor-updater](https://github.com/Cap-go/capacitor-updater) and switches to it the next
+  time the app goes to the background. It also shows the same "New version" banner as the site.
+  Capgo's cloud is not used: update, channel and stats URLs are all off in `capacitor.config.json`.
+  If a downloaded build doesn't start, the updater rolls back to the previous one.
+- **Native changes** (Capacitor, plugins, Android config, icons) need a new APK: tag a release.
+  Installing a new APK drops the downloaded bundles (`resetWhenUpdate`), so it starts from its own files.
+  If a web change ever needs a newer native plugin, release the APK first.
 
 ## Release
 
