@@ -45,7 +45,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         h(
           'td',
           null,
-          h('a', { href: `#/game/${d.id}`, title: `${L('Open', 'Ouvrir')} ${d.name}` }, h('span', { class: 'swatchlet' }), d.name),
+          h('a', { href: `/game/${d.id}`, title: `${L('Open', 'Ouvrir')} ${d.name}` }, h('span', { class: 'swatchlet' }), d.name),
         ),
         h('td', null, LEVEL_NAMES[pr.level], h('span', { class: 'muted' }, pr.manual ? L(' · fixed', ' · fixe') : ' · auto')),
         h('td', { class: 'num' }, s.solved),
@@ -58,7 +58,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
   // Daily challenges: streak and completed lists per difficulty.
   const ds = dailyStats();
   const dailySection = [
-    h('h3', null, h('a', { href: '#/daily' }, L('Daily challenges', 'Défis du jour'))),
+    h('h3', null, h('a', { href: '/daily' }, L('Daily challenges', 'Défis du jour'))),
     h(
       'p',
       { class: 'muted small' },
@@ -92,7 +92,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
             return h(
               'tr',
               null,
-              h('td', null, h('a', { href: `#/daily/${l}` }, LEVEL_NAMES[l])),
+              h('td', null, h('a', { href: `/daily/${l}` }, LEVEL_NAMES[l])),
               h('td', { class: 'num' }, x.completed),
               h('td', { class: 'num' }, x.solved),
               h('td', { class: 'num' }, x.bestTotal != null ? fmtTime(x.bestTotal) : '—'),

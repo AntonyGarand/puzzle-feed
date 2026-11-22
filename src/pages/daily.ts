@@ -32,7 +32,7 @@ export function renderDaily(el: HTMLElement, defs: PuzzleDef[], level?: Difficul
       h(
         'a',
         {
-          href: `#/daily/${l}`,
+          href: `/daily/${l}`,
           role: 'tab',
           'aria-selected': String(l === lvl),
           class: l === lvl ? 'on' : '',
@@ -56,7 +56,7 @@ export function renderDaily(el: HTMLElement, defs: PuzzleDef[], level?: Difficul
           : e.o === 'failed'
             ? h('span', { class: 'bad' }, L('Not yet', 'Pas encore'))
             : h('span', { class: 'muted' }, '—');
-    const href = `#/daily/${lvl}/${i + 1}`;
+    const href = `/daily/${lvl}/${i + 1}`;
     return h(
       'li',
       { class: `daily-item ${e.o === 'solved' ? 'is-solved' : ''}`, 'data-puzzle': e.id },

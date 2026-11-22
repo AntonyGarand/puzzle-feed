@@ -35,7 +35,12 @@
           }).catch(function () {});
         }
         pageview();
-        addEventListener('hashchange', pageview);
+        // Path routing: in-app navigations are history.pushState calls (src/core/nav.ts).
+        var push = history.pushState;
+        history.pushState = function () {
+          push.apply(history, arguments);
+          pageview();
+        };
         addEventListener('popstate', pageview);
       })();
     </script>

@@ -19,7 +19,7 @@ if (!ids.length) {
   ids = await page.evaluate(() => window.__puzzles);
 }
 for (const id of ids) {
-  await page.goto(`${base}#/play/${id}`);
+  await page.goto(`${base}play/${id}`);
   await page.waitForSelector('.card .puzzle');
   await page.locator('.card').first().locator('.help-btn').click();
   const sheet = page.locator('dialog.sheet');

@@ -35,7 +35,7 @@ The same commands are available as mise tasks (`mise run check`, `mise run fix`,
 
 ```
 src/
-  main.ts            app shell: tabs, routing (#/, #/daily, #/daily/<level>/<n>, #/games, #/game/<id>, #/play/<id>, #/s/<share code>, #/stats, #/settings)
+  main.ts            app shell: tabs, path routing (/, /daily, /daily/<level>/<n>, /games, /game/<id>, /play/<id>, /s/<share code>, /stats, /settings; old #/ links redirect)
   styles.css         design tokens + shared components (neo-brutalist)
   core/              feed, card, store (profile/stats/auto-levelling), saves, i18n, help dialog, ui helpers
   pages/             Games, single-game view, Profile, Settings

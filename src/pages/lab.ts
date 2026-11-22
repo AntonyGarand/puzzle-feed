@@ -3,6 +3,7 @@ import { L, locale, setLocale, setWordLocale, wordLocale, type Locale } from '..
 import { Card, type DailyRef } from '../core/card';
 import { dailySaveKey, getSave } from '../core/saves';
 import type { DailyEntry } from '../core/store';
+import { setPath } from '../core/nav';
 import { prefs } from '../core/store';
 import type { ShareCode } from '../core/share';
 import type { Difficulty, PuzzleDef } from '../core/types';
@@ -66,8 +67,7 @@ export class LabView {
               ? L('Resumed', 'Reprise')
               : L('New puzzle', 'Nouvelle partie');
           // Keep the address bar on what's being played, so a reload brings back the same puzzle.
-          const hash = c.shared ? `#/s/${c.code}` : `#/game/${def.id}`;
-          if (location.hash !== hash) history.replaceState(null, '', hash);
+          setPath(c.shared ? `/s/${c.code}` : `/game/${def.id}`);
         },
       });
       this.card = card;
@@ -75,7 +75,7 @@ export class LabView {
         h(
           'div',
           { class: 'lab-bar' },
-          h('a', { class: 'btn ghost', href: '#/games' }, L('← Games', '← Jeux')),
+          h('a', { class: 'btn ghost', href: '/games' }, L('← Games', '← Jeux')),
           note,
           btn(L('Share', 'Partager'), () => card.openShare(), 'ghost'),
         ),
@@ -117,7 +117,7 @@ export class LabView {
       h(
         'div',
         { class: 'lab-bar' },
-        h('a', { class: 'btn ghost', href: `#/daily/${ref.level}` }, L('← Daily', '← Défis')),
+        h('a', { class: 'btn ghost', href: `/daily/${ref.level}` }, L('← Daily', '← Défis')),
         note,
         btn(L('Share', 'Partager'), () => card.openShare(), 'ghost'),
       ),

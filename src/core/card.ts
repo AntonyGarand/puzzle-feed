@@ -226,7 +226,7 @@ export class Card {
         shareSection(this.code, this.def.name),
       ],
       footer: [
-        h('a', { class: 'btn ghost', href: '#/settings', onclick: () => close() }, L('All settings', 'Tous les réglages')),
+        h('a', { class: 'btn ghost', href: '/settings', onclick: () => close() }, L('All settings', 'Tous les réglages')),
         this.done
           ? null
           : btn(this.opts.lab ? L('Give up', 'Abandonner') : L('Skip', 'Passer'), () => {
