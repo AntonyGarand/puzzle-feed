@@ -615,7 +615,11 @@ export class Card {
       });
     } else if (levelUp) {
       parts.push(
-        h('span', { class: 'lvl-change' }, ` · ${levelUp.up ? L('Level up', 'Niveau supérieur') : L('Easing off', 'On ralentit')} → ${levelUp.to}`),
+        h(
+          'span',
+          { class: 'lvl-change' },
+          ` · ${levelUp.up ? L('Level up', 'Niveau supérieur') : L('Easing off', 'On ralentit')} → ${levelUp.to}`,
+        ),
       );
     }
     if (panel) {
