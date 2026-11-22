@@ -68,7 +68,10 @@ app.append(header, feed.el, lab.el, page);
 function applyTheme() {
   const t = getProfile().theme;
   if (t === 'system') delete document.documentElement.dataset['theme'];
-  else document.documentElement.dataset['theme'] = t;
+  else document.documentElement.dataset['theme'] = t === 'oled' ? 'dark' : t;
+  // OLED is dark mode with pure-black surfaces (themes.css), so every dark rule still applies.
+  if (t === 'oled') document.documentElement.dataset['oled'] = '';
+  else delete document.documentElement.dataset['oled'];
   if (getProfile().symbols) document.documentElement.dataset['symbols'] = '';
   else delete document.documentElement.dataset['symbols'];
   const style = getProfile().style ?? 'neo';
