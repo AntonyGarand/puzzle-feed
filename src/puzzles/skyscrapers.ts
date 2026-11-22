@@ -1,7 +1,7 @@
 import './skyscrapers.css';
 import { L } from '../core/i18n';
 import { byLevel, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { addTally, board, h, setTally } from '../core/ui';
 import { latinEntry, latinEntrySteps } from './latinkit/entry';
 import { entryPlace, entryVals, lineHUnits, makeHint } from './sudokukit/hint';
 import { latinConflicts, latinUnique, randomLatin, revealLatin, type Table } from './latinkit/solver';
@@ -153,7 +153,18 @@ export const skyscrapers: PuzzleDef = {
       givens[c] = sol[c];
     }
 
-    const clueEls = clue.map((v, k) => h('div', { class: 'sky-clue', 'data-k': k }, on[k] ? v : ''));
+    const clueEls = clue.map((v, k) =>
+      on[k] ? addTally(h('div', { class: 'sky-clue', 'data-k': k }, v)) : h('div', { class: 'sky-clue', 'data-k': k }),
+    );
+    /** Buildings seen through the filled run starting at the clue: a lower bound that only climbs as the line fills. */
+    const seenSoFar = (vals: number[], k: number) => {
+      const run: number[] = [];
+      for (const c of clueLines[k]) {
+        if (!vals[c]) break;
+        run.push(vals[c]);
+      }
+      return visible(run);
+    };
     const lineState = (vals: number[], k: number) => {
       const vs = clueLines[k].map((c) => vals[c]);
       if (vs.some((v) => !v)) return 0;
@@ -181,6 +192,10 @@ export const skyscrapers: PuzzleDef = {
           const st = on[k] ? lineState(vals, k) : 0;
           el.classList.toggle('ok', st === 1);
           el.classList.toggle('bad', st === -1);
+          if (on[k]) {
+            const have = seenSoFar(vals, k);
+            setTally(el, have, clue[k], st === -1 || have > clue[k], st === -1 || (have > 0 && st !== 1));
+          }
         });
       },
     });

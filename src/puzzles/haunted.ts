@@ -1,7 +1,7 @@
 import './haunted.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { addTally, board, h, s, setTally } from '../core/ui';
 import { ALL, bit, genHaunted, GHOST, narrowLine, pathRange, propagate, seen, single, VAMPIRE, ZOMBIE } from './logickit/hauntedgen';
 
 const kindName = (v: number) => (v === GHOST ? L('ghost', 'fantôme') : v === VAMPIRE ? L('vampire', 'vampire') : L('zombie', 'zombie'));
@@ -128,7 +128,9 @@ export const haunted: PuzzleDef = {
     });
     const clueEls = clue.map((v, k) =>
       on[k]
-        ? h('button', { type: 'button', class: 'hn-clue', 'aria-label': L(`Clue ${v}`, `Indice ${v}`), onclick: () => light(k) }, v)
+        ? addTally(
+            h('button', { type: 'button', class: 'hn-clue', 'aria-label': L(`Clue ${v}`, `Indice ${v}`), onclick: () => light(k) }, v),
+          )
         : h('div', { class: 'hn-clue off' }),
     );
     const corner = () => h('div', { class: 'hn-corner' });
@@ -187,8 +189,11 @@ export const haunted: PuzzleDef = {
         if (!on[k]) return;
         const full = paths[k].cells.every((c) => vals[c]);
         const [lo] = pathRange(paths[k], domains());
+        const ok = full && lo === clue[k];
         el.classList.toggle('err', bad[k]);
-        el.classList.toggle('ok', full && lo === clue[k]);
+        el.classList.toggle('ok', ok);
+        // monsters this line already sees for sure (lower bound, so it only ever climbs)
+        setTally(el, lo, clue[k], bad[k], bad[k] || (lo > 0 && !ok));
         el.classList.toggle('on', k === lit);
       });
       for (const v of [GHOST, VAMPIRE, ZOMBIE]) {

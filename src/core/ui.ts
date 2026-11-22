@@ -1,3 +1,5 @@
+import { L } from './i18n';
+
 type Child = Node | string | number | null | undefined | false;
 type Attrs = Record<string, unknown> | null;
 
@@ -100,4 +102,39 @@ export function cogIcon(cls = 'icon') {
       d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
     }),
   );
+}
+
+/**
+ * Give an existing clue element a small live tally pill tucked against its number (styles: `.cc-host` in styles.css).
+ * Drive it with {@link setTally}. Idempotent.
+ */
+export function addTally<E extends HTMLElement>(el: E): E {
+  el.classList.add('cc-host');
+  if (!el.querySelector('.cc-have')) el.append(h('span', { class: 'cc-have', 'aria-hidden': 'true' }));
+  return el;
+}
+
+/**
+ * Update a tally pill: shown when `show` (default: started but not yet met, or wrong). Only the pill turns red
+ * when the line is wrong (default: past the target); the clue itself keeps its colour.
+ */
+export function setTally(el: HTMLElement, have: number, want: number, bad = have > want, show = bad || (have > 0 && have !== want)) {
+  const pill = el.querySelector<HTMLElement>('.cc-have');
+  if (pill && show) pill.textContent = String(have);
+  el.classList.toggle('counting', show);
+  el.classList.toggle('tally-over', bad);
+}
+
+/** An edge clue showing a target count with a live tally; pair with {@link setCountClue} on every render. */
+export function countClue(cls: string, want: number): HTMLDivElement {
+  return addTally(h('div', { class: cls, 'aria-label': String(want) }, h('span', { class: 'cc-want' }, want)));
+}
+
+/** Update a {@link countClue}: tally plus `done` / `over` state. Returns whether the line is satisfied. */
+export function setCountClue(el: HTMLElement, have: number, want: number): boolean {
+  setTally(el, have, want);
+  el.classList.toggle('done', have === want);
+  el.classList.toggle('over', have > want);
+  el.setAttribute('aria-label', L(`${have} of ${want}`, `${have} sur ${want}`));
+  return have === want;
 }

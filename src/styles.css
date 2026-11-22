@@ -742,6 +742,50 @@ button.cell:active {
   font-weight: 700;
 }
 
+/* edge count clues (tents, tracks, haunted, skyscrapers): big target, small live tally pill beside it */
+.cc-host {
+  position: relative;
+}
+.cc-host .cc-have {
+  position: absolute;
+  /* hug the bottom-right of the target digit, like a subscript (offsets in the pill's own em) */
+  left: calc(50% + 0.55em);
+  top: calc(50% + 0.15em);
+  display: grid;
+  place-items: center;
+  width: 1.8em;
+  height: 1.8em;
+  border-radius: 50%;
+  font-size: max(10px, 0.5em);
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, var(--ink));
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 0.18s,
+    transform 0.22s cubic-bezier(0.3, 1.6, 0.5, 1),
+    background-color 0.2s;
+  pointer-events: none;
+}
+.cc-host.counting .cc-have {
+  opacity: 1;
+  transform: none;
+}
+.cc-host.tally-over .cc-have {
+  color: var(--on-tone);
+  background: var(--bad);
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-host .cc-have {
+    transition: opacity 0.15s;
+  }
+}
+
 /* sudoku: givens are ink, entries are tone-coloured */
 .sudoku .cell:not(.given) {
   color: color-mix(in srgb, var(--accent) 70%, var(--fg));

@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, s } from '../core/ui';
+import { board, btn, countClue, h, s, setCountClue } from '../core/ui';
 import { adjacent, capture, cellAt, stepsToward } from './pathkit/grid';
 import { genTracks } from './pathkit/tracks-gen';
 import './tracks.css';
@@ -58,8 +58,8 @@ export const tracks: PuzzleDef = {
     const given = new Set(P.givens);
     const trail: number[] = [a];
 
-    const colEls = P.colCounts.map((v) => h('div', { class: 'clue' }, v));
-    const rowEls = P.rowCounts.map((v) => h('div', { class: 'clue' }, v));
+    const colEls = P.colCounts.map((v) => countClue('clue', v));
+    const rowEls = P.rowCounts.map((v) => countClue('clue', v));
     const grid = board(n, n, 'tracks-grid');
     const cells = Array.from({ length: N }, (_, i) => {
       const el = h('div', { class: 'cell', 'data-i': i }, i === a ? 'A' : i === b ? 'B' : '');
@@ -95,9 +95,7 @@ export const tracks: PuzzleDef = {
       }
       let ok = true;
       const mark = (el: HTMLElement, have: number, want: number) => {
-        el.classList.toggle('done', have === want);
-        el.classList.toggle('over', have > want);
-        ok &&= have === want;
+        ok = setCountClue(el, have, want) && ok;
       };
       rowEls.forEach((el, r) => mark(el, rc[r], P.rowCounts[r]));
       colEls.forEach((el, c) => mark(el, cc[c], P.colCounts[c]));
