@@ -25,7 +25,8 @@ function root(): Node {
   return trie;
 }
 
-const neighbours = (n: number, i: number) => {
+/** King-move neighbours of `i` on a grid `n` columns wide and `rows` rows tall. */
+const neighbours = (n: number, i: number, rows = n) => {
   const r = Math.floor(i / n),
     c = i % n;
   const out: number[] = [];
@@ -34,7 +35,7 @@ const neighbours = (n: number, i: number) => {
       if (!dr && !dc) continue;
       const rr = r + dr,
         cc = c + dc;
-      if (rr >= 0 && rr < n && cc >= 0 && cc < n) out.push(rr * n + cc);
+      if (rr >= 0 && rr < rows && cc >= 0 && cc < n) out.push(rr * n + cc);
     }
   return out;
 };
@@ -61,14 +62,15 @@ function solve(letters: string[], n: number, minLen: number): Set<string> {
   return found;
 }
 
-/** A path of cell indices spelling `word`, or null. */
-export function findPath(letters: string[], n: number, word: string): number[] | null {
+/** A path of cell indices spelling `word` (on a grid `n` columns wide, through `free` cells only), or null. */
+export function findPath(letters: string[], n: number, word: string, free: (i: number) => boolean = () => true): number[] | null {
   const path: number[] = [];
+  const rows = Math.ceil(letters.length / n);
   const go = (i: number, k: number): boolean => {
-    if (letters[i] !== word[k] || path.includes(i)) return false;
+    if (letters[i] !== word[k] || path.includes(i) || !free(i)) return false;
     path.push(i);
     if (k === word.length - 1) return true;
-    for (const j of neighbours(n, i)) if (go(j, k + 1)) return true;
+    for (const j of neighbours(n, i, rows)) if (go(j, k + 1)) return true;
     path.pop();
     return false;
   };
