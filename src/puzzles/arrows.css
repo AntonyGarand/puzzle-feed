@@ -1,0 +1,76 @@
+[data-puzzle='arrows'] {
+  --accent: var(--p2);
+}
+[data-puzzle='arrows'] .ar-board {
+  width: var(--board);
+  aspect-ratio: 1;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+}
+[data-puzzle='arrows'] .ar-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+[data-puzzle='arrows'] .ar-dot {
+  fill: var(--muted);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+[data-puzzle='arrows'] .ar-dot.lit {
+  opacity: 0.45;
+}
+[data-puzzle='arrows'] .ar path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='arrows'] .ar-edge {
+  stroke: var(--ink);
+  stroke-width: 0.36;
+}
+[data-puzzle='arrows'] .ar-body {
+  stroke: var(--c);
+  stroke-width: 0.2;
+}
+[data-puzzle='arrows'] .ar-tip-edge {
+  fill: var(--ink);
+  stroke: var(--ink);
+  stroke-width: 0.16;
+  stroke-linejoin: round;
+}
+[data-puzzle='arrows'] .ar-tip {
+  fill: var(--c);
+}
+[data-puzzle='arrows'] .ar .ar-hit {
+  stroke: transparent;
+  stroke-width: 0.92;
+  pointer-events: stroke;
+}
+[data-puzzle='arrows'] .ar {
+  cursor: pointer;
+  outline: none;
+}
+[data-puzzle='arrows'] .ar.gone {
+  pointer-events: none;
+}
+[data-puzzle='arrows'] .ar.err .ar-body {
+  stroke: var(--bad);
+}
+[data-puzzle='arrows'] .ar.err .ar-tip {
+  fill: var(--bad);
+}
+[data-puzzle='arrows'] .ar.bumped {
+  animation: ar-bump 0.3s ease-out;
+}
+@keyframes ar-bump {
+  40% {
+    opacity: 0.55;
+  }
+}
