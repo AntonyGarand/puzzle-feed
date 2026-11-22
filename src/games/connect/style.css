@@ -29,7 +29,8 @@
   cursor: pointer;
 }
 [data-puzzle='connect'] .connect-grid .cell.on {
-  background: color-mix(in srgb, var(--c) 32%, transparent);
+  /* only the drawn line carries the colour, not the cell under it */
+  background: transparent;
 }
 [data-puzzle='connect'] .connect-lines {
   position: absolute;
