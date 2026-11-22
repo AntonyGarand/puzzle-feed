@@ -41,6 +41,10 @@ function glyph(v: number) {
   );
 }
 
+/** A small x the player pencils in a cell (a note only: every cell still needs a monster). */
+const xMark = () =>
+  s('svg', { viewBox: '0 0 100 100', class: 'hn-x', 'aria-hidden': 'true' }, s('path', { d: 'M38 38l24 24M62 38 38 62' }));
+
 const mirrorSvg = (m: number) =>
   s(
     'svg',
@@ -78,12 +82,12 @@ export const haunted: PuzzleDef = {
         'Un monstre croisé deux fois par le regard compte deux fois. Les touches sous la grille montrent combien il en reste à placer, sur le total.',
       ),
       L(
-        'Tap a cell, then a monster key. Tap the same key again, or ✕, to clear it (Clear wipes them all). Tap an edge number to light up its line.',
-        'Touchez une case, puis une touche de monstre. Retouchez la même touche, ou ✕, pour l’effacer (Effacer les retire tous). Touchez un nombre du bord pour éclairer sa ligne.',
+        'Tap a cell, then a monster key. Tap the same key again, or ✕, to clear it (Clear wipes them all). ✕ on an empty cell pencils in a small x as a note. Tap an edge number to trace its line.',
+        'Touchez une case, puis une touche de monstre. Retouchez la même touche, ou ✕, pour l’effacer (Effacer les retire tous). ✕ sur une case vide y inscrit un petit x comme note. Touchez un nombre du bord pour tracer sa ligne.',
       ),
       L(
-        'Keyboard: arrows move, G, V, Z (or 1, 2, 3) place, Backspace clears. A number turns red once it can no longer be met.',
-        'Clavier : flèches pour se déplacer, G (ou F), V, Z (ou 1, 2, 3) pour placer, Retour arrière pour effacer. Un nombre rougit s’il ne peut plus être respecté.',
+        'Keyboard: arrows move, G, V, Z (or 1, 2, 3) place, X notes, Backspace clears. A number turns red once it can no longer be met.',
+        'Clavier : flèches pour se déplacer, G (ou F), V, Z (ou 1, 2, 3) pour placer, X pour noter, Retour arrière pour effacer. Un nombre rougit s’il ne peut plus être respecté.',
       ),
     ],
     tips: [
@@ -106,6 +110,8 @@ export const haunted: PuzzleDef = {
     const N = n * n;
     const open = [...mir.keys()].filter((i) => !mir[i]);
     const vals = givens.slice();
+    /** Cells the player pencilled an x in (notes, not monsters). */
+    const marks = new Set<number>();
     let sel = open.find((i) => !givens[i]) ?? -1;
     let lit = -1;
     let done = false;
@@ -125,6 +131,7 @@ export const haunted: PuzzleDef = {
         glyph(GHOST),
         glyph(VAMPIRE),
         glyph(ZOMBIE),
+        xMark(),
       );
     });
     const clueEls = clue.map((v, k) =>
@@ -139,19 +146,56 @@ export const haunted: PuzzleDef = {
     for (let r = 0; r < n; r++) grid.append(clueEls[3 * n + r], ...cells.slice(r * n, r * n + n), clueEls[n + r]);
     grid.append(corner(), ...clueEls.slice(2 * n, 3 * n), corner());
 
+    // A lit edge number traces its sight line over the board: direct part, then reflected part.
+    const ray = s('svg', { class: 'hn-ray', viewBox: `0 0 ${n + 2} ${n + 2}`, preserveAspectRatio: 'none', 'aria-hidden': 'true' });
+    const rayParts = ['before', 'after'].map((cls) => {
+      const under = s('polyline', { class: 'under' });
+      const over = s('polyline', { class: `over ${cls}` });
+      ray.append(under, over);
+      return [under, over];
+    });
+    grid.append(ray);
+    /** Points (board units, ring included) of slot `k`'s line, split at its first bounce. */
+    const rayPoints = (k: number): [string[], string[]] => {
+      const side = Math.floor(k / n),
+        pos = k % n;
+      let r = side === 0 ? -1 : side === 2 ? n : pos,
+        c = side === 3 ? -1 : side === 1 ? n : pos;
+      let dr = side === 0 ? 1 : side === 2 ? -1 : 0,
+        dc = side === 3 ? 1 : side === 1 ? -1 : 0;
+      const pt = () => `${c + 1.5},${r + 1.5}`;
+      const before = [pt()],
+        after: string[] = [];
+      let cur = before;
+      for (let guard = 0; guard < 8 * n * n; guard++) {
+        r += dr;
+        c += dc;
+        cur.push(pt());
+        if (r < 0 || c < 0 || r >= n || c >= n) break;
+        const m = mir[r * n + c];
+        if (m === 1) [dr, dc] = [-dc, -dr];
+        else if (m === 2) [dr, dc] = [dc, dr];
+        if (m && cur === before) {
+          cur = after;
+          after.push(pt());
+        }
+      }
+      return [before, after];
+    };
+
     // Pad: one key per monster (glyph + how many are left to place), then ✕ to erase.
     const padEl = pad(
       [
         ...[GHOST, VAMPIRE, ZOMBIE].map((v) => ({ label: '', value: String(v), class: 'hn-key', aria: kindName(v) })),
-        { label: '✕', value: '0', aria: L('Erase', 'Effacer') },
+        { label: '✕', value: '0', aria: L('Erase, or note an x', 'Effacer, ou noter un x') },
       ],
-      (k) => (k === '0' ? sel >= 0 && vals[sel] && input(vals[sel]) : input(Number(k))),
+      (k) => (k === '0' ? (sel >= 0 && vals[sel] ? input(vals[sel]) : toggleMark()) : input(Number(k))),
     );
     padEl.classList.add('hn-pad');
     const counts: HTMLElement[] = [];
     const keyEls = [GHOST, VAMPIRE, ZOMBIE].map((v, k) => {
       const el = padEl.children[k] as HTMLElement;
-      counts[v] = h('span', { class: 'hn-n' });
+      counts[v] = h('span', { class: 'hn-n', 'aria-hidden': 'true' });
       el.title = kindName(v);
       el.append(glyph(v), counts[v]);
       return el;
@@ -174,19 +218,17 @@ export const haunted: PuzzleDef = {
     };
 
     const render = () => {
-      const seenB = new Set<number>(),
-        seenA = new Set<number>();
-      if (lit >= 0) for (const q of paths[lit].seq) (q.after ? seenA : seenB).add(q.cell);
       cells.forEach((el, i) => {
         let cls = baseCls[i];
         if (!mir[i]) {
           if (vals[i]) cls += ` m${vals[i]}`;
+          else if (marks.has(i)) cls += ' mx';
           if (i === sel) cls += ' sel';
         }
-        if (seenB.has(i)) cls += ' ray';
-        if (seenA.has(i)) cls += ' ray2';
         if (el.getAttribute('class') !== cls) el.setAttribute('class', cls);
       });
+      const pts = lit >= 0 ? rayPoints(lit) : [[], []];
+      rayParts.forEach((els, j) => els.forEach((el) => el.setAttribute('points', pts[j].join(' '))));
       const bad = broken();
       clueEls.forEach((el, k) => {
         if (!on[k]) return;
@@ -201,7 +243,7 @@ export const haunted: PuzzleDef = {
       });
       for (const v of [GHOST, VAMPIRE, ZOMBIE]) {
         const left = totals[v - 1] - placed(v);
-        counts[v].replaceChildren(h('b', null, left), h('small', null, `/${totals[v - 1]}`));
+        counts[v].textContent = String(left);
         keyEls[v - 1].classList.toggle('err', left < 0);
         keyEls[v - 1].classList.toggle('done', left === 0);
         keyEls[v - 1].setAttribute(
@@ -223,10 +265,19 @@ export const haunted: PuzzleDef = {
       render();
     };
 
+    /** ✕ / X on an empty cell: pencil in (or rub out) a small x. */
+    const toggleMark = () => {
+      if (done || sel < 0 || givens[sel] || vals[sel]) return;
+      ctx.touch();
+      if (!marks.delete(sel)) marks.add(sel);
+      render();
+    };
+
     const input = (v: number) => {
       if (done || sel < 0 || givens[sel]) return;
       ctx.touch();
       vals[sel] = vals[sel] === v ? 0 : v;
+      marks.delete(sel);
       render();
       watch(vals[sel] > 0);
       const ok =
@@ -239,19 +290,22 @@ export const haunted: PuzzleDef = {
       }
     };
 
-    const saved = ctx.saved as { vals?: unknown[]; sel?: unknown; lit?: unknown } | undefined;
+    const saved = ctx.saved as { vals?: unknown[]; marks?: unknown[]; sel?: unknown; lit?: unknown } | undefined;
     if (Array.isArray(saved?.vals) && saved.vals.length === N)
       saved.vals.forEach((v, i) => {
         if (!mir[i] && !givens[i] && (v === 0 || v === 1 || v === 2 || v === 3)) vals[i] = v;
       });
+    if (Array.isArray(saved?.marks))
+      for (const i of saved.marks) if (typeof i === 'number' && open.includes(i) && !givens[i] && !vals[i]) marks.add(i);
     if (typeof saved?.sel === 'number' && (saved.sel === -1 || (saved.sel >= 0 && saved.sel < N && !mir[saved.sel]))) sel = saved.sel;
     if (typeof saved?.lit === 'number' && saved.lit >= -1 && saved.lit < 4 * n && (saved.lit < 0 || on[saved.lit])) lit = saved.lit;
 
-    /** Clear: wipe every monster you placed (givens stay). */
+    /** Clear: wipe every monster and x you placed (givens stay). */
     const clear = () => {
-      if (done || !open.some((c) => !givens[c] && vals[c])) return;
+      if (done || (!marks.size && !open.some((c) => !givens[c] && vals[c]))) return;
       ctx.touch();
       for (const c of open) if (!givens[c]) vals[c] = 0;
+      marks.clear();
       render();
       watch(false);
     };
@@ -491,7 +545,7 @@ export const haunted: PuzzleDef = {
     };
 
     return {
-      snapshot: () => ({ vals, sel, lit }),
+      snapshot: () => ({ vals, marks: [...marks], sel, lit }),
       hint,
       check,
       onKey(e) {
@@ -500,8 +554,14 @@ export const haunted: PuzzleDef = {
           input(v);
           return true;
         }
+        if (e.key.toLowerCase() === 'x') {
+          if (sel >= 0 && vals[sel]) input(vals[sel]);
+          else toggleMark();
+          return true;
+        }
         if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
           if (sel >= 0 && vals[sel]) input(vals[sel]);
+          else if (sel >= 0 && marks.has(sel)) toggleMark();
           return true;
         }
         const mv: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
