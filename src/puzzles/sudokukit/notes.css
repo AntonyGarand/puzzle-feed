@@ -1,0 +1,65 @@
+/* Pencil marks inside an empty number cell (sudoku, sudokukit and latinkit grids). */
+.cell .nt {
+  position: absolute;
+  inset: 4% 13% 4% 10%;
+  display: grid;
+  grid-template-columns: repeat(var(--nc), 1fr);
+  grid-template-rows: repeat(var(--nr), 1fr);
+  pointer-events: none;
+  --cs: calc(var(--board) / var(--cols));
+  font-size: min(var(--cs) * 0.3, var(--cs) / max(var(--nc), var(--nr)) * 0.95);
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, currentColor 80%, transparent);
+}
+.cell .nt[hidden] {
+  display: none;
+}
+.cell .nt > span {
+  position: relative;
+  visibility: hidden;
+}
+.cell .nt > span.on {
+  visibility: visible;
+}
+/* a candidate that can't fit anymore */
+.cell .nt > span.bad {
+  color: var(--bad);
+}
+/* number pad as a keypad block mirroring the note spots, ✎ over ✕ in a column on the right */
+.pad.npad {
+  display: grid;
+  grid-template-columns: repeat(var(--nc), 1fr) minmax(56px, 0.75fr);
+  grid-auto-rows: 46px;
+  gap: 8px 8px;
+  padding-right: 3px;
+}
+.pad.npad .key {
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  font-size: 20px;
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s,
+    background 0.1s,
+    font-size 0.12s;
+}
+/* note mode: each digit shrinks into its note spot */
+.pad.npad.notes .key:not(.nk, :last-child) {
+  justify-content: var(--jx);
+  align-items: var(--jy);
+  font-size: 14px;
+  color: color-mix(in srgb, var(--accent) 75%, var(--fg));
+  background: color-mix(in srgb, var(--accent) 8%, var(--cell));
+}
+/* the note switch looks pushed in while notes are on */
+.pad.npad .key.nk {
+  font-size: 22px;
+}
+.pad.npad .key.nk.sel {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}

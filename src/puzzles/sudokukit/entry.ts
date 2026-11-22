@@ -2,6 +2,7 @@ import './kit.css';
 import { L } from '../../core/i18n';
 import type { PuzzleCtx, PuzzleInstance } from '../../core/types';
 import { board, h, pad } from '../../core/ui';
+import { directPlace, keyDigit, makeNotes, notesHelpStep } from './notes';
 import { conflicts, type Problem } from './solver';
 
 export interface EntryOpts {
@@ -34,6 +35,8 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
   const vals = [...puzzle];
   let sel = puzzle.findIndex((v) => v === 0);
   let done = false;
+  const saved = ctx.saved as { vals?: unknown[]; sel?: unknown; notes?: unknown } | undefined;
+  const notes = makeNotes(N, size, saved?.notes);
 
   const unitsOf: number[][] = Array.from({ length: size }, () => []);
   problem.units.forEach((u, k) => u.cells.forEach((c) => unitsOf[c].push(k)));
@@ -52,6 +55,7 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
       el = h('button', { type: 'button', class: baseCls[i], onclick: () => select(i) });
       valEls[i] = h('span', { class: 'v' });
       el.append(valEls[i]);
+      notes.mount(el, i);
     } else {
       el = h('div', { class: `cell off ${extra}`.replace(/\s+/g, ' ').trim() });
     }
@@ -59,6 +63,14 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     grid.append(el);
     return el;
   });
+
+  /** Would `v` at empty cell `i` clash with what's on the board? */
+  const blocked = (i: number, v: number) => {
+    vals[i] = v;
+    const bad = conflicts(problem, vals).has(i);
+    vals[i] = 0;
+    return bad;
+  };
 
   const render = () => {
     const bad = conflicts(problem, vals);
@@ -72,6 +84,7 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
       if (sv > 0 && vals[i] === sv && i !== sel) cls += ' same';
       if (bad.has(i) && !given[i]) cls += ' err';
       if (el.className !== cls) el.className = cls;
+      notes.draw(i, vals[i] > 0, (v) => blocked(i, v));
     });
     o.onRender?.(sel, vals);
     return bad;
@@ -82,8 +95,15 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     render();
   };
 
-  const input = (v: number) => {
+  const input = (v: number, note = notes.on) => {
     if (done || sel < 0 || given[sel]) return;
+    if (note) {
+      if (vals[sel] > 0) return;
+      ctx.touch();
+      notes.toggle(sel, v);
+      render();
+      return;
+    }
     ctx.touch();
     const was = vals[sel];
     vals[sel] = vals[sel] === v ? 0 : v;
@@ -95,13 +115,22 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     }
   };
 
+  const erase = () => {
+    if (done || sel < 0 || given[sel]) return;
+    if (vals[sel] > 0) input(vals[sel], false);
+    else if (notes.bits[sel]) {
+      ctx.touch();
+      notes.clear(sel);
+      render();
+    }
+  };
+
   const keys: { label: string; value: string; aria?: string }[] = Array.from({ length: N }, (_, i) => ({
     label: String(i + 1),
     value: String(i + 1),
   }));
-  keys.push({ label: '✕', value: '0', aria: L('Erase', 'Effacer') });
+  keys.push(notes.key, { label: '✕', value: '0', aria: L('Erase', 'Effacer') });
 
-  const saved = ctx.saved as { vals?: unknown[]; sel?: unknown } | undefined;
   if (Array.isArray(saved?.vals) && saved.vals.length === size) {
     saved.vals.forEach((v, i) => {
       if (puzzle[i] === 0 && Number.isInteger(v) && (v as number) >= 0 && (v as number) <= N) vals[i] = v as number;
@@ -109,10 +138,9 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
   }
   if (typeof saved?.sel === 'number' && (saved.sel === -1 || (saved.sel >= 0 && saved.sel < size && active(saved.sel)))) sel = saved.sel;
 
-  ctx.root.append(
-    grid,
-    pad(keys, (v) => (v === '0' ? sel >= 0 && vals[sel] > 0 && input(vals[sel]) : input(Number(v)))),
-  );
+  const padEl = pad(keys, (v) => (v === 'n' ? notes.padKey() : v === '0' ? erase() : input(Number(v))));
+  notes.bindPad(padEl);
+  ctx.root.append(grid, padEl);
   render();
 
   const step = (dr: number, dc: number) => {
@@ -127,16 +155,20 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     }
   };
 
-  return {
-    snapshot: () => ({ vals, sel }),
+  const inst: PuzzleInstance = {
+    snapshot: () => ({ vals, sel, notes: notes.bits }),
     onKey(e) {
-      const k = Number(e.key);
-      if (k >= 1 && k <= N) {
-        input(k);
+      const d = keyDigit(e, N);
+      if (d) {
+        input(d.v, d.note !== notes.on);
+        return true;
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        notes.flip();
         return true;
       }
       if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-        if (sel >= 0 && vals[sel] > 0) input(vals[sel]);
+        erase();
         return true;
       }
       const mv: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
@@ -147,6 +179,11 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
       return false;
     },
   };
+  directPlace.set(inst, (i, v) => {
+    select(i);
+    input(v, false);
+  });
+  return inst;
 }
 
 /** Tutorial steps describing the shared entry controls (tap + pad, keyboard, conflict marks). */
@@ -160,6 +197,7 @@ export function entryHelpSteps(): string[] {
       'Keyboard: arrow keys move, digits fill, Backspace erases. Clashing numbers are marked.',
       'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les conflits sont signalés.',
     ),
+    notesHelpStep(),
   ];
 }
 

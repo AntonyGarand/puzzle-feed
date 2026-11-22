@@ -2,6 +2,7 @@ import './kit.css';
 import { L, P } from '../../core/i18n';
 import type { PuzzleCtx, PuzzleInstance } from '../../core/types';
 import { board, h, pad } from '../../core/ui';
+import { directPlace, keyDigit, makeNotes, notesHelpStep } from '../sudokukit/notes';
 
 export interface LatinEntryOpts {
   ctx: PuzzleCtx;
@@ -34,6 +35,8 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
   const vals = [...givens];
   let sel = givens.findIndex((v) => v === 0);
   let done = false;
+  const saved = ctx.saved as { vals?: unknown[]; sel?: unknown; notes?: unknown } | undefined;
+  const notes = makeNotes(n, size, saved?.notes);
 
   const valEls: HTMLElement[] = [];
   const baseCls: string[] = [];
@@ -44,6 +47,7 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
     const el = h('button', { type: 'button', class: baseCls[i], onclick: () => select(i) });
     valEls[i] = h('span', { class: 'v' });
     el.append(valEls[i]);
+    notes.mount(el, i);
     o.decorate?.(el, i);
     return el;
   });
@@ -55,6 +59,14 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
   }
 
   const peer = (i: number, j: number) => Math.floor(i / n) === Math.floor(j / n) || i % n === j % n;
+  /** Would `v` at empty cell `i` break a rule with what's on the board? */
+  const blocked = (i: number, v: number) => {
+    vals[i] = v;
+    const bad = o.check(vals).has(i);
+    vals[i] = 0;
+    return bad;
+  };
+
   const render = () => {
     const bad = o.check(vals);
     const sv = sel >= 0 ? vals[sel] : 0;
@@ -66,6 +78,7 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
       if (sv > 0 && vals[i] === sv && i !== sel) cls += ' same';
       if (bad.has(i) && !given[i]) cls += ' err';
       if (el.className !== cls) el.className = cls;
+      notes.draw(i, vals[i] > 0, (v) => blocked(i, v));
     });
     o.after?.(vals);
     ctx.status(P(vals.filter((v) => !v).length, ['left', 'left'], ['à remplir', 'à remplir']));
@@ -77,8 +90,15 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
     render();
   };
 
-  const input = (v: number) => {
+  const input = (v: number, note = notes.on) => {
     if (done || sel < 0 || given[sel]) return;
+    if (note) {
+      if (vals[sel] > 0) return;
+      ctx.touch();
+      notes.toggle(sel, v);
+      render();
+      return;
+    }
     ctx.touch();
     const was = vals[sel];
     vals[sel] = vals[sel] === v ? 0 : v;
@@ -90,13 +110,22 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
     }
   };
 
+  const erase = () => {
+    if (done || sel < 0 || given[sel]) return;
+    if (vals[sel] > 0) input(vals[sel], false);
+    else if (notes.bits[sel]) {
+      ctx.touch();
+      notes.clear(sel);
+      render();
+    }
+  };
+
   const keys: { label: string; value: string; aria?: string }[] = Array.from({ length: n }, (_, i) => ({
     label: String(i + 1),
     value: String(i + 1),
   }));
-  keys.push({ label: '✕', value: '0', aria: L('Erase', 'Effacer') });
+  keys.push(notes.key, { label: '✕', value: '0', aria: L('Erase', 'Effacer') });
 
-  const saved = ctx.saved as { vals?: unknown[]; sel?: unknown } | undefined;
   if (Array.isArray(saved?.vals) && saved.vals.length === size) {
     saved.vals.forEach((v, i) => {
       if (!given[i] && Number.isInteger(v) && (v as number) >= 0 && (v as number) <= n) vals[i] = v as number;
@@ -104,10 +133,9 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
   }
   if (typeof saved?.sel === 'number' && Number.isInteger(saved.sel) && saved.sel >= -1 && saved.sel < size) sel = saved.sel;
 
-  ctx.root.append(
-    grid,
-    pad(keys, (v) => (v === '0' ? sel >= 0 && vals[sel] > 0 && input(vals[sel]) : input(Number(v)))),
-  );
+  const padEl = pad(keys, (v) => (v === 'n' ? notes.padKey() : v === '0' ? erase() : input(Number(v))));
+  notes.bindPad(padEl);
+  ctx.root.append(grid, padEl);
   render();
 
   const step = (dr: number, dc: number) => {
@@ -117,16 +145,20 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
     select(r * n + c);
   };
 
-  return {
-    snapshot: () => ({ vals, sel }),
+  const inst: PuzzleInstance = {
+    snapshot: () => ({ vals, sel, notes: notes.bits }),
     onKey(e) {
-      const k = Number(e.key);
-      if (k >= 1 && k <= n) {
-        input(k);
+      const d = keyDigit(e, n);
+      if (d) {
+        input(d.v, d.note !== notes.on);
+        return true;
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        notes.flip();
         return true;
       }
       if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-        if (sel >= 0 && vals[sel] > 0) input(vals[sel]);
+        erase();
         return true;
       }
       const mv: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
@@ -137,6 +169,11 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
       return false;
     },
   };
+  directPlace.set(inst, (i, v) => {
+    select(i);
+    input(v, false);
+  });
+  return inst;
 }
 
 /** Tutorial steps describing the shared entry controls (tap + pad, keyboard, conflict marks). */
@@ -150,6 +187,7 @@ export function latinEntrySteps(): string[] {
       'Keyboard: arrow keys move, digits fill, Backspace erases. Cells breaking a rule turn red.',
       'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les cases fautives passent au rouge.',
     ),
+    notesHelpStep(),
   ];
 }
 
