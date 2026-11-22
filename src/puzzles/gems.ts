@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { arrowIcon, board, btn, h, pad, shake } from '../core/ui';
+import { arrowIcon, board, h, pad, restartBtn, shake, undoBtn } from '../core/ui';
 import { anim } from './movekit/kit';
 import { DIRS8, MINE, ROCK, genGems, slide, solveGems } from './pathkit/gems-gen';
 import { capture, cellAt } from './pathkit/grid';
@@ -77,8 +77,8 @@ export const gems: PuzzleDef = {
         'Glissez avec le pavé 3×3, en balayant (en diagonale aussi) ou en touchant une case alignée avec votre jeton : même rangée, colonne ou diagonale.',
       ),
       L(
-        'Keyboard: arrows or WASD, plus Q E Z C (or numpad 7 9 1 3) for the diagonals. U or Backspace undoes.',
-        'Clavier : flèches ou WASD, plus Q E Z C (ou 7 9 1 3 du pavé numérique) pour les diagonales. U ou Retour arrière annule.',
+        'Keyboard: arrows or WASD, plus Q E Z C (or numpad 7 9 1 3) for the diagonals. U or Backspace undoes, R restarts.',
+        'Clavier : flèches ou WASD, plus Q E Z C (ou 7 9 1 3 du pavé numérique) pour les diagonales. U ou Retour arrière annule, R fait repartir.',
       ),
       L(
         'Every gem you pass over is collected. A diagonal slide can’t squeeze between two rocks touching at their corners.',
@@ -89,8 +89,8 @@ export const gems: PuzzleDef = {
         'Dès le niveau Moyen, des mines parsèment la glace. Si vous glissez dessus, vous perdez un cœur et revenez au début de cette glissade. Trois cœurs perdus, c’est l’échec.',
       ),
       L(
-        'On Expert and Master, moves are limited (shown as 3/12). Undo takes back your last move, but not a lost heart.',
-        'En Expert et Maître, les coups sont limités (affichés 3/12). Annuler reprend votre dernier coup, mais pas un cœur perdu.',
+        'On Expert and Master, moves are limited (shown as 3/12). Undo takes back your last move and Restart puts you back at the start, but neither gives back a lost heart.',
+        'En Expert et Maître, les coups sont limités (affichés 3/12). Annuler reprend votre dernier coup et Repartir vous ramène au départ, mais aucun des deux ne rend un cœur perdu.',
       ),
     ],
     tips: [
@@ -111,13 +111,13 @@ export const gems: PuzzleDef = {
   par: (d) => byLevel(d, [20, 40, 70, 100, 150]),
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
-    const P = genGems(rng, d);
-    const { n, cell, start, limit } = P;
+    const B = genGems(rng, d);
+    const { n, cell, start, limit } = B;
     const N = n * n;
     const hasMines = cell.includes(MINE);
     const gemIdx = new Map<number, number>();
-    P.gems.forEach((g, k) => gemIdx.set(g, k));
-    const G = P.gems.length;
+    B.gems.forEach((g, k) => gemIdx.set(g, k));
+    const G = B.gems.length;
 
     let hist: number[] = [];
     let at = start;
@@ -162,16 +162,19 @@ export const gems: PuzzleDef = {
       });
       const mv = `${hist.length}${limit ? `/${limit}` : ''}`;
       mid.textContent = mv;
-      const hearts = hasMines ? ` · ${'♥'.repeat(LIVES - boom)}${'♡'.repeat(boom)}` : '';
+      if (hasMines) ctx.lives(LIVES - boom, LIVES);
       // Dead end (some gem out of reach, or not enough moves left): Undo gets out of it, so just say so.
-      const rest = finished || got.size === G ? [] : solveGems(n, cell, at, P.gems, got);
+      const rest = finished || got.size === G ? [] : solveGems(n, cell, at, B.gems, got);
       const stuck =
         rest === null
-          ? L(' · a gem is out of reach, undo', ' · une gemme est hors d’atteinte, annulez')
+          ? L(' · a gem is out of reach · undo', ' · une gemme est hors d’atteinte · annulez')
           : limit && hist.length + rest.length > limit
-            ? L(' · too few moves left, undo', ' · trop peu de coups restants, annulez')
+            ? L(' · too few moves left · undo', ' · trop peu de coups restants · annulez')
             : '';
-      ctx.status(L(`${got.size}/${G} gems · ${mv} moves${hearts}`, `${got.size}/${G} gemmes · ${mv} coups${hearts}`) + stuck);
+      const moves = limit
+        ? P(limit - hist.length, ['move left', 'moves left'], ['coup restant', 'coups restants'])
+        : P(hist.length, ['move', 'moves'], ['coup', 'coups']);
+      ctx.status(`${L(`${got.size} / ${G} gems`, `${got.size} / ${G} gemmes`)} · ${moves}${stuck}`);
     };
 
     const move = (dir: number) => {
@@ -257,14 +260,26 @@ export const gems: PuzzleDef = {
     );
     keys.classList.add('gems-pad');
     keys.insertBefore(mid, keys.children[4]);
+    /** Histories wiped by Restart, so Undo can bring them back. */
+    const restarts: number[][] = [];
     const undo = () => {
-      if (finished || !hist.length) return;
-      hist.pop();
+      if (finished) return;
+      if (hist.length) hist.pop();
+      else if (restarts.length) hist = restarts.pop()!;
+      else return;
       replay();
       place(1);
       render();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    const restart = () => {
+      if (finished || !hist.length) return;
+      restarts.push(hist);
+      hist = [];
+      replay();
+      place(1);
+      render();
+    };
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
     const sv = ctx.saved as { v?: unknown; hist?: unknown; boom?: unknown } | undefined;
     if (sv?.v === 2 && Array.isArray(sv.hist) && sv.hist.every((v) => Number.isInteger(v) && v >= 0 && v < 8)) {
@@ -280,7 +295,7 @@ export const gems: PuzzleDef = {
     let memo: { key: string; p: number[] | null } | null = null;
     const plan = (): number[] | null => {
       const key = `${at}:${[...got].sort((x, y) => x - y).join(',')}`;
-      if (memo?.key !== key) memo = { key, p: solveGems(n, cell, at, P.gems, got) };
+      if (memo?.key !== key) memo = { key, p: solveGems(n, cell, at, B.gems, got) };
       return memo.p;
     };
     /** Gems no slide from here can ever pass over (every spot the token can still reach is tried). */
@@ -299,7 +314,7 @@ export const gems: PuzzleDef = {
             q.push(e);
           }
         }
-      return P.gems.filter((g) => !got.has(g) && !passed.has(g));
+      return B.gems.filter((g) => !got.has(g) && !passed.has(g));
     };
     /** Dead ends: a gem out of reach, or more slides needed than moves left. `play()` undoes a move. */
     const check = (): Hint | null => {
@@ -330,12 +345,13 @@ export const gems: PuzzleDef = {
       }
       if (limit && hist.length + p.length > limit) {
         const left = limit - hist.length;
+        const ml = P(left, ['move', 'moves'], ['coup', 'coups']);
         return stuck(
           L(
-            `The ${G - got.size} gems left need at least ${p.length} more slides from here, but you only have ${left} ${left === 1 ? 'move' : 'moves'} left. Undo a move.`,
-            `Les ${G - got.size} gemmes restantes demandent encore au moins ${p.length} glissades d’ici, mais il ne vous reste que ${left} ${left === 1 ? 'coup' : 'coups'}. Annulez un coup.`,
+            `The ${G - got.size} gems left need at least ${p.length} more slides from here, but you only have ${ml} left. Undo a move.`,
+            `Les ${G - got.size} gemmes restantes demandent encore au moins ${p.length} glissades d’ici, mais il ne vous reste que ${ml}. Annulez un coup.`,
           ),
-          P.gems.filter((g) => !got.has(g)).map((g) => cells[g]),
+          B.gems.filter((g) => !got.has(g)).map((g) => cells[g]),
         );
       }
       return null;
@@ -425,8 +441,13 @@ export const gems: PuzzleDef = {
       check,
       hint,
       onKey(e) {
+        // Z is the down-left slide here (Q E Z C diagonals), so U undoes instead.
         if (e.key === 'Backspace' || e.key === 'u' || e.key === 'U') {
           undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          restart();
           return true;
         }
         const k = KEYS[e.key];

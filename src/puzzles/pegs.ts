@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, restartBtn, shake, undoBtn } from '../core/ui';
 import { anim } from './movekit/kit';
 import { genPegs, jumps, pegSolver, type Jump, type PegVerdict } from './playkit/pegs-gen';
 import './pegs.css';
@@ -33,8 +33,8 @@ export const pegs: PuzzleDef = {
         'Touchez une bille pour la prendre (ses trous d’arrivée s’allument), puis touchez un trou allumé. Vous pouvez aussi glisser la bille jusqu’au trou.',
       ),
       L(
-        'Undo (Z) takes back a jump; Restart (R) puts every peg back. If no jump is left and more than one peg remains, the game is lost.',
-        'Annuler (Z) reprend un saut; Repartir (R) remet toutes les billes. S’il ne reste aucun saut possible et plus d’une bille, la partie est perdue.',
+        'Undo (Z) takes back a jump; Restart (R) puts every peg back. If no jump is left and more than one peg remains, undo and try another way.',
+        'Annuler (Z) reprend un saut; Repartir (R) remet toutes les billes. S’il ne reste aucun saut possible et plus d’une bille, annulez et essayez autrement.',
       ),
     ],
     tips: [
@@ -93,8 +93,15 @@ export const pegs: PuzzleDef = {
         );
       });
       const left = count();
+      const stuck = !jumps(B, peg).length && !(left === 1 && (goal < 0 || peg[goal]));
       ctx.status(
-        `${P(left, ['peg left', 'pegs left'], ['bille restante', 'billes restantes'])}${goal >= 0 ? L(' · finish in the centre', ' · finissez au centre') : ''}`,
+        `${P(left, ['peg left', 'pegs left'], ['bille restante', 'billes restantes'])}${
+          stuck
+            ? L(' · no jumps left · undo', ' · plus aucun saut · annulez')
+            : goal >= 0
+              ? L(' · finish in the centre', ' · finissez au centre')
+              : ''
+        }`,
       );
     };
 
@@ -122,12 +129,7 @@ export const pegs: PuzzleDef = {
       if (left === 1 && (goal < 0 || peg[goal])) {
         over = true;
         ctx.solved();
-      } else if (!jumps(B, peg).length) {
-        over = true;
-        shake(grid);
-        ctx.status(L('No jumps left', 'Plus aucun saut possible'));
-        ctx.failed();
-      }
+      } else if (!jumps(B, peg).length) shake(grid); // dead end: the status says so, Undo backs out
     };
 
     const tap = (i: number) => {
@@ -187,7 +189,7 @@ export const pegs: PuzzleDef = {
       sel = -1;
       render();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), restart, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
     const sv = ctx.saved as { moves?: unknown; sel?: unknown } | undefined;
     if (Array.isArray(sv?.moves)) {

@@ -22,6 +22,7 @@ function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
     failed: () => events.push('failed'),
     mistake: () => events.push('mistake'),
     touch() {},
+    lives() {},
     status() {},
     controls() {},
   };

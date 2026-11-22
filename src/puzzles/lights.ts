@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, h, restartBtn, undoBtn } from '../core/ui';
+import './lights.css';
 
 export const lights: PuzzleDef = {
   id: 'lights',
@@ -8,7 +9,6 @@ export const lights: PuzzleDef = {
     return L('Lights', 'Lumières');
   },
   category: 'logic',
-  undo: true,
   get rules() {
     return L('A tap flips a tile and its neighbours. Lights out!', 'Une touche inverse la case et ses voisines. Éteignez tout!');
   },
@@ -24,8 +24,8 @@ export const lights: PuzzleDef = {
         'Les cases allumées sont en couleur. Vous gagnez quand il n’en reste aucune.',
       ),
       L(
-        'The status line shows your moves and how many tiles are still lit.',
-        'La ligne d’état affiche vos coups et le nombre de cases encore allumées.',
+        'The status line shows your moves and how many tiles are still lit. Undo (Z) takes back a tap; Restart (R) brings back the starting board.',
+        'La ligne d’état affiche vos coups et le nombre de cases encore allumées. Annuler (Z) reprend une touche; Repartir (R) ramène la grille de départ.',
       ),
       L(
         'Higher levels mean bigger boards and more scrambled starts.',
@@ -82,19 +82,60 @@ export const lights: PuzzleDef = {
       const lit = on.filter(Boolean).length;
       ctx.status(`${P(moves, ['move', 'moves'], ['coup', 'coups'])} · ${P(lit, ['lit', 'lit'], ['allumée', 'allumées'])}`);
     };
+    /** Move history: the tiles a step tapped (taps are their own inverse) and the move count before it. */
+    let hist: { t: number[]; m: number }[] = [];
+    let done = false;
     const press = (i: number) => {
+      if (done) return;
       ctx.touch();
+      hist.push({ t: [i], m: moves });
       toggle(i);
       moves++;
       render();
-      if (!on.some(Boolean)) ctx.solved();
+      if (!on.some(Boolean)) {
+        done = true;
+        ctx.solved();
+      }
     };
-    const sv = ctx.saved as { on?: boolean[]; moves?: number } | undefined;
-    if (sv?.on?.length === on.length) {
-      sv.on.forEach((v, i) => (on[i] = v));
-      moves = sv.moves ?? 0;
+    const undo = () => {
+      const last = done ? undefined : hist.pop();
+      if (!last) return;
+      ctx.touch();
+      last.t.forEach(toggle);
+      moves = last.m;
+      render();
+    };
+    /** Back to the starting board: re-tap every tile tapped an odd number of times (undoable). */
+    const restart = () => {
+      if (done) return;
+      const odd = new Set<number>();
+      for (const e of hist) for (const i of e.t) if (!odd.delete(i)) odd.add(i);
+      if (!odd.size) return;
+      ctx.touch();
+      hist.push({ t: [...odd], m: moves });
+      odd.forEach(toggle);
+      moves = 0;
+      render();
+    };
+    const sv = ctx.saved as { on?: unknown; moves?: unknown; hist?: unknown } | undefined;
+    if (sv && Array.isArray(sv.on) && sv.on.length === on.length && sv.on.every((v) => typeof v === 'boolean')) {
+      sv.on.forEach((v, i) => (on[i] = v as boolean));
+      const count = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : 0);
+      moves = count(sv.moves);
+      if (Array.isArray(sv.hist))
+        hist = sv.hist
+          .filter(
+            (e): e is { t: number[]; m: number } =>
+              !!e &&
+              typeof e === 'object' &&
+              Array.isArray((e as { t?: unknown }).t) &&
+              (e as { t: unknown[] }).t.every((i) => Number.isInteger(i) && (i as number) >= 0 && (i as number) < on.length),
+          )
+          .map((e) => ({ t: e.t.slice(), m: count(e.m) }))
+          .slice(-500);
     }
     root.append(grid);
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     render();
     /** Tile `i` and its up-to-4 neighbours. */
     const cross = (i: number) => {
@@ -165,6 +206,20 @@ export const lights: PuzzleDef = {
         play: () => press(o.i),
       };
     };
-    return { snapshot: () => ({ on, moves }), hint };
+    return {
+      snapshot: () => ({ on, moves, hist }),
+      hint,
+      onKey(e) {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') {
+          undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          restart();
+          return true;
+        }
+        return false;
+      },
+    };
   },
 };

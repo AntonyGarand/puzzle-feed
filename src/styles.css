@@ -19,6 +19,12 @@
   --shade: #111111;
   --on-shade: #ffffff;
 
+  /* physical objects (card faces, chess squares and pieces, black/white pearls): the same tones in both
+     themes, so "red on black" or "white pearl" stays true in dark mode. Never use them for UI surfaces. */
+  --paper: #fffdf6;
+  --paper-alt: #f4ead6;
+  --coal: #111111;
+
   /* shared palette (flood, code breaker, …) */
   --p1: #ff8a3d;
   --p2: #5b8cff;
@@ -67,43 +73,6 @@
   }
 }
 
-/* puzzle tones */
-[data-puzzle='target'] {
-  --accent: var(--p7);
-}
-[data-puzzle='sudoku'] {
-  --accent: var(--p2);
-}
-[data-puzzle='lights'] {
-  --accent: var(--p4);
-}
-[data-puzzle='slide'] {
-  --accent: var(--p1);
-}
-[data-puzzle='queens'] {
-  --accent: var(--p5);
-}
-[data-puzzle='memory'] {
-  --accent: var(--p6);
-}
-[data-puzzle='nonogram'] {
-  --accent: var(--p2);
-}
-[data-puzzle='codebreaker'] {
-  --accent: var(--p5);
-}
-[data-puzzle='maze'] {
-  --accent: var(--p3);
-}
-[data-puzzle='pipes'] {
-  --accent: var(--p1);
-}
-[data-puzzle='flood'] {
-  --accent: var(--p6);
-}
-[data-puzzle='anagram'] {
-  --accent: var(--p4);
-}
 [data-puzzle] {
   --accent-soft: color-mix(in srgb, var(--accent) 32%, var(--cell));
 }
@@ -407,6 +376,24 @@ h3 {
   color: var(--on-tone);
   font-variant-numeric: tabular-nums;
 }
+.lives {
+  display: flex;
+  gap: 2px;
+  padding: 3px 6px;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+}
+.lives i {
+  width: 11px;
+  height: 10px;
+  background: var(--bad);
+  clip-path: path('M5.5 10 0.8 5.2A2.8 2.8 0 0 1 5.5 1.4 2.8 2.8 0 0 1 10.2 5.2Z');
+}
+.lives i:not(.on) {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.lives.bump,
 .mistakes.bump {
   animation: bump 0.3s ease;
 }
@@ -1263,6 +1250,29 @@ button.cell:active {
   font-size: 0.85em;
   font-weight: 700;
 }
+/* long-press progress (tapOrHold, pressable and friends toggle .lp): a ring closes in while holding */
+.cell.lp::before {
+  content: '';
+  position: absolute;
+  inset: 14%;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px var(--ink),
+    inset 0 0 0 1px var(--ink);
+  pointer-events: none;
+  animation: lp-ring 0.4s linear forwards;
+}
+@keyframes lp-ring {
+  from {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+}
 
 /* edge count clues (tents, tracks, haunted, skyscrapers): big target, small live tally pill beside it */
 .cc-host {
@@ -1308,324 +1318,8 @@ button.cell:active {
   }
 }
 
-/* sudoku: givens are ink, entries are tone-coloured */
-.sudoku .cell:not(.given) {
-  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
-}
-.sudoku .cell.sel:not(.given) {
-  color: var(--on-tone);
-}
-.sudoku .cell.alt {
-  background: color-mix(in srgb, var(--accent) 12%, var(--cell-alt));
-}
-.sudoku .cell.alt.peer {
-  background: color-mix(in srgb, var(--accent) 24%, var(--cell-alt));
-}
-
-/* slide */
-[data-puzzle='slide'] .grid {
-  touch-action: none;
-}
-.cell.tile.gap {
-  background: transparent;
-  border-style: dashed;
-  box-shadow: none;
-}
-.cell.tile.home {
-  background: var(--accent);
-  color: var(--on-tone);
-}
-
-/* queens */
-.cell.queen {
-  background: var(--accent);
-}
-.cell.queen::after {
-  content: '♛';
-  font-size: 0.95em;
-  line-height: 1;
-  color: var(--on-tone);
-}
-.cell.queen.given {
-  background: var(--ink);
-}
-.cell.queen.given::after {
-  color: var(--bg);
-}
-
 .cell.given {
   cursor: default;
-}
-
-/* pipes */
-.pipes .cell {
-  overflow: hidden;
-}
-.pipe {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.14s ease;
-}
-.pipe line {
-  stroke: color-mix(in srgb, var(--fg) 30%, var(--cell));
-  stroke-width: 18;
-  stroke-linecap: square;
-}
-.pipe circle {
-  fill: color-mix(in srgb, var(--fg) 30%, var(--cell));
-}
-.lit {
-  background: var(--accent) !important;
-}
-.lit .pipe line {
-  stroke: var(--on-tone);
-}
-.lit .pipe circle {
-  fill: var(--on-tone);
-}
-.pipe circle.src {
-  fill: var(--on-tone) !important;
-  stroke: var(--cell);
-  stroke-width: 6;
-}
-
-/* flood: one framed board, no per-cell borders */
-.grid.flood {
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
-}
-.flood .cell {
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  cursor: pointer;
-}
-
-/* odd shade */
-.swatch-cell {
-  cursor: pointer;
-}
-
-/* nonogram */
-.nono {
-  display: grid;
-  grid-template-columns: auto var(--board);
-  grid-template-rows: auto auto;
-  gap: 8px;
-  padding: 10px 10px 10px 8px;
-  background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
-  --board: calc(var(--fit, 380px) * 0.8);
-}
-.nono .cols {
-  display: grid;
-  grid-template-columns: repeat(var(--cols), 1fr);
-  column-gap: var(--gap);
-  align-items: end;
-}
-.nono .rows {
-  display: grid;
-  grid-template-rows: repeat(var(--cols), 1fr);
-  row-gap: var(--gap);
-}
-.clue {
-  font-size: clamp(11px, calc(var(--board) / var(--cols) * 0.36), 16px);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  border-radius: 4px;
-  transition: opacity 0.2s;
-}
-.clue.col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1.1;
-  padding: 3px 0;
-}
-.clue.row {
-  display: flex;
-  gap: 0.5em;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 5px;
-}
-.clue.done {
-  opacity: 0.3;
-}
-.nono-grid {
-  touch-action: none;
-  padding: 0;
-}
-.nono-grid .cell {
-  cursor: pointer;
-  box-shadow: none;
-  border-radius: 3px;
-}
-.nono-grid .cell.on {
-  background: var(--ink);
-}
-
-/* code breaker */
-.code-board {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: min(var(--board), 340px);
-  padding: 8px;
-  background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
-}
-.code-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 2px solid transparent;
-}
-.code-row.cur {
-  background: var(--accent-soft);
-  border-color: var(--ink);
-}
-.code-row.future {
-  opacity: 0.5;
-}
-.code-row.reveal {
-  border: 2px dashed var(--ink);
-  margin-top: 6px;
-}
-.pegs {
-  display: flex;
-  gap: 8px;
-}
-.peg {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--c);
-  border: 2px solid var(--ink);
-}
-.peg.empty {
-  background: transparent;
-  border-style: dashed;
-  opacity: 0.5;
-}
-.code-row.cur .peg.empty {
-  opacity: 1;
-  background: var(--cell);
-}
-.fb {
-  display: grid;
-  grid-template-columns: repeat(3, 9px);
-  gap: 3px;
-  min-width: 33px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.fb i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 2px solid var(--ink);
-}
-.fb .exact {
-  background: var(--ink);
-}
-@media (max-height: 760px) {
-  .peg {
-    width: 19px;
-    height: 19px;
-  }
-  .code-row {
-    padding: 2px 8px;
-  }
-}
-
-/* maze */
-.maze-wrap {
-  width: var(--board);
-  aspect-ratio: 1;
-  overflow: hidden;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
-  background: var(--cell);
-}
-.maze {
-  width: 100%;
-  height: 100%;
-  display: block;
-  touch-action: none;
-}
-
-/* target */
-.chips {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  min-height: 60px;
-}
-.chip.num {
-  min-width: 60px;
-  height: 60px;
-  padding: 0 14px;
-  background: var(--cell);
-  font-size: 24px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  box-shadow: 3px 3px 0 var(--ink);
-  transition:
-    transform 0.06s,
-    box-shadow 0.06s;
-}
-.chip.num:active {
-  transform: translate(3px, 3px);
-  box-shadow: none;
-}
-.chip.num.sel {
-  background: var(--accent);
-  color: var(--on-tone);
-  transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 var(--ink);
-}
-[data-puzzle='target'] .big {
-  padding: 2px 22px;
-  background: var(--accent);
-  color: var(--on-tone);
-  border: var(--bw) solid var(--ink);
-  border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
-}
-
-/* anagram */
-.slots {
-  display: grid;
-  grid-template-columns: repeat(var(--len), 1fr);
-  gap: 8px;
-  width: min(var(--board), calc(var(--len) * 58px));
-  padding: 0 3px 3px 0;
-}
-.slots .cell {
-  font-size: clamp(18px, 6vw, 28px);
-  text-transform: uppercase;
-}
-.slot {
-  border-style: dashed;
-  box-shadow: none;
-  background: transparent;
-}
-.slot.filled {
-  border-style: solid;
-  background: var(--accent);
-  color: var(--on-tone);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-.tiles .cell.used {
-  opacity: 0.2;
-  box-shadow: none;
-  transform: translate(3px, 3px);
 }
 
 /* ---------- feedback ---------- */
@@ -1646,11 +1340,12 @@ button.cell:active {
     transform: translateX(3px);
   }
 }
-.card.is-solved .grid,
-.card.is-solved .maze-wrap,
-.card.is-solved .nono,
-.card.is-solved .code-board {
+/* Shared result feedback, the same for every game: the board pops on a solve and shakes on a failure. */
+.card.is-solved .puzzle {
   animation: pop 0.45s ease;
+}
+.card.is-failed .puzzle {
+  animation: shake 0.45s;
 }
 @keyframes pop {
   40% {

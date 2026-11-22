@@ -2,7 +2,7 @@ import './singles.css';
 import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import { pressable } from './latinkit/entry';
 import { randomLatin } from './latinkit/solver';
 
@@ -165,8 +165,8 @@ export const singles: PuzzleDef = {
         'Touchez une case pour la changer : noircie, encerclée (sûre de rester), puis normale. Appuyez longuement (ou clic droit) pour l’encercler.',
       ),
       L(
-        'Keyboard: arrows move, Space cycles, Backspace resets. Red marks broken rules: repeats between circled cells, touching shades, or cut-off cells.',
-        'Au clavier : flèches pour bouger, Espace pour changer, Retour arrière pour remettre. Le rouge signale une règle brisée : doublon entre cases encerclées, noires qui se touchent ou cases coupées du reste.',
+        'Keyboard: arrows move, Space cycles, Backspace resets. Red marks broken rules: repeats between circled cells, touching shades, or cut-off cells. Clear wipes your marks.',
+        'Au clavier : flèches pour bouger, Espace pour changer, Retour arrière pour remettre. Le rouge signale une règle brisée : doublon entre cases encerclées, noires qui se touchent ou cases coupées du reste. Effacer retire vos marques.',
       ),
     ],
     tips: [
@@ -250,10 +250,13 @@ export const singles: PuzzleDef = {
         el,
         () => tap(i),
         () => set(i, 2),
+        () => !locked[i] && st[i] !== 2,
       );
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when shading breaks a rule (circles are marks and never count). */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const render = () => {
       const bad = new Set<number>();
@@ -285,7 +288,9 @@ export const singles: PuzzleDef = {
       if (done || locked[i] || st[i] === v) return;
       ctx.touch();
       st[i] = v;
-      if (render()) {
+      const won = render();
+      watch(v === 1);
+      if (won) {
         done = true;
         ctx.solved();
       }
@@ -304,6 +309,16 @@ export const singles: PuzzleDef = {
     if (typeof sv?.cur === 'number' && Number.isInteger(sv.cur) && sv.cur >= -1 && sv.cur < st.length) cur = sv.cur;
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v, i) => locked[i] || !v)) return;
+        ctx.touch();
+        st.forEach((_, i) => !locked[i] && (st[i] = 0));
+        render();
+        watch(false);
+      }),
+    );
 
     const lineCells = (row: boolean, k: number) => Array.from({ length: n }, (_, j) => (row ? k * n + j : j * n + k));
     const lineName = (row: boolean, k: number) =>

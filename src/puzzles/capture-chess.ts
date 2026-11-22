@@ -2,7 +2,8 @@ import './capture-chess.css';
 import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Difficulty, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, restartBtn, shake, undoBtn } from '../core/ui';
+import { GLYPH, pieceName, sqName as squareName } from './chesskit/pieces';
 import { anim } from './movekit/kit';
 
 /**
@@ -249,16 +250,6 @@ function generate(rng: Rng, d: Difficulty): Game {
 
 // ---------- game ----------
 
-const GLYPH = ['', '♟', '♞', '♝', '♜', '♛', '♚'].map((g) => (g ? g + '\uFE0E' : ''));
-const NAME = () => [
-  '',
-  L('pawn', 'pion'),
-  L('knight', 'cavalier'),
-  L('bishop', 'fou'),
-  L('rook', 'tour'),
-  L('queen', 'dame'),
-  L('king', 'roi'),
-];
 /** French article for a piece: tour and dame are feminine. */
 const LE = (p: number) => (p === ROOK || p === QUEEN ? 'la' : 'le');
 
@@ -295,8 +286,8 @@ export const captureChess: PuzzleDef = {
         'Touchez une pièce pour voir ce qu’elle peut prendre, puis touchez la cible. Vous pouvez aussi glisser la pièce dessus.',
       ),
       L(
-        'Stuck with no capture left? Undo (Z) takes back a move; Restart (R) sets the board up again.',
-        'Bloqué sans prise possible? Annuler (Z) reprend un coup; Repartir (R) replace toutes les pièces.',
+        'Stuck with no capture left? Undo (Z or Backspace) takes back a move; Restart (R) sets the board up again.',
+        'Bloqué sans prise possible? Annuler (Z ou Retour arrière) reprend un coup; Repartir (R) replace toutes les pièces.',
       ),
     ],
     tips: [
@@ -322,8 +313,11 @@ export const captureChess: PuzzleDef = {
     let over = false;
     let justPicked = false;
 
-    const sqName = (sq: number) => 'abcdefgh'[sq % n] + (n - Math.floor(sq / n));
-    const grid = board(n, n, 'cc-board');
+    /** Lines of captures taken back by Restart, newest last (Undo brings them back). */
+    const restarts: number[][] = [];
+
+    const sqName = (sq: number) => squareName(sq, n);
+    const grid = board(n, n, 'cc-board chessboard');
     const cells = Array.from({ length: N }, (_, sq) => {
       const el = h('button', {
         type: 'button',
@@ -352,7 +346,7 @@ export const captureChess: PuzzleDef = {
         if (last >= 0 && (sq === mFrom(last) || sq === mTo(last))) cls += ' last';
         if (p && limit && cur.used[sq] >= limit) cls += ' spent';
         el.className = cls;
-        el.setAttribute('aria-label', `${sqName(sq)}${p ? ' ' + NAME()[p] : ''}`);
+        el.setAttribute('aria-label', `${sqName(sq)}${p ? ' ' + pieceName(p) : ''}`);
         const kids: HTMLElement[] = [];
         if (p) kids.push(h('span', { class: 'pc' }, GLYPH[p]));
         if (p && limit) {
@@ -364,11 +358,9 @@ export const captureChess: PuzzleDef = {
         el.replaceChildren(...kids);
       });
       const left = count(cur);
-      if (stuck()) ctx.status(L(`No capture left with ${left} pieces · Undo`, `Aucune prise possible avec ${left} pièces · Annulez`));
-      else
-        ctx.status(
-          `${P(left, ['piece left', 'pieces left'], ['pièce restante', 'pièces restantes'])}${limit ? L(` · max ${limit} captures`, ` · ${limit} prises max`) : ''}`,
-        );
+      const pieces = P(left, ['piece left', 'pieces left'], ['pièce restante', 'pièces restantes']);
+      if (stuck()) ctx.status(`${pieces} · ${L('no capture left · undo', 'aucune prise possible · annulez')}`);
+      else ctx.status(`${pieces}${limit ? L(` · max ${limit} captures`, ` · ${limit} prises max`) : ''}`);
     };
 
     const play = (m: number, animate = true) => {
@@ -437,28 +429,48 @@ export const captureChess: PuzzleDef = {
       play(sel * 64 + sq);
     });
 
+    /** Undo takes back the last capture; right after a Restart it brings the whole line back. */
     const undo = () => {
-      if (over || !done.length) return;
-      done.pop();
+      if (over) return;
+      if (done.length) done.pop();
+      else if (restarts.length) done.push(...restarts.pop()!);
+      else return;
+      ctx.touch();
       cur = done.reduce(apply, g.start);
       sel = -1;
       render();
     };
     const restart = () => {
       if (over || !done.length) return;
+      ctx.touch();
+      restarts.push([...done]);
       done.length = 0;
       cur = g.start;
       sel = -1;
       render();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), restart, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
-    const sv = ctx.saved as { moves?: unknown; sel?: unknown } | undefined;
-    if (Array.isArray(sv?.moves)) {
-      for (const m of sv.moves) {
-        if (typeof m !== 'number' || !moves(g, cur).includes(m) || count(cur) <= 2) break;
-        play(m, false);
+    /** The longest legal prefix of a saved line of captures (never a finished board). */
+    const legalLine = (v: unknown): number[] => {
+      const out: number[] = [];
+      if (!Array.isArray(v)) return out;
+      let s = g.start;
+      for (const m of v) {
+        if (typeof m !== 'number' || !moves(g, s).includes(m) || count(s) <= 2) break;
+        s = apply(s, m);
+        out.push(m);
       }
+      return out;
+    };
+    const sv = ctx.saved as { moves?: unknown; sel?: unknown; restarts?: unknown } | undefined;
+    if (sv && typeof sv === 'object') {
+      for (const m of legalLine(sv.moves)) play(m, false);
+      if (Array.isArray(sv.restarts))
+        for (const r of sv.restarts.slice(-20)) {
+          const line = legalLine(r);
+          if (line.length) restarts.push(line);
+        }
       if (Number.isInteger(sv.sel) && (sv.sel as number) >= 0 && (sv.sel as number) < N && cur.type[sv.sel as number])
         sel = sv.sel as number;
     }
@@ -481,8 +493,8 @@ export const captureChess: PuzzleDef = {
       const m = done[k];
       const f = mFrom(m),
         t = mTo(m);
-      const pf = NAME()[s.type[f]],
-        pt = NAME()[s.type[t]];
+      const pf = pieceName(s.type[f]),
+        pt = pieceName(s.type[t]);
       const after = apply(s, m);
       const back = done.length - k;
       const left = count(after);
@@ -518,7 +530,7 @@ export const captureChess: PuzzleDef = {
     const hint = (): Hint | null => {
       if (over) return null;
       const all = moves(g, cur);
-      const name = (sq: number, s: Pos = cur) => NAME()[s.type[sq]];
+      const name = (sq: number, s: Pos = cur) => pieceName(s.type[sq]);
       if (!all.length) {
         if (!done.length) return null;
         const t = mTo(done[done.length - 1]);
@@ -640,7 +652,7 @@ export const captureChess: PuzzleDef = {
     root.append(grid);
     render();
     return {
-      snapshot: () => ({ moves: [...done], sel }),
+      snapshot: () => ({ moves: [...done], sel, restarts: restarts.map((r) => [...r]) }),
       hint,
       check,
       onKey(e) {

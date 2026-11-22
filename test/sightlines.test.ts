@@ -31,6 +31,7 @@ describe('sightlines', () => {
           mistake() {},
           touch() {},
           status() {},
+          lives() {},
           controls() {},
         };
         const inst = sightlines.create(ctx) || {};

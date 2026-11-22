@@ -1,3 +1,22 @@
+[data-puzzle='flood'] {
+  --accent: var(--p6);
+}
+
+/* Base styles (moved from styles.css). */
+/* one framed board, no per-cell borders */
+[data-puzzle='flood'] .grid.flood {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+}
+[data-puzzle='flood'] .flood .cell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
 [data-puzzle='flood'] .fl-head {
   display: flex;
   align-items: center;
@@ -5,18 +24,14 @@
   width: var(--board);
   margin-bottom: -6px;
 }
+/* Colours, border and the low state come from playkit/moves-left.css. */
 [data-puzzle='flood'] .fl-left {
   display: flex;
   align-items: baseline;
   gap: 6px;
   padding: 2px 12px;
-  background: var(--accent);
-  color: var(--on-tone);
-  border: var(--bw) solid var(--ink);
   border-radius: 999px;
-  box-shadow: 3px 3px 0 var(--ink);
   white-space: nowrap;
-  transition: background 0.2s;
 }
 [data-puzzle='flood'] .fl-num {
   display: inline-block;
@@ -44,7 +59,6 @@
     width 0.25s ease,
     background 0.2s;
 }
-[data-puzzle='flood'] .fl-head.low .fl-left,
 [data-puzzle='flood'] .fl-head.low .fl-fill {
   background: var(--bad);
 }

@@ -1,0 +1,34 @@
+[data-puzzle='pipes'] {
+  --accent: var(--p1);
+}
+
+[data-puzzle='pipes'] .pipes .cell {
+  overflow: hidden;
+}
+[data-puzzle='pipes'] .pipe {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.14s ease;
+}
+[data-puzzle='pipes'] .pipe line {
+  stroke: color-mix(in srgb, var(--fg) 30%, var(--cell));
+  stroke-width: 18;
+  stroke-linecap: square;
+}
+[data-puzzle='pipes'] .pipe circle {
+  fill: color-mix(in srgb, var(--fg) 30%, var(--cell));
+}
+[data-puzzle='pipes'] .lit {
+  background: var(--accent) !important;
+}
+[data-puzzle='pipes'] .lit .pipe line {
+  stroke: var(--on-tone);
+}
+[data-puzzle='pipes'] .lit .pipe circle {
+  fill: var(--on-tone);
+}
+[data-puzzle='pipes'] .pipe circle.src {
+  fill: var(--on-tone) !important;
+  stroke: var(--cell);
+  stroke-width: 6;
+}

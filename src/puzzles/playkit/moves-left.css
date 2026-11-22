@@ -1,0 +1,12 @@
+/* Shared "moves left" meter pill (flood, copy-paste): accent tone, red when running low. */
+:is([data-puzzle='flood'], [data-puzzle='copy-paste']) .moves-left {
+  background: var(--accent);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  font-variant-numeric: tabular-nums;
+  transition: background 0.2s;
+}
+:is([data-puzzle='flood'], [data-puzzle='copy-paste']) .low .moves-left {
+  background: var(--bad);
+}

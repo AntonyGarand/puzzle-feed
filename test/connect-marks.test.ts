@@ -22,6 +22,7 @@ function make(seed: number, saved?: unknown) {
     mistake() {},
     touch() {},
     status() {},
+    lives() {},
     controls() {},
   };
   connect.create(ctx);

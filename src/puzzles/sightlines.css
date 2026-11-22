@@ -38,22 +38,3 @@
   outline-offset: 1px;
   z-index: 1;
 }
-/* long-press progress: a ring closes in while holding, then the cell gets a dot */
-[data-puzzle='sightlines'] .sl-grid .cell.lp::before {
-  content: '';
-  position: absolute;
-  inset: 14%;
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  animation: sl-press 0.35s linear forwards;
-}
-@keyframes sl-press {
-  from {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(0.6);
-    opacity: 1;
-  }
-}

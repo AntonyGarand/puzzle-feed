@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { h, PALETTE, s, shake } from '../core/ui';
+import { h, pad, PALETTE, s, shake } from '../core/ui';
 import { genHiddenRule, type Spec } from './shapekit/rulegen';
 import { shape } from './shapekit/shapes';
 import './hidden-rule.css';
@@ -10,7 +10,7 @@ const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 export const hiddenRule: PuzzleDef = {
   id: 'hidden-rule',
   get name() {
-    return L('Hidden rule', 'Règle cachée');
+    return L('Hidden Rule', 'Règle cachée');
   },
   category: 'logic',
   offByDefault: true,
@@ -40,8 +40,8 @@ export const hiddenRule: PuzzleDef = {
         'Chaque motif classé rejoint la bande du bas avec sa vraie marque : un indice de plus pour le suivant.',
       ),
       L(
-        'A wrong mark costs a life (●). Sort them all to win; the rule is revealed at the end.',
-        'Une erreur coûte une vie (●). Classez-les tous pour gagner; la règle est dévoilée à la fin.',
+        'A wrong mark costs a life (♥). Sort them all to win; the rule is revealed at the end.',
+        'Une erreur coûte une vie (♥). Classez-les tous pour gagner; la règle est dévoilée à la fin.',
       ),
       L(
         'From Expert on, the rule joins two simpler ones (and, or, but not).',
@@ -107,33 +107,30 @@ export const hiddenRule: PuzzleDef = {
     const no = row('✗', L('Break the rule', 'Enfreignent la règle'), g.neg);
 
     const stage = h('div', { class: 'hr-stage' });
-    const lifeDots = h('div', { class: 'dots', 'aria-label': L('lives', 'vies') });
     const prompt = h('p', { class: 'hr-prompt' });
-    const keyYes = h(
-      'button',
-      { type: 'button', class: 'key hr-yes', 'aria-label': L('Follows the rule', 'Respecte la règle'), onclick: () => answer(true) },
-      '✓',
+    const keys = pad(
+      [
+        { label: '✓', value: 'y', class: 'hr-yes', aria: L('Follows the rule', 'Respecte la règle') },
+        { label: '✗', value: 'n', class: 'hr-no', aria: L('Breaks the rule', 'Enfreint la règle') },
+      ],
+      (v) => answer(v === 'y'),
     );
-    const keyNo = h(
-      'button',
-      { type: 'button', class: 'key hr-no', 'aria-label': L('Breaks the rule', 'Enfreint la règle'), onclick: () => answer(false) },
-      '✗',
-    );
-    const keys = h('div', { class: 'hr-keys' }, keyYes, keyNo);
-    const side = h('div', { class: 'hr-side' }, lifeDots, prompt, keys);
+    keys.classList.add('hr-keys');
+    const [keyYes, keyNo] = keys.children;
+    const side = h('div', { class: 'hr-side' }, prompt, keys);
     const play = h('div', { class: 'hr-play' }, stage, side);
     const hist = h('div', { class: 'hr-hist', style: `--n:${tests.length}` });
 
     const render = () => {
       const i = answers.length;
-      lifeDots.replaceChildren(...Array.from({ length: maxLives }, (_, k) => h('span', { class: `dot ${k < lives ? 'on' : ''}`.trim() })));
+      ctx.lives(lives, maxLives);
       stage.replaceChildren(i < tests.length && !over ? spec(tests[i], 'hr-test') : spec(tests[Math.max(0, i - 1)], 'hr-test done'));
       hist.replaceChildren(
         ...tests.map((sp, k) => {
           if (k >= i) return h('div', { class: `hr-slot ${k === i && !over ? 'cur' : ''}`.trim() }, h('i', { class: 'hr-empty' }));
           const truth = rule.test(sp);
           const ok = answers[k] === truth;
-          return h('div', { class: `hr-slot ${ok ? 'ok' : 'bad'}` }, spec(sp), h('b', { class: truth ? 'yes' : 'no' }, truth ? '✓' : '✗'));
+          return h('div', { class: `hr-slot ${ok ? 'ok' : 'err'}` }, spec(sp), h('b', { class: truth ? 'yes' : 'no' }, truth ? '✓' : '✗'));
         }),
       );
       if (over) {
@@ -143,7 +140,7 @@ export const hiddenRule: PuzzleDef = {
       } else {
         prompt.textContent = L('Does this one follow the rule?', 'Celui-ci respecte-t-il la règle?');
       }
-      ctx.status(over ? '' : L(`Pattern ${i + 1} of ${tests.length}`, `Motif ${i + 1} sur ${tests.length}`));
+      ctx.status(`${i} / ${P(tests.length, ['pattern', 'patterns'], ['motif', 'motifs'])}`);
     };
 
     const answer = (v: boolean) => {

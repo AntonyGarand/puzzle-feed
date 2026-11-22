@@ -1,7 +1,7 @@
 import './haunted.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { addTally, board, h, s, setTally } from '../core/ui';
+import { addTally, board, clearBtn, h, pad, s, setTally } from '../core/ui';
 import { ALL, bit, genHaunted, GHOST, narrowLine, pathRange, propagate, seen, single, VAMPIRE, ZOMBIE } from './logickit/hauntedgen';
 
 const kindName = (v: number) => (v === GHOST ? L('ghost', 'fantôme') : v === VAMPIRE ? L('vampire', 'vampire') : L('zombie', 'zombie'));
@@ -78,8 +78,8 @@ export const haunted: PuzzleDef = {
         'Un monstre croisé deux fois par le regard compte deux fois. Les touches sous la grille montrent combien il en reste à placer, sur le total.',
       ),
       L(
-        'Tap a cell, then a monster key. Tap the same key again, or ✕, to clear it. Tap an edge number to light up its line.',
-        'Touchez une case, puis une touche de monstre. Retouchez la même touche, ou ✕, pour l’effacer. Touchez un nombre du bord pour éclairer sa ligne.',
+        'Tap a cell, then a monster key. Tap the same key again, or ✕, to clear it (Clear wipes them all). Tap an edge number to light up its line.',
+        'Touchez une case, puis une touche de monstre. Retouchez la même touche, ou ✕, pour l’effacer (Effacer les retire tous). Touchez un nombre du bord pour éclairer sa ligne.',
       ),
       L(
         'Keyboard: arrows move, G, V, Z (or 1, 2, 3) place, Backspace clears. A number turns red once it can no longer be met.',
@@ -139,21 +139,23 @@ export const haunted: PuzzleDef = {
     for (let r = 0; r < n; r++) grid.append(clueEls[3 * n + r], ...cells.slice(r * n, r * n + n), clueEls[n + r]);
     grid.append(corner(), ...clueEls.slice(2 * n, 3 * n), corner());
 
-    const counts: HTMLElement[] = [];
-    const keyEls = [GHOST, VAMPIRE, ZOMBIE].map((v) => {
-      counts[v] = h('span', { class: 'hn-n' });
-      return h(
-        'button',
-        { type: 'button', class: 'key hn-key', 'aria-label': kindName(v), title: kindName(v), onclick: () => input(v) },
-        glyph(v),
-        counts[v],
-      );
-    });
-    const erase = h(
-      'button',
-      { type: 'button', class: 'key', 'aria-label': L('Erase', 'Effacer'), onclick: () => sel >= 0 && vals[sel] && input(vals[sel]) },
-      '✕',
+    // Pad: one key per monster (glyph + how many are left to place), then ✕ to erase.
+    const padEl = pad(
+      [
+        ...[GHOST, VAMPIRE, ZOMBIE].map((v) => ({ label: '', value: String(v), class: 'hn-key', aria: kindName(v) })),
+        { label: '✕', value: '0', aria: L('Erase', 'Effacer') },
+      ],
+      (k) => (k === '0' ? sel >= 0 && vals[sel] && input(vals[sel]) : input(Number(k))),
     );
+    padEl.classList.add('hn-pad');
+    const counts: HTMLElement[] = [];
+    const keyEls = [GHOST, VAMPIRE, ZOMBIE].map((v, k) => {
+      const el = padEl.children[k] as HTMLElement;
+      counts[v] = h('span', { class: 'hn-n' });
+      el.title = kindName(v);
+      el.append(glyph(v), counts[v]);
+      return el;
+    });
 
     const domains = () => {
       const dom = new Uint8Array(N);
@@ -248,7 +250,15 @@ export const haunted: PuzzleDef = {
     if (typeof saved?.sel === 'number' && (saved.sel === -1 || (saved.sel >= 0 && saved.sel < N && !mir[saved.sel]))) sel = saved.sel;
     if (typeof saved?.lit === 'number' && saved.lit >= -1 && saved.lit < 4 * n && (saved.lit < 0 || on[saved.lit])) lit = saved.lit;
 
-    root.append(grid, h('div', { class: 'pad hn-pad' }, ...keyEls, erase));
+    /** Clear: wipe every monster you placed (givens stay). */
+    const clear = () => {
+      if (done || !open.some((c) => !givens[c] && vals[c])) return;
+      ctx.touch();
+      for (const c of open) if (!givens[c]) vals[c] = 0;
+      render();
+    };
+    root.append(grid, padEl);
+    ctx.controls(clearBtn(clear));
     render();
 
     // ---------- guide ----------

@@ -63,7 +63,7 @@
   gap: var(--gap);
   pointer-events: none;
   opacity: 0.85;
-  filter: drop-shadow(3px 3px 0 var(--ink));
+  filter: drop-shadow(var(--sh) var(--sh) 0 var(--ink));
 }
 [data-puzzle='blocks'] .blk-ghost i {
   border-width: var(--bw);

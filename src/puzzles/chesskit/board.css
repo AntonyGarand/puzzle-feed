@@ -1,0 +1,88 @@
+/*
+ * Shared chess board (chess, capture-chess). Each game sets on its [data-puzzle] root:
+ *   --sq-l / --sq-d   light / dark squares     --sq-ink  piece and ring ink
+ *   --sq-hi           selection highlight      --sq-last / --sq-last-dk  last move on light / dark
+ *   --pc-size         piece size (share of a square)   --co-size  rank / file label size
+ * The board is a physical object: its squares and pieces keep the same tones in both themes.
+ */
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) {
+  --sq-l: var(--paper-alt);
+  --sq-ink: var(--coal);
+  --sq-hi: var(--hi);
+}
+/* One solid framed board: no gaps, no per-square borders, ink frame + hard shadow. */
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .grid.chessboard {
+  gap: 0;
+  padding: 0;
+  border: calc(var(--bw) + 0.5px) solid var(--ink);
+  border-radius: var(--r-cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: hidden;
+  background: var(--sq-l);
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--sq-l);
+  color: var(--sq-ink);
+  font-size: calc(var(--board) / var(--cols) * var(--pc-size));
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell:active {
+  transform: none;
+  box-shadow: none;
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.dk {
+  background: var(--sq-d);
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.last {
+  background: var(--sq-last);
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.last.dk {
+  background: var(--sq-last-dk);
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.sel {
+  background: color-mix(in srgb, var(--sq-hi) 82%, var(--sq-l));
+  box-shadow: inset 0 0 0 3px var(--sq-ink);
+}
+/* Rank / file labels on the edge squares (drawn in the opposite square tone). */
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell[data-rank]::before,
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell > .co {
+  position: absolute;
+  font-size: max(8px, calc(var(--board) / var(--cols) * var(--co-size)));
+  font-weight: 800;
+  line-height: 1;
+  color: var(--sq-d);
+  pointer-events: none;
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell[data-rank]::before {
+  content: attr(data-rank);
+  left: 3px;
+  top: 3px;
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell > .co {
+  right: 3px;
+  bottom: 2px;
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.dk[data-rank]::before,
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard .cell.dk > .co {
+  color: var(--sq-l);
+}
+/* Pieces: text glyphs with a hard outline. White (.pw, and every capture-chess .pc) is always light. */
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard :is(.pw, .pb, .pc) {
+  position: relative;
+  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', 'Apple Symbols', sans-serif;
+  font-variant-emoji: text;
+  font-weight: 400;
+  pointer-events: none;
+  transform: translateY(-3%);
+  paint-order: stroke fill;
+  text-shadow: 1px 1.5px 0 color-mix(in srgb, var(--coal) 35%, transparent);
+}
+:is([data-puzzle='chess'], [data-puzzle='capture-chess']) .chessboard :is(.pw, .pc) {
+  color: var(--paper);
+  -webkit-text-stroke: 2px var(--coal);
+}

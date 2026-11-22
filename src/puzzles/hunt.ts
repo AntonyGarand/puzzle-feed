@@ -4,6 +4,7 @@ import { board, btn, h, shake } from '../core/ui';
 import { adjacent, findPath, makeGrid, points } from './wordkit/hunt-solver';
 import { dictReady, isWord, letterKey, whenDict } from './wordkit/lexicon';
 import { traceInput, traceOverlay } from './wordkit/trace';
+import './wordkit/pill.css';
 import './hunt.css';
 
 export const hunt: PuzzleDef = {
@@ -35,8 +36,12 @@ export const hunt: PuzzleDef = {
         'Chaque tuile ne sert qu’une fois par mot. La longueur minimale est affichée au-dessus de la grille (3 ou 4 lettres).',
       ),
       L(
-        'Longer words score more: 3 letters = 1 pt, 4 = 2, 5 = 3, 6 = 5, 7 = 7, 8+ = 10.',
-        'Les mots longs rapportent plus : 3 lettres = 1 pt, 4 = 2, 5 = 3, 6 = 5, 7 = 7, 8 et + = 10.',
+        'Longer words score more: 3 letters = 1 pt, 4 = 2, 5 = 3, 6 = 5, 7 = 7, 8+ = 10. Something that isn’t a word counts as a mistake.',
+        'Les mots longs rapportent plus : 3 lettres = 1 pt, 4 = 2, 5 = 3, 6 = 5, 7 = 7, 8 et + = 10. Ce qui n’est pas un mot compte comme une erreur.',
+      ),
+      L(
+        'The first ★ solves the puzzle. Keep going for ★★★, or tap Finish to stop there.',
+        'La première ★ résout la partie. Continuez vers ★★★, ou touchez Terminer pour vous arrêter là.',
       ),
       L(
         'Keyboard: type a word and press Enter; Backspace removes a letter, Escape clears.',
@@ -83,8 +88,9 @@ export const hunt: PuzzleDef = {
     const bar = h('div', { class: 'hunt-bar' }, fill, ...starEls);
     const remainingEl = h('div', { class: 'hunt-left' });
     const foundEl = h('div', { class: 'hunt-found' });
+    // The ★ goal records the solve (`keepPlaying`); Finish, or ★★★, ends the run.
     const finish = btn(
-      L('Finish ✓', 'Terminer ✓'),
+      L('Finish', 'Terminer'),
       () => {
         if (!won) {
           won = true;
@@ -147,7 +153,7 @@ export const hunt: PuzzleDef = {
           h(
             'span',
             {
-              class: `hunt-len ${(left.get(len) ?? 0) === 0 ? 'done' : ''}`,
+              class: `word-pill hunt-len${(left.get(len) ?? 0) === 0 ? ' done' : ''}`,
               title: L(`${len}-letter words left`, `mots de ${len} lettres restants`),
             },
             h('b', null, L(`${len}L`, `${len} l.`)),
@@ -155,7 +161,9 @@ export const hunt: PuzzleDef = {
           ),
         ),
       );
-      foundEl.replaceChildren(...[...found].reverse().map((w) => h('span', { class: listed.includes(w) ? '' : 'bonus' }, w)));
+      foundEl.replaceChildren(
+        ...[...found].reverse().map((w) => h('span', { class: listed.includes(w) ? 'word-pill' : 'word-pill bonus' }, w)),
+      );
       finish.hidden = won || st < 1 || st >= 3;
       ctx.status(
         st >= 1
@@ -193,20 +201,24 @@ export const hunt: PuzzleDef = {
         return;
       }
       if (!ok) {
+        // A rejected answer: a mistake (a real word never is, even one that doesn't score).
         render();
         shake(word);
+        ctx.mistake();
         say(L('Not a word', 'Mot inconnu'));
         return;
       }
+      const before = stars();
       found.push(w);
       score += points(w.length);
       render();
       say(`+${points(w.length)} ${w}`);
-      if (stars() >= 3 && !won) {
+      if (won) return;
+      if (stars() >= 3) {
         won = true;
         render();
         ctx.solved();
-      }
+      } else if (before < 1 && stars() >= 1) ctx.solved({ keepPlaying: true });
     };
 
     // Pointer: drag to trace (release submits); or tap cells one by one and tap the last again to submit.

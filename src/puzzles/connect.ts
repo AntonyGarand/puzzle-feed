@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, PALETTE, s } from '../core/ui';
+import { board, clearBtn, h, PALETTE, s } from '../core/ui';
 import { genConnect } from './pathkit/connect-gen';
 import { adjacent, capture, cellAt, nbrs, pts, stepsToward } from './pathkit/grid';
 import './connect.css';
@@ -123,7 +123,7 @@ export const connect: PuzzleDef = {
       );
       const linked = paths.filter((_, c) => complete(c)).length;
       const pct = Math.round((filled / N) * 100);
-      ctx.status(L(`${linked}/${k} linked · ${pct}% filled`, `${linked}/${k} reliées · ${pct} % rempli`));
+      ctx.status(L(`${linked} / ${k} linked · ${pct}% filled`, `${linked} / ${k} reliées · ${pct} % rempli`));
       return linked === k && filled === N && !bad.length;
     };
     const check = () => {
@@ -205,15 +205,11 @@ export const connect: PuzzleDef = {
     grid.addEventListener('pointercancel', end);
 
     ctx.controls(
-      btn(
-        L('Clear', 'Effacer'),
-        () => {
-          if (finished) return;
-          paths.forEach((p) => (p.length = 0));
-          render();
-        },
-        'ghost',
-      ),
+      clearBtn(() => {
+        if (finished) return;
+        paths.forEach((p) => (p.length = 0));
+        render();
+      }),
     );
 
     // ---- resume ----

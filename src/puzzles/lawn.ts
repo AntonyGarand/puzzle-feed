@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, s, shake } from '../core/ui';
+import { board, h, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { anim, keyDir, type Dir } from './movekit/kit';
 import { adjacent, capture, cellAt, stepsToward } from './pathkit/grid';
 import { blocker, genMow, lawnAdj, movesFrom, solveMow, type Blocker } from './playkit/lawn-gen';
@@ -154,6 +154,7 @@ export const lawn: PuzzleDef = {
       facing = r1 < r0 ? 0 : c1 > c0 ? 1 : r1 > r0 ? 2 : 3;
       g[j]--;
       hist.push(j);
+      beforeRestart = null;
       pos = j;
       render();
       anim(cells[j], [{ transform: 'scale(0.92)' }, { transform: 'scale(1)' }], 140);
@@ -161,10 +162,7 @@ export const lawn: PuzzleDef = {
         done = true;
         drag = null;
         ctx.solved();
-      } else if (stuck()) {
-        shake(mower);
-        ctx.mistake();
-      }
+      } else if (stuck()) shake(mower); // a dead end: the status says so; Undo backs out of it
       return true;
     };
     const move = (dir: Dir) => {
@@ -176,15 +174,22 @@ export const lawn: PuzzleDef = {
       }
       go(r * w + c);
     };
+    /** The moves undone by Restart, so Undo can bring them back. */
+    let beforeRestart: number[] | null = null;
     const undo = () => {
-      if (done || !hist.length) return;
-      const j = hist.pop()!;
-      g[j]++;
+      if (done) return;
+      if (!hist.length) {
+        if (!beforeRestart) return;
+        for (const j of beforeRestart) g[j]--;
+        hist.push(...beforeRestart);
+        beforeRestart = null;
+      } else g[hist.pop()!]++;
       pos = hist.length ? hist[hist.length - 1] : start;
       render();
     };
     const reset = () => {
       if (done || !hist.length) return;
+      beforeRestart = [...hist];
       while (hist.length) g[hist.pop()!]++;
       pos = start;
       facing = 0;
@@ -256,7 +261,7 @@ export const lawn: PuzzleDef = {
       if (down?.id === e.pointerId) down = null;
     });
 
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
 
     // Resume: replay the saved moves while they stay legal.
     const sv = ctx.saved as { m?: unknown } | undefined;
@@ -484,11 +489,11 @@ export const lawn: PuzzleDef = {
           if (!done) move(k);
           return true;
         }
-        if (e.key === 'z' || e.key === 'u' || e.key === 'Backspace') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'u' || e.key === 'Backspace') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           reset();
           return true;
         }

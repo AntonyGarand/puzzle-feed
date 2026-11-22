@@ -41,7 +41,7 @@
   place-items: center;
   width: 70%;
   height: 70%;
-  border: 2px solid var(--ink);
+  border: var(--cbw) solid var(--ink);
   border-radius: 50%;
   background: var(--c, var(--cell));
   color: var(--on-tone);

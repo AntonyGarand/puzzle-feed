@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, s, shake } from '../core/ui';
+import { h, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { genBeehive } from './pathkit/beehive-gen';
 import { capture } from './pathkit/grid';
 import { deadEnd, solvePath, type PathSolve } from './pathkit/number-path';
@@ -34,8 +34,8 @@ export const beehive: PuzzleDef = {
       ),
       L('Highlighted hexes show where the next number can go.', 'Les hexagones en surbrillance montrent où peut aller le prochain nombre.'),
       L(
-        'Tap a placed number to rewind to it. Undo removes the last number; Reset starts over from 1.',
-        'Touchez un nombre placé pour revenir à lui. Annuler retire le dernier nombre; Repartir revient à 1.',
+        'Tap a placed number to rewind to it. Undo (Z) removes the last number; Restart (R) starts over from 1.',
+        'Touchez un nombre placé pour revenir à lui. Annuler (Z) retire le dernier nombre; Repartir (R) revient à 1.',
       ),
     ],
     tips: [
@@ -52,8 +52,8 @@ export const beehive: PuzzleDef = {
   par: (d) => byLevel(d, [30, 60, 90, 150, 220]),
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
-    const P = genBeehive(rng, d);
-    const { cells, adj, givens } = P;
+    const pz = genBeehive(rng, d);
+    const { cells, adj, givens } = pz;
     const N = cells.length;
     const givenAt = new Map<number, number>(); // number -> cell
     givens.forEach((g, i) => g && givenAt.set(g, i));
@@ -88,7 +88,10 @@ export const beehive: PuzzleDef = {
     });
 
     let finished = false;
+    /** Dead end: the chain isn't done and no hex can take the next number. */
+    let stuck = false;
     const render = () => {
+      let open = false;
       const pos = new Map<number, number>();
       chain.forEach((c, k) => pos.set(c, k));
       const end = chain[chain.length - 1];
@@ -98,12 +101,15 @@ export const beehive: PuzzleDef = {
         const num = givens[i] || (k != null ? k + 1 : 0);
         t.textContent = num ? String(num) : '';
         const canStep = !finished && k == null && adj[end].includes(i) && (givens[i] ? givens[i] === next : !givenAt.has(next));
+        if (canStep) open = true;
         g.setAttribute(
           'class',
           `hex${givens[i] ? ' given' : ''}${k != null ? ' placed' : ''}${i === end ? ' end' : ''}${canStep ? ' next' : ''}`,
         );
       });
-      ctx.status(`${chain.length} / ${N}`);
+      stuck = !open && chain.length < N;
+      const count = `${chain.length} / ${P(N, ['hex', 'hexes'], ['hexagone', 'hexagones'])}`;
+      ctx.status(stuck ? `${count} · ${L('dead end · undo', 'impasse · annulez')}` : count);
       return chain.length === N;
     };
     const check = () => {
@@ -129,6 +135,7 @@ export const beehive: PuzzleDef = {
       const next = chain.length + 1;
       if (givens[i] ? givens[i] !== next : givenAt.has(next)) return false;
       chain.push(i);
+      beforeRestart = null;
       return true;
     };
 
@@ -174,28 +181,23 @@ export const beehive: PuzzleDef = {
     svg.addEventListener('pointerup', end);
     svg.addEventListener('pointercancel', end);
 
-    ctx.controls(
-      btn(
-        L('Undo', 'Annuler'),
-        () => {
-          if (!finished && chain.length > 1) {
-            chain.pop();
-            render();
-          }
-        },
-        'ghost',
-      ),
-      btn(
-        L('Reset', 'Repartir'),
-        () => {
-          if (!finished) {
-            chain.length = 1;
-            render();
-          }
-        },
-        'ghost',
-      ),
-    );
+    /** The chain as it was before Restart, so Undo can bring it back. */
+    let beforeRestart: number[] | null = null;
+    const undo = () => {
+      if (finished) return;
+      if (chain.length > 1) chain.pop();
+      else if (beforeRestart) chain.splice(0, 1, ...beforeRestart);
+      else return;
+      beforeRestart = null;
+      render();
+    };
+    const restart = () => {
+      if (finished || chain.length < 2) return;
+      beforeRestart = [...chain];
+      chain.length = 1;
+      render();
+    };
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
     // ---- resume: replay the saved chain through the same rules ----
     const sv = ctx.saved as { chain?: unknown } | undefined;
@@ -215,13 +217,13 @@ export const beehive: PuzzleDef = {
     const solveHere = (): PathSolve => {
       const key = chain.join(',');
       if (memo?.path && chain.every((c, k) => memo!.path![k] === c)) return memo;
-      if (memo?.key !== key) memo = { key, ...solvePath(adj, givenAt, chain, BUDGET, P.path) };
+      if (memo?.key !== key) memo = { key, ...solvePath(adj, givenAt, chain, BUDGET, pz.path) };
       return memo;
     };
     /** Length of the chain's common start with the stored solution. */
     const onTrack = () => {
       let k = 0;
-      while (k < chain.length && chain[k] === P.path[k]) k++;
+      while (k < chain.length && chain[k] === pz.path[k]) k++;
       return k;
     };
     const rewind = (k: number) => {
@@ -237,7 +239,7 @@ export const beehive: PuzzleDef = {
       if (res.path || res.capped) return null;
       let k = chain.length - 1;
       const t0 = performance.now();
-      while (k > k0 && (performance.now() - t0 > 25 || !solvePath(adj, givenAt, chain.slice(0, k), BUDGET, P.path).path)) k--;
+      while (k > k0 && (performance.now() - t0 > 25 || !solvePath(adj, givenAt, chain.slice(0, k), BUDGET, pz.path).path)) k--;
       const dead = deadEnd(adj, givenAt, chain);
       const text = !dead
         ? L(
@@ -265,7 +267,7 @@ export const beehive: PuzzleDef = {
                 );
       const why = !dead ? [] : dead.kind === 'isolated' || dead.kind === 'far' ? [dead.cell] : dead.cells;
       return {
-        kind: 'fix',
+        kind: stuck ? 'stuck' : 'fix',
         text,
         why: why.map(hexEl),
         at: chain.slice(k).map(hexEl),
@@ -415,6 +417,17 @@ export const beehive: PuzzleDef = {
         play,
       };
     };
-    return { hint, check: checkHint, snapshot: () => ({ chain }) };
+    return {
+      hint,
+      check: checkHint,
+      snapshot: () => ({ chain }),
+      onKey(e) {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') undo();
+        else if (e.key === 'r' || e.key === 'R') restart();
+        else return false;
+        ctx.touch();
+        return true;
+      },
+    };
   },
 };

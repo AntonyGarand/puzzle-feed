@@ -218,7 +218,7 @@ export const blocks: PuzzleDef = {
         );
       });
       scoreEl.textContent = String(score);
-      comboEl.textContent = combo > 1 ? `Combo ×${combo}` : '';
+      comboEl.textContent = combo > 1 ? L(`Combo ×${combo}`, `Combo ×${combo}`) : '';
       const best = Math.max(getBest(d), score);
       bestEl.textContent = beat ? L(`New best! ${best}`, `Nouveau record! ${best}`) : L(`Best ${best}`, `Record ${best}`);
       bestEl.classList.toggle('new', beat);
@@ -226,7 +226,7 @@ export const blocks: PuzzleDef = {
       if (over) return;
       ctx.status(
         cleared < goal
-          ? L(`Lines ${cleared}/${goal}`, `Lignes ${cleared}/${goal}`)
+          ? L(`${cleared} / ${goal} lines`, `${cleared} / ${goal} lignes`)
           : `${P(cleared, ['line', 'lines'], ['ligne', 'lignes'])} · ${L('goal reached, keep going!', 'objectif atteint, continuez!')}`,
       );
     };
@@ -260,8 +260,9 @@ export const blocks: PuzzleDef = {
       score += pointsFor(placed.length, lines, combo);
       if (prevBest > 0 && score > prevBest && !beat) {
         beat = true;
+        // A new high score is this game's own reward; skip it when the card is already celebrating the goal.
         const gr = grid.getBoundingClientRect();
-        if (gr.height) confetti(gr.left + gr.width / 2, gr.top, 40);
+        if (gr.height && !(wasBelow && cleared >= goal)) confetti(gr.left + gr.width / 2, gr.top, 40);
       }
       putBest(d, score);
       tray[k] = -1;

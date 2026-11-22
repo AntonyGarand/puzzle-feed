@@ -1,0 +1,19 @@
+[data-puzzle='queens'] {
+  --accent: var(--p5);
+}
+
+[data-puzzle='queens'] .cell.queen {
+  background: var(--accent);
+}
+[data-puzzle='queens'] .cell.queen::after {
+  content: '♛';
+  font-size: 0.95em;
+  line-height: 1;
+  color: var(--on-tone);
+}
+[data-puzzle='queens'] .cell.queen.given {
+  background: var(--ink);
+}
+[data-puzzle='queens'] .cell.queen.given::after {
+  color: var(--bg);
+}

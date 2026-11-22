@@ -81,14 +81,9 @@
   overflow-y: auto;
   scrollbar-width: thin;
 }
-[data-puzzle='hunt'] .hunt-found span {
+[data-puzzle='hunt'] .hunt-found .word-pill {
   padding: 1px 8px;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
   background: var(--accent-soft);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 18px;
 }
 
 /* stars on the progress bar */
@@ -108,7 +103,7 @@
   height: 24px;
   font-size: 15px;
   line-height: 1;
-  border: 2px solid var(--ink);
+  border: var(--bw) solid var(--ink);
   border-radius: 50%;
   background: var(--cell);
   color: color-mix(in srgb, var(--fg) 30%, var(--cell));
@@ -138,17 +133,12 @@
   justify-content: center;
   gap: 6px;
 }
-[data-puzzle='hunt'] .hunt-len {
+[data-puzzle='hunt'] .hunt-left .hunt-len {
   display: inline-flex;
   align-items: baseline;
   gap: 5px;
   padding: 2px 9px;
-  font-size: 13px;
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--cell);
 }
 [data-puzzle='hunt'] .hunt-len b {
   font-size: 11px;

@@ -1,0 +1,16 @@
+[data-puzzle='slide'] {
+  --accent: var(--p1);
+}
+
+[data-puzzle='slide'] .grid {
+  touch-action: none;
+}
+[data-puzzle='slide'] .cell.tile.gap {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+[data-puzzle='slide'] .cell.tile.home {
+  background: var(--accent);
+  color: var(--on-tone);
+}

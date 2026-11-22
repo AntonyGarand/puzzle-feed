@@ -10,7 +10,7 @@
 /* closed: raised tile (ink border + hard bottom/right lip, the theme's shadow language) */
 [data-puzzle='mines'] .lk-mines .cell {
   background: var(--mn-tile);
-  border-radius: 5px;
+  border-radius: var(--r-cell);
   box-shadow: inset -2px -3px 0 var(--mn-edge);
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -20,24 +20,6 @@
 [data-puzzle='mines'] .lk-mines button.cell:active {
   transform: none;
   box-shadow: inset 0 0 0 var(--mn-edge);
-}
-/* long-press progress: a fill grows from the centre while holding */
-[data-puzzle='mines'] .lk-mines .cell.lp::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, color-mix(in srgb, var(--bad) 55%, transparent) 0 60%, transparent 62%);
-  animation: mn-press 0.35s linear forwards;
-}
-@keyframes mn-press {
-  from {
-    transform: scale(0);
-    opacity: 0.4;
-  }
-  to {
-    transform: scale(1.4);
-    opacity: 1;
-  }
 }
 /* opened: flat, sunk into the board */
 [data-puzzle='mines'] .lk-mines .cell.open,

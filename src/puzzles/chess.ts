@@ -2,17 +2,9 @@ import './chess.css';
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, shake } from '../core/ui';
-import { apply, bestDefence, forcesMate2, from, generate, isMate, legal, sqName, to, type Board } from './chesskit/chess';
+import { apply, bestDefence, forcesMate2, from, generate, isMate, legal, to, type Board } from './chesskit/chess';
+import { GLYPH, pieceName, sqName } from './chesskit/pieces';
 
-const NAME = () => [
-  '',
-  L('pawn', 'pion'),
-  L('knight', 'cavalier'),
-  L('bishop', 'fou'),
-  L('rook', 'tour'),
-  L('queen', 'dame'),
-  L('king', 'roi'),
-];
 /** Is `sq` attacked by the white piece on `f` (sliders look through empty squares only)? */
 function covers(b: Board, f: number, sq: number): boolean {
   const p = b[f];
@@ -32,8 +24,6 @@ function covers(b: Board, f: number, sq: number): boolean {
   for (let k = 1; k < Math.max(ar, ac); k++) if (b[f + (sr * 8 + sc) * k]) return false;
   return true;
 }
-
-const GLYPH = ['', '♟', '♞', '♝', '♜', '♛', '♚'].map((g) => (g ? g + '\uFE0E' : ''));
 
 export const chess: PuzzleDef = {
   id: 'chess',
@@ -102,11 +92,13 @@ export const chess: PuzzleDef = {
         b = apply(b, m);
       }
       if (ok.length % 2 === 0 && ok.length < puzzle.mateIn * 2 - 1) moves = ok;
-      if (typeof sv.sel === 'number' && sv.sel >= 0 && sv.sel < 64 && b[sv.sel] > 0) sel = sv.sel;
     }
 
     let cur = replay(moves);
-    const grid = board(8, 8, 'chess');
+    // The saved selection must be a white piece on the board actually restored (moves may have been dropped).
+    if (sv && Number.isInteger(sv.sel) && (sv.sel as number) >= 0 && (sv.sel as number) < 64 && cur[sv.sel as number] > 0)
+      sel = sv.sel as number;
+    const grid = board(8, 8, 'chess chessboard');
     const cells: HTMLButtonElement[] = [];
     for (let sq = 0; sq < 64; sq++) {
       const el = h('button', {
@@ -200,7 +192,6 @@ export const chess: PuzzleDef = {
       sel = -1;
       over = true;
       render();
-      status(L('Checkmate!', 'Échec et mat!'));
       ctx.solved();
     };
 
@@ -213,7 +204,7 @@ export const chess: PuzzleDef = {
       const f = from(target),
         t = to(target);
       const kSq = cur.indexOf(-6);
-      const name = (sq: number, b: Board = cur) => NAME()[Math.abs(b[sq])];
+      const name = (sq: number, b: Board = cur) => pieceName(b[sq]);
       const fem = (sq: number) => (cur[sq] === 4 || cur[sq] === 5 ? 'la' : 'le');
       if (sel !== f) {
         return {

@@ -1,7 +1,7 @@
 import './kit.css';
-import { L } from '../../core/i18n';
+import { L, P } from '../../core/i18n';
 import type { PuzzleCtx, PuzzleInstance } from '../../core/types';
-import { board, h, pad } from '../../core/ui';
+import { board, clearBtn, h, pad } from '../../core/ui';
 import { directPlace, keyDigit, makeNotes, notesHelpStep } from './notes';
 import { conflicts, type Problem } from './solver';
 
@@ -87,6 +87,7 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
       notes.draw(i, vals[i] > 0, (v) => blocked(i, v));
     });
     o.onRender?.(sel, vals);
+    ctx.status(P(vals.filter((v, i) => active(i) && !v).length, ['left', 'left'], ['à remplir', 'à remplir']));
     return bad;
   };
 
@@ -137,6 +138,23 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     });
   }
   if (typeof saved?.sel === 'number' && (saved.sel === -1 || (saved.sel >= 0 && saved.sel < size && active(saved.sel)))) sel = saved.sel;
+
+  /** Clear: wipe every entry and note, keeping the givens. */
+  const clear = () => {
+    if (done) return;
+    let any = false;
+    vals.forEach((v, i) => {
+      if (puzzle[i] === 0 && (v > 0 || notes.bits[i])) {
+        vals[i] = 0;
+        notes.clear(i);
+        any = true;
+      }
+    });
+    if (!any) return;
+    ctx.touch();
+    render();
+  };
+  ctx.controls(clearBtn(clear));
 
   const padEl = pad(keys, (v) => (v === 'n' ? notes.padKey() : v === '0' ? erase() : input(Number(v))));
   notes.bindPad(padEl);
@@ -194,8 +212,8 @@ export function entryHelpSteps(): string[] {
       'Touchez une case, puis un chiffre du pavé. Touchez le même chiffre, ou ✕, pour l’effacer.',
     ),
     L(
-      'Keyboard: arrow keys move, digits fill, Backspace erases. Clashing numbers are marked.',
-      'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les conflits sont signalés.',
+      'Keyboard: arrow keys move, digits fill, Backspace erases. Clashing numbers are marked. Clear wipes all your numbers.',
+      'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les conflits sont signalés. Effacer retire tous vos chiffres.',
     ),
     notesHelpStep(),
   ];

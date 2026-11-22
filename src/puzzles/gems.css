@@ -97,7 +97,7 @@
   border: 2px solid var(--ink);
   border-radius: 3px;
 }
-.gems-token {
+[data-puzzle='gems'] .gems-token {
   position: absolute;
   left: 0;
   top: 0;
@@ -108,7 +108,7 @@
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
 }
-.gems-token::after {
+[data-puzzle='gems'] .gems-token::after {
   content: '';
   display: block;
   width: 78%;

@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import { fullSet, genDominosa, pairIndex } from './gridkit/dominosa';
 import { capture } from './pathkit/grid';
 import './dominoes.css';
@@ -38,8 +38,8 @@ export const dominoes: PuzzleDef = {
         'Vous pouvez aussi toucher une case, puis une voisine. Touchez le milieu d’un domino pour l’enlever.',
       ),
       L(
-        'The checklist below greys out the pairs you have used; pairs used twice turn red.',
-        'La liste en dessous grise les paires déjà utilisées; une paire utilisée deux fois devient rouge.',
+        'The checklist below greys out the pairs you have used; a pair used twice turns red and counts as a mistake. Clear wipes the board.',
+        'La liste en dessous grise les paires déjà utilisées; une paire utilisée deux fois devient rouge et compte comme une erreur. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -76,6 +76,8 @@ export const dominoes: PuzzleDef = {
     const chips = set.map(([a, b]) => h('span', { class: 'do-chip' }, h('b', null, a), h('b', null, b)));
     const list = h('div', { class: 'do-set', 'aria-label': L('Dominoes in the set', 'Dominos du jeu') }, ...chips);
     const wrap = h('div', { class: 'do-wrap' }, grid, list);
+    /** Counts a mistake when a domino repeats a pair (the tiles on the grid turn red). */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const render = () => {
       const used = new Array<number>(set.length).fill(0);
@@ -91,7 +93,7 @@ export const dominoes: PuzzleDef = {
         const dup = used[pairIndex(val[i], val[j], n)] > 1;
         els.push(
           h('div', {
-            class: `do-tile ${horiz ? 'h' : 'v'}${dup ? ' err' : ''}${done ? ' won' : ''}`,
+            class: `do-tile ${horiz ? 'h' : 'v'}${dup ? ' err' : ''}`,
             style: `grid-area:${r}/${c}/span ${horiz ? 1 : 2}/span ${horiz ? 2 : 1}`,
           }),
         );
@@ -106,7 +108,7 @@ export const dominoes: PuzzleDef = {
         el.classList.toggle('dup', used[k] > 1);
       });
       const placed = used.reduce((t, u) => t + u, 0);
-      ctx.status(L(`${placed} / ${set.length} dominoes`, `${placed} / ${set.length} dominos`));
+      ctx.status(`${placed} / ${P(set.length, ['domino', 'dominoes'], ['domino', 'dominos'])}`);
       return placed === set.length && used.every((u) => u === 1);
     };
 
@@ -129,7 +131,9 @@ export const dominoes: PuzzleDef = {
       after();
     };
     const after = () => {
-      if (render() && !done) {
+      const won = render();
+      watch();
+      if (won && !done) {
         done = true;
         sel = -1;
         render();
@@ -206,6 +210,17 @@ export const dominoes: PuzzleDef = {
     if (typeof s0 === 'number' && Number.isInteger(s0) && s0 >= 0 && s0 < N && mate[s0] < 0) sel = s0;
     root.append(wrap);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || mate.every((j) => j < 0)) return;
+        ctx.touch();
+        mate.fill(-1);
+        sel = -1;
+        render();
+        watch(false);
+      }),
+    );
     // Guide: cells with one partner left, pairs with one spot left, pairs already used.
     let lastKind = '';
     let taught = false;

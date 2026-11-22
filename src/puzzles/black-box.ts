@@ -1,7 +1,7 @@
 import './black-box.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, PALETTE, shake } from '../core/ui';
+import { board, btn, clearBtn, h, PALETTE, shake } from '../core/ui';
 import { allResults, HIT, invisible, layouts, REFL, trace, type Trail } from './blackboxkit/rays';
 
 const MAX_CHECKS = 3;
@@ -45,8 +45,8 @@ export const blackBox: PuzzleDef = {
         'Sinon, son entrée et sa sortie reçoivent le même numéro et la même couleur.',
       ),
       L(
-        'Tap inside the box to place or remove a ball, then press Check once all are placed.',
-        'Touchez l’intérieur de la boîte pour placer ou retirer une bille, puis appuyez sur Vérifier quand elles y sont toutes.',
+        'Tap inside the box to place or remove a ball (Clear lifts them all), then press Check once all are placed.',
+        'Touchez l’intérieur de la boîte pour placer ou retirer une bille (Effacer les retire toutes), puis appuyez sur Vérifier quand elles y sont toutes.',
       ),
       L(
         `Rays are limited. Any layout that gives the same result for every ray counts. ${MAX_CHECKS} wrong checks, or a wrong check with no rays left, end the game.`,
@@ -148,7 +148,7 @@ export const blackBox: PuzzleDef = {
       if (over) return;
       const parts = [
         P(raysLeft(), ['ray left', 'rays left'], ['rayon restant', 'rayons restants']),
-        L(`balls ${guess.size}/${count}`, `billes ${guess.size}/${count}`),
+        `${guess.size} / ${P(count, ['ball', 'balls'], ['bille', 'billes'])}`,
       ];
       if (checks) parts.push(P(MAX_CHECKS - checks, ['check left', 'checks left'], ['vérification restante', 'vérifications restantes']));
       ctx.status(parts.join(' · '));
@@ -200,7 +200,14 @@ export const blackBox: PuzzleDef = {
       }
       render();
     };
-    ctx.controls(btn(L('Check', 'Vérifier'), check, 'primary'));
+    /** Clear: lift every ball mark (rays stay fired). */
+    const clear = () => {
+      if (over || !guess.size) return;
+      ctx.touch();
+      guess.clear();
+      render();
+    };
+    ctx.controls(btn(L('Check', 'Vérifier'), check, 'primary'), clearBtn(clear));
 
     const sv = ctx.saved as { rays?: unknown; guess?: unknown; checks?: unknown } | undefined;
     if (sv) {

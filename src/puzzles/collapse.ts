@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, PALETTE, shake } from '../core/ui';
+import { board, h, PALETTE, restartBtn, shake, undoBtn } from '../core/ui';
 import { anim } from './movekit/kit';
 import {
   collapseSolver,
@@ -49,8 +49,8 @@ export const collapse: PuzzleDef = {
         'Un groupe de n blocs vaut (n − 2)² points : les gros groupes rapportent beaucoup plus.',
       ),
       L(
-        'The game ends when no group is left: you win if the blocks left meet the goal shown below the board. Undo (Z) takes back a move.',
-        'La partie se termine quand il ne reste plus de groupe : vous gagnez si les blocs restants respectent l’objectif affiché sous la grille. Annuler (Z) reprend un coup.',
+        'When no group is left, you win if the blocks left meet the goal shown below the board; otherwise undo. Undo (Z) takes back a move; Restart (R) starts over.',
+        'Quand il ne reste plus de groupe, vous gagnez si les blocs restants respectent l’objectif affiché sous la grille; sinon, annulez. Annuler (Z) reprend un coup; Repartir (R) recommence.',
       ),
     ],
     tips: [
@@ -111,10 +111,15 @@ export const collapse: PuzzleDef = {
           ? L(`Goal: ${target} blocks or fewer left`, `Objectif : ${target} blocs ou moins restants`)
           : L('Goal: clear every block', 'Objectif : retirer tous les blocs');
       goalEl.classList.toggle('met', n <= target);
+      const tail = over
+        ? ''
+        : !hasMove(cols) && n > target
+          ? L(' · no groups left · undo', ' · plus aucun groupe · annulez')
+          : stranded(cols) > target
+            ? L(' · goal out of reach · undo', ' · objectif hors d’atteinte · annulez')
+            : '';
       ctx.status(
-        `${L(`Score ${score}`, `Pointage ${score}`)} · ${P(n, ['block left', 'blocks left'], ['bloc restant', 'blocs restants'])}${
-          !over && stranded(cols) > target ? L(' · goal out of reach, undo', ' · objectif hors d’atteinte, annulez') : ''
-        }`,
+        `${L(`Score ${score}`, `Pointage ${score}`)} · ${P(n, ['block left', 'blocks left'], ['bloc restant', 'blocs restants'])}${tail}`,
       );
     };
 
@@ -139,13 +144,10 @@ export const collapse: PuzzleDef = {
 
     const finish = () => {
       if (hasMove(cols)) return;
-      over = true;
-      if (left() <= target) ctx.solved();
-      else {
-        shake(grid);
-        ctx.status(L(`No groups left · ${left()} blocks remain`, `Plus aucun groupe · il reste ${left()} blocs`));
-        ctx.failed();
-      }
+      if (left() <= target) {
+        over = true;
+        ctx.solved();
+      } else shake(grid); // dead end: the status says so, Undo backs out
     };
 
     const tapCell = (i: number) => {
@@ -197,14 +199,25 @@ export const collapse: PuzzleDef = {
     });
     grid.addEventListener('pointerleave', clearHover);
 
+    /** Move lists wiped by Restart, so Undo can bring them back. */
+    const restarts: number[][] = [];
     const undo = () => {
-      if (over || !moves.length) return;
-      const keep = moves.slice(0, -1);
+      if (over) return;
+      if (!moves.length && !restarts.length) return;
+      const keep = moves.length ? moves.slice(0, -1) : restarts.pop()!;
       reset();
       for (const m of keep) apply(m);
+      clearHover();
       render();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    const restart = () => {
+      if (over || !moves.length) return;
+      restarts.push(moves.slice());
+      reset();
+      clearHover();
+      render();
+    };
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
     reset();
     const sv = ctx.saved as { moves?: unknown } | undefined;
@@ -389,8 +402,10 @@ export const collapse: PuzzleDef = {
       check,
       hint,
       onKey(e) {
-        if (e.key !== 'z' && e.key !== 'Z' && e.key !== 'Backspace') return false;
-        undo();
+        const key = e.key.toLowerCase();
+        if (key === 'z' || key === 'backspace') undo();
+        else if (key === 'r') restart();
+        else return false;
         return true;
       },
     };

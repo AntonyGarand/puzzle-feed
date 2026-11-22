@@ -1,8 +1,8 @@
 import { genMaze } from './pathkit/maze-gen';
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import './maze.css';
-import { h } from '../core/ui';
+import { h, shake } from '../core/ui';
 
 // Passage bits
 const N = 1,
@@ -160,7 +160,7 @@ export const maze: PuzzleDef = {
     };
     /** Keep moving in one direction until a junction or wall. */
     const run = (dir: (typeof DIRS)[number]) => {
-      if (!step(dir)) return;
+      if (!step(dir)) return bump();
       // `finished` is set inside step().
       // oxlint-disable-next-line no-unmodified-loop-condition
       for (let guard = 0; guard < n * n && !finished; guard++) {
@@ -170,9 +170,15 @@ export const maze: PuzzleDef = {
         step(dir);
       }
     };
+    const status = () => ctx.status(P(path.length - 1, ['step', 'steps'], ['pas', 'pas']));
     const after = () => {
       draw();
+      status();
       if (finished) ctx.solved();
+    };
+    /** A step into a wall: refused, so the board shakes. */
+    const bump = () => {
+      if (!finished) shake(wrap);
     };
 
     // Pointer: drag along the corridor (moves to adjacent open cells under the finger), or swipe.
@@ -185,9 +191,12 @@ export const maze: PuzzleDef = {
       const cs = rect.width / n;
       return { r: Math.floor((e.clientY - rect.top) / cs), c: Math.floor((e.clientX - rect.left) / cs) };
     };
+    /** Cell the drag last bumped into a wall at (shake once per cell, not on every pointer move). */
+    let bumped = -1;
     canvas.addEventListener('pointerdown', (e) => {
       dragging = true;
       moved = false;
+      bumped = -1;
       sx = e.clientX;
       sy = e.clientY;
       canvas.setPointerCapture(e.pointerId);
@@ -203,7 +212,15 @@ export const maze: PuzzleDef = {
           dc = c - (p % n);
         if (!dr && !dc) break;
         const dir = Math.abs(dc) >= Math.abs(dr) ? DIRS[dc > 0 ? 1 : 3] : DIRS[dr > 0 ? 2 : 0];
-        if (!step(dir)) break;
+        if (!step(dir)) {
+          const at = r * n + c;
+          if (Math.abs(dr) + Math.abs(dc) === 1 && at !== bumped) {
+            bumped = at;
+            bump();
+          }
+          break;
+        }
+        bumped = -1;
         changed = true;
       }
       if (changed) {
@@ -234,6 +251,7 @@ export const maze: PuzzleDef = {
     if (sv?.v === 3 && sv.path?.length && sv.path[0] === 0 && sv.path.every((v) => v >= 0 && v < n * n))
       path.splice(0, path.length, ...sv.path);
     root.append(wrap);
+    status();
     requestAnimationFrame(draw);
 
     // ---- guide ----
@@ -376,7 +394,7 @@ export const maze: PuzzleDef = {
         const k = map[e.key];
         if (k == null) return false;
         if (e.shiftKey) run(DIRS[k]);
-        else step(DIRS[k]);
+        else if (!step(DIRS[k])) bump();
         after();
         return true;
       },

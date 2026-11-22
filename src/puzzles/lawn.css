@@ -3,7 +3,7 @@
   /* lawn tones: fresh green grass, pale lime once cut, dark blades */
   --grass: var(--p3);
   --mown: var(--p8);
-  --blade: color-mix(in srgb, var(--p3) 40%, #14532d);
+  --blade: color-mix(in srgb, var(--p3) 55%, var(--coal));
 }
 
 [data-puzzle='lawn'] .lawn-grid {

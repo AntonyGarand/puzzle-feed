@@ -1,6 +1,6 @@
 import { L, P } from '../../core/i18n';
 import type { Hint, PuzzleCtx, PuzzleInstance } from '../../core/types';
-import { board, btn, h, dpad, s, shake } from '../../core/ui';
+import { board, dpad, h, restartBtn, s, shake, undoBtn } from '../../core/ui';
 import { anim, type Dir, keyDir } from '../movekit/kit';
 import { type Board, caught, front, frozen, isGoal, type Moved, nbr, type Rules, solve, type St, stateKey, step } from './engine';
 import type { Level } from './gen';
@@ -142,13 +142,12 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
     }
     const moves = trail.length - 1;
     const home = st.b.filter((b) => tset.has(b)).length;
-    const ms = P(moves, ['move', 'moves'], ['pas', 'pas']);
-    let msg = L(`${home}/${st.b.length} home · ${ms}`, `${home}/${st.b.length} · ${ms}`);
+    const ms = P(moves, ['move', 'moves'], ['coup', 'coups']);
+    let msg = L(`${home} / ${st.b.length} home · ${ms}`, `${home} / ${st.b.length} placées · ${ms}`);
     const stuck = st.b.filter((b, k) => !tset.has(b) && ((R.counted && st.c[k] === 0) || frozen(B, nb, b))).length;
     if (stuck) msg = `${P(stuck, ['crate stuck', 'crates stuck'], ['caisse coincée', 'caisses coincées'])} · ${L('undo', 'annulez')}`;
     if (R.every) {
       if (dead()) msg = L('Caught by the wall · undo', 'Rattrapé par le mur · annulez');
-      else if (!stuck) msg = `${L(`Wall in ${left}`, `Mur dans ${left}`)} · ${msg}`;
       if (wallBar) {
         const pips = Math.min(left, R.every);
         wallBar.replaceChildren(
@@ -156,7 +155,7 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
           h(
             'span',
             { class: 'pk-walllbl' },
-            dead() ? L('caught!', 'rattrapé!') : L('moves before the wall advances', 'pas avant que le mur avance'),
+            dead() ? L('caught!', 'rattrapé!') : L('moves before the wall advances', 'coups avant que le mur avance'),
           ),
           h('span', { class: 'pk-pips' }, ...Array.from({ length: R.every }, (_, k) => h('i', { class: k < pips ? 'on' : '' }))),
         );
@@ -381,10 +380,10 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
         `Poussez la caisse ${dirName(d)} : sur la glace, elle glisse jusqu’à ce qu’un obstacle l’arrête, ici sur la case encerclée.${onto}`,
       );
     else if (kind === 'count') {
-      const c = st.c[first.box];
+      const c = P(st.c[first.box], ['push', 'pushes'], ['poussée', 'poussées']);
       text = L(
-        `This crate has ${c} ${c === 1 ? 'push' : 'pushes'} left. Push it ${dirName(d)} ${sq}; pushes are scarce, so don't waste any.${onto}`,
-        `Cette caisse a encore ${c} ${c === 1 ? 'poussée' : 'poussées'}. Poussez-la ${dirName(d)} ${sq}; elles sont comptées, n’en gaspillez pas.${onto}`,
+        `This crate has ${c} left. Push it ${dirName(d)} ${sq}; pushes are scarce, so don't waste any.${onto}`,
+        `Cette caisse a encore ${c}. Poussez-la ${dirName(d)} ${sq}; elles sont comptées, n’en gaspillez pas.${onto}`,
       );
     } else if (kind === 'wrap' && wrapped)
       text = L(
@@ -541,7 +540,7 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
   });
 
   const arrows = dpad((dir) => move(dir as Dir));
-  ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
+  ctx.controls(undoBtn(undo), restartBtn(reset));
   if (wallBar) root.append(wallBar);
   root.append(grid, arrows);
   render();
@@ -556,11 +555,11 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
         move(k);
         return true;
       }
-      if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+      if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
         undo();
         return true;
       }
-      if (e.key === 'r') {
+      if (e.key === 'r' || e.key === 'R') {
         reset();
         return true;
       }

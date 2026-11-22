@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, dpad, s, shake } from '../core/ui';
+import { board, dpad, h, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { anim, keyDir, type Dir } from './movekit/kit';
 import { deadCrates, planPush, type PushPlan } from './movekit/push-hint';
 import { generateRoom, liveCells, stepper, stuckCrates } from './movekit/pushgen';
@@ -160,13 +160,13 @@ export const push: PuzzleDef = {
       });
       const moves = history.reduce((a, act) => a + act.length, drag?.cur.length ?? 0);
       const home = boxes.filter((b) => tset.has(b)).length;
-      const ms = P(moves, ['move', 'moves'], ['pas', 'pas']);
+      const ms = P(moves, ['move', 'moves'], ['coup', 'coups']);
       // A crate wedged where it can never reach a target: say so (Undo/Restart get out of it).
       const stuck = stuckCrates(w, hh, floor, targets, boxes, live).length;
       ctx.status(
         stuck
           ? `${P(stuck, ['crate stuck', 'crates stuck'], ['caisse coincée', 'caisses coincées'])} · ${L('undo', 'annulez')}`
-          : L(`${home}/${boxes.length} home · ${ms}`, `${home}/${boxes.length} · ${ms}`),
+          : L(`${home} / ${boxes.length} home · ${ms}`, `${home} / ${boxes.length} placées · ${ms}`),
       );
     };
     const after = (rec: string) => {
@@ -475,7 +475,7 @@ export const push: PuzzleDef = {
     });
 
     const arrows = dpad((dir) => move(dir as Dir));
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
     root.append(grid, arrows);
     render();
 
@@ -489,11 +489,11 @@ export const push: PuzzleDef = {
           move(k);
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           reset();
           return true;
         }

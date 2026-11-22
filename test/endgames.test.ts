@@ -36,6 +36,7 @@ function play(def: PuzzleDef, d: Difficulty, seed: number) {
     mistake: () => g.events.push('mistake'),
     touch: () => {},
     status: (s) => (g.status = s),
+    lives: () => {},
     controls: (...els) => (g.controls = els),
   };
   g.inst = def.create(c) || {};

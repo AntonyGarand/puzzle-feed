@@ -1,6 +1,7 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
+import { tapOrHold } from './gridkit/press';
 import { colourRegions, edgeClasses, nb8, regionAdjacency, tint } from './logickit/kit';
 import { genStars, solveStars } from './logickit/starsgen';
 import './stars.css';
@@ -24,12 +25,12 @@ export const stars: PuzzleDef = {
       L('Each row, column and coloured region gets exactly one star.', 'Chaque rangée, colonne et région colorée reçoit une seule étoile.'),
       L('Two stars may never touch, not even at a corner.', 'Deux étoiles ne se touchent jamais, même pas en diagonale.'),
       L(
-        'Tap a cell once to mark it ✕ (no star), twice for a star, a third time to clear it.',
-        'Touchez une case une fois pour la marquer ✕ (pas d’étoile), deux fois pour une étoile, trois fois pour l’effacer.',
+        'Tap a cell once for a star, twice to mark it ✕ (no star), a third time to clear it. Long-press (or right-click) to mark ✕ directly.',
+        'Touchez une case une fois pour une étoile, deux fois pour la marquer ✕ (pas d’étoile), trois fois pour l’effacer. Appuyez longuement (ou cliquez droit) pour marquer ✕ directement.',
       ),
       L(
-        'Clashing stars are marked. The footer counts the stars placed.',
-        'Les étoiles en conflit sont signalées. Le bas de la carte compte les étoiles placées.',
+        'Clashing stars turn red and count as a mistake. The footer counts the stars placed; Clear wipes the board.',
+        'Les étoiles en conflit deviennent rouges et comptent comme une erreur. Le bas de la carte compte les étoiles placées; Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -62,7 +63,6 @@ export const stars: PuzzleDef = {
         class: `cell ${edges[i]}`,
         'data-i': i,
         style: `--rc:${tint(colour[region[i]], 42)}`,
-        onclick: () => tap(i),
       });
       grid.append(el);
       return el;
@@ -85,25 +85,45 @@ export const stars: PuzzleDef = {
         el.classList.toggle('x', st[i] === 1);
         el.classList.toggle('err', bad.has(i));
       });
-      ctx.status(L(`${starsAt.length} / ${n} stars`, `${starsAt.length} / ${n} étoiles`));
+      ctx.status(`${starsAt.length} / ${P(n, ['star', 'stars'], ['étoile', 'étoiles'])}`);
       return starsAt.length === n && bad.size === 0;
     };
 
     let done = false;
-    const tap = (i: number) => {
-      if (done) return;
+    /** Counts a mistake when a placed star clashes (✕ marks never do). */
+    const watch = ruleBreaks(grid, ctx.mistake);
+    const set = (i: number, v: number) => {
+      if (done || st[i] === v) return;
       ctx.touch();
-      st[i] = (st[i] + 1) % 3;
-      if (render()) {
+      st[i] = v;
+      const won = render();
+      watch(v === 2);
+      if (won) {
         done = true;
         ctx.solved();
       }
     };
+    // Tap cycles empty → star → ✕ → empty; long-press (or right-click) toggles ✕.
+    const cleanup = tapOrHold(
+      grid,
+      (i) => set(i, st[i] === 0 ? 2 : st[i] === 2 ? 1 : 0),
+      (i) => set(i, st[i] === 1 ? 0 : 1),
+    );
 
     const sv = ctx.saved as { st?: unknown } | undefined;
     if (Array.isArray(sv?.st) && sv.st.length === st.length) sv.st.forEach((v, i) => (st[i] = v === 1 || v === 2 ? v : 0));
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
 
     const all = [...st.keys()];
     const rowOf = (i: number) => Math.floor(i / n);
@@ -128,10 +148,8 @@ export const stars: PuzzleDef = {
           : L('this region', 'cette région');
     const els = (ix: number[]) => ix.map((i) => cells[i]);
     const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
-    const cross = (ix: number[]) => () => ix.forEach((i) => st[i] === 0 && tap(i));
-    const place = (i: number) => () => {
-      for (let t = 0; t < 2 && st[i] !== 2; t++) tap(i);
-    };
+    const cross = (ix: number[]) => () => ix.forEach((i) => st[i] === 0 && set(i, 1));
+    const place = (i: number) => () => set(i, 2);
 
     /**
      * The solution the board is heading for: the stored one when the puzzle is unique (or the board
@@ -154,10 +172,8 @@ export const stars: PuzzleDef = {
       return cols;
     };
     const isSol = (cols: number[], i: number) => cols[rowOf(i)] === colOf(i);
-    /** Undo the mark on cell `i` with the same taps a player would use. */
-    const clearCell = (i: number) => () => {
-      for (let t = 0; t < 2 && st[i] !== 0; t++) tap(i);
-    };
+    /** Clear cell `i` through the same path as a player's tap. */
+    const clearCell = (i: number) => () => set(i, 0);
     const fixHint = (i: number, text: string, why: number[] = []): Hint => ({
       kind: 'fix',
       text,
@@ -252,8 +268,8 @@ export const stars: PuzzleDef = {
           if (ix.length)
             return {
               text: L(
-                'A star rules out the rest of its row, column and region, and the 8 cells around it. Tap them once to mark ✕.',
-                'Une étoile exclut le reste de sa rangée, de sa colonne et de sa région, ainsi que ses 8 voisines. Touchez-les une fois pour les marquer ✕.',
+                'A star rules out the rest of its row, column and region, and the 8 cells around it. Long-press them to mark ✕.',
+                'Une étoile exclut le reste de sa rangée, de sa colonne et de sa région, ainsi que ses 8 voisines. Appuyez longuement dessus pour les marquer ✕.',
               ),
               why: els([a]),
               at: els(ix),
@@ -272,8 +288,8 @@ export const stars: PuzzleDef = {
             const name = unitName(u);
             return {
               text: L(
-                `Every other cell of ${name} is ruled out, so its star must go here. Tap twice for a star.`,
-                `Toutes les autres cases de ${name} sont exclues : son étoile va donc ici. Touchez deux fois pour une étoile.`,
+                `Every other cell of ${name} is ruled out, so its star must go here. Tap once for a star.`,
+                `Toutes les autres cases de ${name} sont exclues : son étoile va donc ici. Touchez une fois pour une étoile.`,
               ),
               why: els(u.cells.filter((i) => i !== f[0])),
               at: els(f),
@@ -352,6 +368,6 @@ export const stars: PuzzleDef = {
         play: place(i),
       };
     };
-    return { snapshot: () => ({ st }), hint, check };
+    return { snapshot: () => ({ st }), hint, check, destroy: cleanup };
   },
 };

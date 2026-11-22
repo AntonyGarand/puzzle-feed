@@ -1,6 +1,7 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, s } from '../core/ui';
+import './pipes.css';
 
 // Connection bits: N=1 E=2 S=4 W=8
 const DIRS = [

@@ -23,6 +23,7 @@ function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
     mistake() {},
     touch() {},
     status() {},
+    lives() {},
     controls() {},
   };
   const inst = def.create(ctx) || {};

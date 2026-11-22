@@ -82,16 +82,19 @@ describe('pyramid', () => {
       mistake: () => events.push('mistake'),
       touch: () => {},
       status: (t) => (line = t),
+      lives: () => {},
       controls: () => {},
     };
     const inst = pyramid.create(ctx) || {};
     return { inst, events, line: () => line };
   }
 
-  it('ends a dead game on Easy instead of recycling the stock forever', () => {
-    const { inst, events } = play({ s: dead(), hist: [] });
+  it('flags a dead game on Easy as a dead end (undo, not a loss) instead of recycling the stock forever', () => {
+    const { inst, events, line } = play({ s: dead(), hist: [] });
     inst.onKey!({ key: 'd' } as KeyboardEvent); // starts another pass: nothing can pair
-    expect(events).toEqual(['failed']);
+    expect(events).toEqual([]);
+    expect(line()).toMatch(/· undo$/);
+    expect(inst.check!()?.kind).toBe('stuck');
   });
 
   it('warns when the position is lost but moves remain', () => {
@@ -101,7 +104,7 @@ describe('pyramid', () => {
     pyr[15] = C(1, 4);
     const { events, line } = play({ s: { pyr, stock: [C(1, 3)], waste: [C(1, 2)], passes: 0, moves: 3 }, hist: [] });
     expect(events).toEqual([]);
-    expect(line()).toMatch(/Undo or skip/);
+    expect(line()).toMatch(/· undo$/);
   });
 });
 

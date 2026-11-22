@@ -9,5 +9,5 @@
   visibility: hidden;
 }
 [data-puzzle='pyramid'] .ctable .pc.lock::after {
-  background: rgb(0 0 0 / 0.14);
+  background: color-mix(in srgb, var(--coal) 14%, transparent);
 }

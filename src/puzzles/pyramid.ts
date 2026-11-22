@@ -1,7 +1,7 @@
 import './pyramid.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, shake } from '../core/ui';
+import { h, restartBtn, shake, undoBtn } from '../core/ui';
 import { cardEl, elAt, label, leCard, pileEl, pilesEl, rank, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
 import {
   cardAt,
@@ -61,8 +61,8 @@ export const pyramid: PuzzleDef = {
         'Touchez la pioche pour retourner une carte sur le talon. Quand elle est vide, ↻ lance une nouvelle passe : illimitées en Facile, 3 en Moyen, 2 en Difficile et Expert, 1 en Maître.',
       ),
       L(
-        'Undo takes back a move (Z or Backspace on a keyboard); Space or D draws.',
-        'Annuler reprend un coup (Z ou Retour arrière au clavier); Espace ou D pioche.',
+        'Undo takes back a move (Z or Backspace on a keyboard); Restart deals the same game again (R); Space or D draws.',
+        'Annuler reprend un coup (Z ou Retour arrière au clavier); Repartir redonne la même partie (R); Espace ou D pioche.',
       ),
     ],
     tips: [
@@ -82,6 +82,7 @@ export const pyramid: PuzzleDef = {
     const passes = byLevel(d, [-1, 3, 2, 2, 1]); // -1 = unlimited
     // Always winnable: a random deal the solver proves, else one built around a winning line.
     let s = genP(rng, passes, byLevel(d, [10, 10, 16, 6, 30]), d === 5 ? 2000 : 5000);
+    const init = structuredClone(s);
 
     const hist = new History<PState>(80);
     let sel: string | null = null;
@@ -102,20 +103,18 @@ export const pyramid: PuzzleDef = {
     /** Winning line the guide follows, with the position expected before each of its moves. */
     let plan: { keys: string[]; line: PAct[] } | null = null;
     const judge = () => {
-      doomed = !plan?.keys.includes(keyOf(s)) && solveP(s, passes, 6000) === 'dead';
+      doomed = deadP(s, passes) || (!plan?.keys.includes(keyOf(s)) && solveP(s, passes, 6000) === 'dead');
     };
 
     const status = () => {
-      const left = s.pyr.filter((c) => c >= 0).length;
+      const gone = 28 - s.pyr.filter((c) => c >= 0).length;
+      const head = `${L('Cleared', 'Retirées')} ${gone} / 28 · ${P(s.moves, ['move', 'moves'], ['coup', 'coups'])}`;
       if (doomed) {
-        ctx.status(
-          `${L(`${left} left`, `Reste ${left}`)} · ${L('No way to clear it from here · Undo or skip', 'Impossible de la vider d’ici · Annulez ou passez')}`,
-        );
+        ctx.status(`${head} · ${L('no way to clear it from here · undo', 'impossible de la vider d’ici · annulez')}`);
         return;
       }
-      const pass = passes < 0 ? '' : ` · ${L('Pass', 'Passe')} ${s.passes + 1}/${passes}`;
-      const rest = L(`${left} left`, `Reste ${left}`);
-      ctx.status(`${rest} · ${L('Stock', 'Pioche')} ${s.stock.length}${pass}`);
+      const pass = passes < 0 ? '' : ` · ${L('Pass', 'Passe')} ${s.passes + 1} / ${passes}`;
+      ctx.status(head + pass);
     };
 
     const render = () => {
@@ -151,14 +150,7 @@ export const pyramid: PuzzleDef = {
       render();
       if (clearedP(s)) {
         over = true;
-        ctx.status(L(`Pyramid cleared in ${s.moves} moves`, `Pyramide vidée en ${P(s.moves, ['coup', 'coups'], ['coup', 'coups'])}`));
         ctx.solved();
-        return;
-      }
-      if (deadP(s, passes)) {
-        over = true;
-        ctx.status(L('No pairs left', 'Plus aucune paire possible'));
-        ctx.failed();
         return;
       }
       judge();
@@ -246,7 +238,20 @@ export const pyramid: PuzzleDef = {
       judge();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    /** Deal the same game again (undoable). */
+    const restart = () => {
+      if (over || JSON.stringify(s) === JSON.stringify(init)) return;
+      ctx.touch();
+      hist.push(s);
+      s = structuredClone(init);
+      sel = null;
+      render();
+      judge();
+      status();
+    };
+    /** Undo the last move, or deal the same game again when there is nothing to undo. */
+    const backOut = () => (hist.size ? undo() : restart());
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(table);
     render();
     if (sv) judge();
@@ -376,8 +381,8 @@ export const pyramid: PuzzleDef = {
           'Impossible de vider la pyramide d’ici : dans tous les ordres, des cartes ne trouvent jamais à temps de partenaire qui fasse 13. Annulez.',
         ),
         at: pilesEl(table, 'p'),
-        action: L('Undo', 'Annuler'),
-        play: undo,
+        action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+        play: backOut,
       };
     };
 
@@ -505,11 +510,16 @@ export const pyramid: PuzzleDef = {
       check,
       snapshot: () => ({ s, hist: hist.stack, sel }),
       onKey(e) {
-        if (e.key === 'z' || e.key === 'Backspace') {
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'backspace') {
           undo();
           return true;
         }
-        if (e.key === ' ' || e.key === 'd') {
+        if (k === 'r') {
+          restart();
+          return true;
+        }
+        if (e.key === ' ' || k === 'd') {
           if (!over) {
             ctx.touch();
             draw();

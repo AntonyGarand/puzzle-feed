@@ -21,6 +21,7 @@ function run(saved: unknown) {
     mistake: () => {},
     touch: () => {},
     status: () => {},
+    lives: () => {},
     controls: (...els) => buttons.push(...els),
     saved,
   };

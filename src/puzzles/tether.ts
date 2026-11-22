@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, s, shake } from '../core/ui';
+import { board, h, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { anim, keyDir, POP, type Dir } from './movekit/kit';
 import { dist, stepper } from './movekit/pushgen';
 import { applyMove, genTether, legalMoves, solveTether, type TMove } from './movekit/tethergen';
@@ -173,7 +173,7 @@ export const tether: PuzzleDef = {
       dots.forEach((dd, k) => (dd.className = k < used ? 'dot on' : 'dot'));
       const ms = P(history.length, ['move', 'moves'], ['coup', 'coups']);
       ctx.status(
-        used >= max ? L(`Tape full · ${ms}`, `Ruban plein · ${ms}`) : L(`Tape ${used}/${max} · ${ms}`, `Ruban ${used}/${max} · ${ms}`),
+        used >= max ? L(`Tape full · ${ms}`, `Ruban plein · ${ms}`) : L(`Tape ${used} / ${max} · ${ms}`, `Ruban ${used} / ${max} · ${ms}`),
       );
     };
 
@@ -318,10 +318,11 @@ export const tether: PuzzleDef = {
       };
     };
 
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
     root.append(grid, meter);
     render();
 
+    // No check(): a token can always walk back along its tape, so no position is a dead end.
     return {
       snapshot: () => ({ h: history, s: sel }),
       hint,
@@ -335,11 +336,11 @@ export const tether: PuzzleDef = {
           select((1 - sel) as 0 | 1);
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           reset();
           return true;
         }

@@ -2,7 +2,7 @@
 // collections; this implementation and every puzzle are generated here.
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, PALETTE, s } from '../core/ui';
+import { board, clearBtn, h, PALETTE, s } from '../core/ui';
 import { adjacent, capture, cellAt, pts, stepsToward } from './pathkit/grid';
 import { genZigzag, turnsOf, numberLines, twistError } from './pathkit/zigzag-gen';
 import './zigzag.css';
@@ -41,8 +41,8 @@ export const zigzag: PuzzleDef = {
         'Glissez à partir d’un nombre pour tracer sa ligne. Revenez en arrière pour la raccourcir, reprenez-la au milieu pour la retracer, ou touchez le nombre pour l’effacer.',
       ),
       L(
-        'Drawing over another line cuts it. A cell that breaks a rule turns red.',
-        'Tracer par-dessus une autre ligne la coupe. Une case qui brise une règle devient rouge.',
+        'Drawing over another line cuts it. A cell that breaks a rule turns red. Clear erases every line.',
+        'Tracer par-dessus une autre ligne la coupe. Une case qui brise une règle devient rouge. Effacer supprime toutes les lignes.',
       ),
     ],
     tips: [
@@ -111,7 +111,7 @@ export const zigzag: PuzzleDef = {
       });
       polys.forEach((l, j) => l.setAttribute('points', pts(paths[j], n)));
       const pct = Math.round((filled / N) * 100);
-      ctx.status(L(`${linked}/${k} lines · ${pct}% filled`, `${linked}/${k} lignes · ${pct} % rempli`));
+      ctx.status(L(`${linked} / ${k} lines · ${pct}% filled`, `${linked} / ${k} lignes · ${pct} % rempli`));
       return linked === k && filled === N;
     };
     const check = () => {
@@ -178,6 +178,15 @@ export const zigzag: PuzzleDef = {
     };
     grid.addEventListener('pointerup', end);
     grid.addEventListener('pointercancel', end);
+
+    ctx.controls(
+      clearBtn(() => {
+        if (finished) return;
+        active = -1;
+        paths.forEach((p) => (p.length = 0));
+        render();
+      }),
+    );
 
     // ---- resume ----
     const sv = ctx.saved as { paths?: unknown } | undefined;

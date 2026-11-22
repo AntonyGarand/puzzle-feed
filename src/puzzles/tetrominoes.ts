@@ -1,8 +1,8 @@
 // Tetromino tiling with a "no same shape side by side" rule. Inspired by a paper-puzzle genre from
 // Arvi Teikari's (Hempuli) collections; this implementation and every puzzle are generated here.
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks, s } from '../core/ui';
 import { cellFromPointer, edgeClasses, nb4, tint } from './logickit/kit';
 import { genTetro, KINDS, placementsCovering, shapeOf, TetroBoard, TETROS } from './logickit/tetrogen';
 import './tetrominoes.css';
@@ -55,8 +55,8 @@ export const tetrominoes: PuzzleDef = {
         'Glissez sur quatre cases voisines pour poser une pièce. Elle remplace celles qu’elle chevauche.',
       ),
       L(
-        'Tap a piece to remove it. Pieces are coloured by shape; red marks a broken rule.',
-        'Touchez une pièce pour l’enlever. Les pièces sont colorées selon leur forme; le rouge signale une règle brisée.',
+        'Tap a piece to remove it. Pieces are coloured by shape; red marks a broken rule and counts as a mistake. Clear wipes the board.',
+        'Touchez une pièce pour l’enlever. Les pièces sont colorées selon leur forme; le rouge signale une règle brisée et compte comme une erreur. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -98,6 +98,8 @@ export const tetrominoes: PuzzleDef = {
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when a placed piece breaks a rule. */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const ownerMap = () => {
       const owner = new Array<number>(N).fill(-1);
@@ -132,14 +134,14 @@ export const tetrominoes: PuzzleDef = {
         if (clue[i] >= 0) cls.push('clue');
         if (o >= 0) cls.push('on');
         if (o >= 0 && bad.has(o)) cls.push('err');
-        if (pending.includes(i)) cls.push('hint');
+        if (pending.includes(i)) cls.push('pv');
         const c = cls.filter(Boolean).join(' ');
         if (el.className !== c) el.className = c;
         const st = o >= 0 ? `--rc:${tint(TONE[kindOf(pieces[o])], 50)}` : '';
         if ((el.getAttribute('style') ?? '') !== st) el.setAttribute('style', st);
       });
       const good = pieces.length - bad.size;
-      ctx.status(L(`${good} / ${total} pieces`, `${good} / ${total} pièces`));
+      ctx.status(`${good} / ${P(total, ['piece', 'pieces'], ['pièce', 'pièces'])}`);
       return owner.every((o) => o >= 0) && bad.size === 0;
     };
 
@@ -149,7 +151,9 @@ export const tetrominoes: PuzzleDef = {
       pieces.push([...p].sort((a, b) => a - b));
     };
     const check = () => {
-      if (render() && !done) {
+      const won = render();
+      watch();
+      if (won && !done) {
         done = true;
         ctx.solved();
       }
@@ -221,6 +225,18 @@ export const tetrominoes: PuzzleDef = {
     }
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || !pieces.length) return;
+        ctx.touch();
+        pieces = [];
+        pending = [];
+        downAt = -1;
+        render();
+        watch(false);
+      }),
+    );
 
     // Guide: undo wrong pieces, then clues that fit one way, cells only one piece can cover.
     const solKey = new Set(sol.map((p) => [...p.cells].sort((a, b) => a - b).join(',')));

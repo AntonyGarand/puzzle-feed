@@ -13,7 +13,6 @@
 [data-puzzle='tower'] .tw .cell {
   font-size: calc(var(--w) / var(--cols) * 0.5);
   text-transform: uppercase;
-  border-radius: 4px;
 }
 /* top word: the roof, waiting */
 [data-puzzle='tower'] .tw .cell.tw-goal {

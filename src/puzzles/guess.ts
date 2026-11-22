@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, shake } from '../core/ui';
+import { h, pad, shake } from '../core/ui';
+import './playkit/code-board.css';
 import './guess.css';
 
 /** Bulls & cows score of a guess against the secret (both distinct digits). */
@@ -32,8 +33,8 @@ export const guess: PuzzleDef = {
     ),
     steps: [
       L(
-        'Tap digits (or type them) to fill the row. Tap a digit again to remove it; ✕ or Backspace erases the last one.',
-        'Touchez des chiffres (ou tapez-les) pour remplir la rangée. Touchez un chiffre de nouveau pour le retirer; ✕ ou Retour arrière efface le dernier.',
+        'Tap digits (or type them) to fill the row. Tap a digit again to remove it; ⌫ or Backspace erases the last one.',
+        'Touchez des chiffres (ou tapez-les) pour remplir la rangée. Touchez un chiffre de nouveau pour le retirer; ⌫ ou Retour arrière efface le dernier.',
       ),
       L('Press Guess (or Enter) to submit the row.', 'Appuyez sur Essayer (ou Entrée) pour soumettre la rangée.'),
       L(
@@ -71,14 +72,23 @@ export const guess: PuzzleDef = {
     const keyEls = new Map<number, HTMLButtonElement>();
     const rows: number[][] = poolSize > 6 ? [pool.slice(0, Math.ceil(pool.length / 2)), pool.slice(Math.ceil(pool.length / 2))] : [pool];
     const pads = rows.map((r) => {
-      const p = h('div', { class: 'pad' });
-      for (const v of r) {
-        const k = h('button', { type: 'button', class: 'key', onclick: () => add(v) }, String(v));
-        keyEls.set(v, k);
-        p.append(k);
-      }
+      const p = pad(
+        r.map((v) => ({ label: String(v), value: String(v) })),
+        (v) => add(Number(v)),
+      );
+      r.forEach((v, k) => keyEls.set(v, p.children[k] as HTMLButtonElement));
       return p;
     });
+    // Erase and commit close the pad, as on the word games' keyboard.
+    pads.push(
+      pad(
+        [
+          { label: '⌫', value: 'back', class: 'back', aria: L('Delete', 'Effacer') },
+          { label: L('Guess', 'Essayer'), value: 'enter', class: 'wide' },
+        ],
+        (v) => (v === 'back' ? back() : submit()),
+      ),
+    );
 
     const digit = (v: number | undefined, cls = '') =>
       h('span', { class: `gd ${v == null ? 'empty' : ''} ${cls}`.trim() }, v == null ? '' : String(v));
@@ -166,10 +176,6 @@ export const guess: PuzzleDef = {
       if (okDigits(sv?.cur, false)) cur = sv.cur.slice();
     }
 
-    const del = btn('✕', back, 'ghost');
-    del.setAttribute('aria-label', L('Delete', 'Effacer'));
-    del.title = L('Delete', 'Effacer');
-    ctx.controls(del, btn(L('Guess', 'Essayer'), submit, 'primary'));
     root.append(boardEl, ...pads);
     render();
     // ---------- guide ----------

@@ -2,7 +2,7 @@ import './eclipse.css';
 import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks, s } from '../core/ui';
 import { pressable } from './latinkit/entry';
 import { type TakuzuRule, takuzuCheck, takuzuStep } from './logickit/takuzu-hint';
 
@@ -176,8 +176,8 @@ export const eclipse: PuzzleDef = {
         'Touchez une case pour la changer : soleil, lune, puis vide. Appuyez longuement (ou clic droit) pour l’effacer. Les cases pointillées sont données.',
       ),
       L(
-        'Keyboard: arrows move, Space cycles, 1 = sun, 2 = moon, Backspace clears. Cells breaking a rule turn red.',
-        'Au clavier : flèches pour bouger, Espace pour changer, 1 = soleil, 2 = lune, Retour arrière pour effacer. Les cases fautives passent au rouge.',
+        'Keyboard: arrows move, Space cycles, 1 = sun, 2 = moon, Backspace clears. Cells breaking a rule turn red and count as a mistake once you move on. Clear wipes your entries.',
+        'Au clavier : flèches pour bouger, Espace pour changer, 1 = soleil, 2 = lune, Retour arrière pour effacer. Les cases fautives passent au rouge et comptent comme une erreur dès que vous passez à une autre case. Effacer retire vos entrées.',
       ),
     ],
     tips: [
@@ -219,10 +219,17 @@ export const eclipse: PuzzleDef = {
         el,
         () => tap(i),
         () => set(i, -1),
+        () => !given[i] && g[i] !== -1,
       );
       grid.append(el);
       return el;
     });
+    /**
+     * Rule breaks count as a mistake once the player moves on: a tap cycles sun → moon, so the sun on the
+     * way to a moon must not count. `pending` is the cell whose entry hasn't been judged yet.
+     */
+    const watch = ruleBreaks(grid, ctx.mistake);
+    let pending = -1;
     const render = () => {
       const bad = broken(g, n);
       cells.forEach((el, i) => {
@@ -236,14 +243,18 @@ export const eclipse: PuzzleDef = {
         el.setAttribute('aria-label', g[i] === 0 ? L('sun', 'soleil') : g[i] === 1 ? L('moon', 'lune') : L('empty', 'vide'));
       });
       const left = g.filter((v) => v < 0).length;
-      ctx.status(P(left, ['left', 'left'], ['à remplir', 'à remplir']));
+      ctx.status(P(left, ['empty cell', 'empty cells'], ['case vide', 'cases vides']));
       return left === 0 && bad.size === 0;
     };
     const set = (i: number, v: number) => {
       if (done || given[i] || g[i] === v) return;
       ctx.touch();
+      if (pending !== i && pending >= 0) watch();
       g[i] = v;
-      if (render()) {
+      const won = render();
+      pending = v >= 0 && !won ? i : -1;
+      if (pending < 0) watch(false);
+      if (won) {
         done = true;
         ctx.solved();
       }
@@ -259,6 +270,18 @@ export const eclipse: PuzzleDef = {
     if (typeof sv?.cur === 'number' && Number.isInteger(sv.cur) && sv.cur >= -1 && sv.cur < g.length) cur = sv.cur;
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || g.every((v, i) => given[i] || v < 0)) return;
+        ctx.touch();
+        g.forEach((_, i) => !given[i] && (g[i] = -1));
+        cur = -1;
+        pending = -1;
+        render();
+        watch(false);
+      }),
+    );
 
     const lineName = (row: boolean, k: number) =>
       row ? L(`Row ${k + 1}`, `La rangée ${k + 1}`) : L(`Column ${k + 1}`, `La colonne ${k + 1}`);

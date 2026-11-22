@@ -24,6 +24,7 @@ function ctx(d: (typeof LEVELS)[number], seed: number) {
     mistake: () => events.push('mistake'),
     touch: () => {},
     status: () => {},
+    lives: () => {},
     controls: () => {},
   };
   return { c, root, events };
@@ -32,10 +33,21 @@ function ctx(d: (typeof LEVELS)[number], seed: number) {
 describe.each(PUZZLES.map((p) => [p.id, p] as const))('%s', (_id, def) => {
   it.each(LEVELS)('generates quickly and unsolved at level %i', (d) => {
     for (let seed = 1; seed <= 15; seed++) {
-      const { c, root, events } = ctx(d, seed * 7919 + d);
-      const t = performance.now();
-      const inst = def.create(c) || {};
-      const ms = performance.now() - t;
+      const time = () => {
+        const run = ctx(d, seed * 7919 + d);
+        const t = performance.now();
+        const inst = def.create(run.c) || {};
+        return { ...run, inst, ms: performance.now() - t };
+      };
+      // Generation is deterministic, so a slow seed is timed again: test files run in parallel, and a busy
+      // CI runner can stall a worker for a second or more. A generator that is really too slow stays slow.
+      let r = time();
+      if (r.ms >= 1500) {
+        r.inst.destroy?.();
+        const again = time();
+        if (again.ms < r.ms) r = again;
+      }
+      const { root, events, inst, ms } = r;
       expect(ms, `seed ${seed} took ${ms.toFixed(0)}ms`).toBeLessThan(1500);
       expect(root.childElementCount).toBeGreaterThan(0);
       expect(events).toEqual([]);

@@ -28,6 +28,7 @@ function make(id: string, d: Difficulty, seed: number) {
     mistake() {},
     touch() {},
     status() {},
+    lives: () => {},
     controls: (...els) => root.append(...els),
   };
   const inst: PuzzleInstance = def.create(ctx) || {};
@@ -42,7 +43,7 @@ function tap(root: HTMLElement, rng: Rng) {
 
 const snap = (inst: PuzzleInstance) => JSON.stringify(inst.snapshot?.());
 
-describe.each(['freecell', 'ladders', 'pyramid', 'capture-chess'])('%s check()', (id) => {
+describe.each(['freecell', 'ladders', 'pyramid', 'capture-chess', 'solitaire', 'spider'])('%s check()', (id) => {
   it('flags only dead ends, leaves the board alone, and backs out of them', () => {
     let flagged = 0;
     for (const d of [1, 3, 5] as Difficulty[])
@@ -73,7 +74,7 @@ describe.each(['freecell', 'ladders', 'pyramid', 'capture-chess'])('%s check()',
         g.destroy();
       }
     // The random taps do reach dead ends in these games, so the path above was exercised.
-    expect(id === 'freecell' || flagged > 0, `${id}: random taps never reached a dead end`).toBe(true);
+    expect(['freecell', 'solitaire', 'spider'].includes(id) || flagged > 0, `${id}: random taps never reached a dead end`).toBe(true);
   }, 60_000);
 });
 

@@ -69,6 +69,7 @@ describe('cover game', () => {
         mistake: () => events.push('mistake'),
         touch() {},
         status() {},
+        lives() {},
         controls() {},
       };
       const inst = cover.create(ctx) || {};

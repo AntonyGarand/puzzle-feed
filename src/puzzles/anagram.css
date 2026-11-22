@@ -1,0 +1,31 @@
+[data-puzzle='anagram'] {
+  --accent: var(--p4);
+}
+
+[data-puzzle='anagram'] .slots {
+  display: grid;
+  grid-template-columns: repeat(var(--len), 1fr);
+  gap: 8px;
+  width: min(var(--board), calc(var(--len) * 58px));
+  padding: 0 3px 3px 0;
+}
+[data-puzzle='anagram'] .slots .cell {
+  font-size: clamp(18px, 6vw, 28px);
+  text-transform: uppercase;
+}
+[data-puzzle='anagram'] .slot {
+  border-style: dashed;
+  box-shadow: none;
+  background: transparent;
+}
+[data-puzzle='anagram'] .slot.filled {
+  border-style: solid;
+  background: var(--accent);
+  color: var(--on-tone);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+[data-puzzle='anagram'] .tiles .cell.used {
+  opacity: 0.2;
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}

@@ -48,7 +48,7 @@
   gap: 0;
   padding: 0;
   border: var(--bw) solid var(--ink);
-  border-radius: 4px;
+  border-radius: var(--r-cell);
   background-color: var(--cell);
   background-image:
     linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
@@ -79,11 +79,11 @@
   content: '';
   width: 26%;
   height: 26%;
-  border: 2px solid var(--ink);
-  border-radius: 3px;
+  border: var(--cbw) solid var(--ink);
+  border-radius: calc(var(--r-cell) / 2);
   background: var(--accent);
 }
-.tracks-line {
+[data-puzzle='tracks'] .tracks-line {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -91,16 +91,16 @@
   overflow: visible;
   pointer-events: none;
 }
-.tracks-line polyline {
+[data-puzzle='tracks'] .tracks-line polyline {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.tracks-line .under {
+[data-puzzle='tracks'] .tracks-line .under {
   stroke: var(--ink);
   stroke-width: 0.3;
 }
-.tracks-line .over {
+[data-puzzle='tracks'] .tracks-line .over {
   stroke: var(--accent);
   stroke-width: 0.16;
 }

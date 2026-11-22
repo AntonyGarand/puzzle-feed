@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, restartBtn, shake, undoBtn } from '../core/ui';
 import { keyboard, keyValue } from './wordkit/keyboard';
 import { diff, makeLadder } from './wordkit/ladder';
 import { commonOfLength, dictReady, isWord, whenDict } from './wordkit/lexicon';
@@ -35,8 +35,8 @@ export const tower: PuzzleDef = {
         'Vous gagnez dès que votre mot n’est plus qu’à une lettre du mot du sommet.',
       ),
       L(
-        'Floors are limited; the footer shows floors used and par, the fewest steps possible. Undo removes your last floor or clears your typing (so does Escape).',
-        'Les étages sont limités; le bas de la carte indique les étages utilisés et le minimum d’étapes possible. « Annuler » retire votre dernier étage ou efface la saisie (Échap aussi).',
+        'Floors are limited; the footer shows floors used and par, the fewest steps possible. Undo removes your last floor or clears your typing (so does Escape); Restart takes every floor down.',
+        'Les étages sont limités; le bas de la carte indique les étages utilisés et le minimum d’étapes possible. « Annuler » retire votre dernier étage ou efface la saisie (Échap aussi); « Repartir » retire tous les étages.',
       ),
     ],
     tips: [
@@ -79,7 +79,7 @@ export const tower: PuzzleDef = {
     const status = (msg?: string) => {
       if (msg) ctx.status(msg);
       else if (!dictReady()) ctx.status(L('loading words…', 'chargement des mots…'));
-      else ctx.status(L(`Floor ${rungs.length}/${floors} · par ${steps} steps`, `Étage ${rungs.length}/${floors} · min. ${steps}`));
+      else ctx.status(L(`Floor ${rungs.length} / ${floors} · par ${steps} steps`, `Étage ${rungs.length} / ${floors} · min. ${steps}`));
     };
 
     const paintRow = (r: number, word: string, cls: string, below?: string) => {
@@ -121,8 +121,7 @@ export const tower: PuzzleDef = {
       }
       const n = diff(prev, cur);
       if (n !== 1) {
-        shake(grid);
-        if (n > 1) ctx.mistake();
+        shake(grid); // a rule the game enforces: refused, not a mistake
         status(n === 0 ? L('Change one letter', 'Changez une lettre') : L('Only one letter may change', 'Une seule lettre peut changer'));
         return;
       }
@@ -138,6 +137,7 @@ export const tower: PuzzleDef = {
       }
       if (!ok) {
         shake(grid);
+        ctx.mistake();
         status(L('Not in word list', 'Mot inconnu'));
         return;
       }
@@ -147,6 +147,7 @@ export const tower: PuzzleDef = {
         return;
       }
       rungs.push(cur);
+      beforeRestart = null;
       cur = '';
       if (diff(rungs[rungs.length - 1], goal) === 1) {
         win();
@@ -169,15 +170,30 @@ export const tower: PuzzleDef = {
         render();
       } else shake(grid);
     };
+    /** The floors taken down by Restart, so Undo can put them back. */
+    let beforeRestart: string[] | null = null;
     const undo = () => {
-      if (won || (!rungs.length && !cur)) return;
+      if (won || (!rungs.length && !cur && !beforeRestart)) return;
       ctx.touch();
       if (cur) cur = '';
-      else rungs.pop();
+      else if (rungs.length) rungs.pop();
+      else {
+        rungs.push(...beforeRestart!);
+        beforeRestart = null;
+      }
+      render();
+      status(rungs.length >= floors ? noFloors() : undefined);
+    };
+    const restart = () => {
+      if (won || (!rungs.length && !cur)) return;
+      ctx.touch();
+      if (rungs.length) beforeRestart = [...rungs];
+      rungs.length = 0;
+      cur = '';
       render();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
 
     const sv = ctx.saved as { r?: unknown; cur?: unknown } | undefined;
     if (sv && Array.isArray(sv.r)) {
@@ -249,7 +265,7 @@ export const tower: PuzzleDef = {
           kind: 'stuck',
           text: n
             ? L(
-                `From ${up(prev)}, no ladder of real words reaches ${up(goal)} in the ${n} floor${n > 1 ? 's' : ''} left. Undo this floor.`,
+                `From ${up(prev)}, no ladder of real words reaches ${up(goal)} in the ${P(n, ['floor', 'floors'], ['étage', 'étages'])} left. Undo this floor.`,
                 `À partir de ${up(prev)}, aucune échelle de vrais mots n’atteint ${up(goal)} dans ${n > 1 ? `les ${n} étages restants` : 'le dernier étage'}. Annulez cet étage.`,
               )
             : L(

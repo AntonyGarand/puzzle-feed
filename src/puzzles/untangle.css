@@ -11,40 +11,34 @@
   box-shadow: var(--sh) var(--sh) 0 var(--ink);
   overflow: hidden;
 }
-.untangle {
+[data-puzzle='untangle'] .untangle {
   display: block;
   width: 100%;
   height: 100%;
   touch-action: none;
   user-select: none;
 }
-.untangle line {
+[data-puzzle='untangle'] .untangle line {
   stroke: var(--ink);
   stroke-width: 0.9;
   stroke-linecap: round;
 }
-.untangle line.bad {
+[data-puzzle='untangle'] .untangle line.bad {
   stroke: var(--bad);
   stroke-width: 1.1;
 }
-.untangle .v {
+[data-puzzle='untangle'] .untangle .v {
   fill: var(--accent);
   stroke: var(--ink);
   stroke-width: 0.9;
   cursor: grab;
 }
-.untangle .v.on {
+[data-puzzle='untangle'] .untangle .v.on {
   fill: var(--cell);
   stroke-width: 1.2;
   cursor: grabbing;
 }
-[data-puzzle='untangle'].is-solved .untangle-wrap {
-  animation: pop 0.45s ease;
-}
-[data-puzzle='untangle'].is-solved .untangle line {
-  stroke: var(--ink);
-}
-.untangle .ghost {
+[data-puzzle='untangle'] .untangle .ghost {
   fill: none;
   stroke: var(--accent);
   stroke-width: 0.9;

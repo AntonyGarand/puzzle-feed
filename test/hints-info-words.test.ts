@@ -31,6 +31,7 @@ function make(p: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
     mistake() {},
     touch() {},
     status() {},
+    lives: () => {},
     controls: (...els) => root.append(...els),
   };
   const inst: PuzzleInstance = p.create(ctx) || {};

@@ -59,6 +59,3 @@
 [data-puzzle='loop'] .lo-svg .lo-n.err {
   fill: var(--bad);
 }
-[data-puzzle='loop'] .lo-board.won .edge.on .ln {
-  stroke: var(--good);
-}

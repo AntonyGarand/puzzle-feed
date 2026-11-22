@@ -1,10 +1,11 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, shake } from '../core/ui';
 import { makeCover } from './wordkit/cover-gen';
 import { adjacent, findPath } from './wordkit/hunt-solver';
 import { dictReady, isWord, letterKey, whenDict } from './wordkit/lexicon';
 import { traceInput, traceOverlay } from './wordkit/trace';
+import './wordkit/pill.css';
 import './cover.css';
 
 // Found words get these colours in turn (the tone, --p5, is kept for the live trace).
@@ -36,16 +37,16 @@ export const cover: PuzzleDef = {
         'Ou touchez les lettres une à une, puis retouchez la dernière pour valider.',
       ),
       L(
-        'A hidden word locks in and takes a colour. Other real words are accepted as guesses but don’t count.',
-        'Un mot caché se verrouille et prend une couleur. Les autres vrais mots ne comptent pas, sans pénalité.',
+        'A hidden word locks in and takes a colour. Other real words don’t count, without penalty; something that isn’t a word is a mistake.',
+        'Un mot caché se verrouille et prend une couleur. Les autres vrais mots ne comptent pas, sans pénalité; ce qui n’est pas un mot est une erreur.',
       ),
       L(
         'The chips above the grid show the words left (with their lengths on the easier levels).',
         'Les pastilles au-dessus de la grille montrent les mots restants (et leur longueur aux niveaux faciles).',
       ),
       L(
-        'Stuck? Hint shows the next letter of a word, at the cost of a mistake. Keyboard: type, then Enter.',
-        'Bloqué? Indice dévoile la lettre suivante d’un mot, au prix d’une erreur. Clavier : tapez, puis Entrée.',
+        'Stuck? The bulb at the top shows where a word runs. Keyboard: type, then Enter.',
+        'Bloqué? L’ampoule en haut montre où passe un mot. Clavier : tapez, puis Entrée.',
       ),
     ],
     tips: [
@@ -82,7 +83,6 @@ export const cover: PuzzleDef = {
     paths.forEach((p, k) => p.forEach((i) => (owner[i] = k)));
 
     const found: number[] = []; // word indices, in the order they were found
-    const shown = new Array<number>(K).fill(0); // letters revealed by hints, per word
     let path: number[] = [];
     let won = false;
     const claimed = (i: number) => found.includes(owner[i]);
@@ -133,14 +133,9 @@ export const cover: PuzzleDef = {
           cls += ' cover-done';
           style = `--c:${color(k)}`;
         } else if (pk >= 0) cls += pk === path.length - 1 ? ' sel' : ' on';
-        else if (paths[k].indexOf(i) < shown[k]) cls += ' hint';
         el.className = cls;
         if (style) el.setAttribute('style', style);
         else el.removeAttribute('style');
-        // Revealed letters carry their place in the word (1, 2, …).
-        const n = paths[k].indexOf(i) + 1;
-        if (cls.endsWith(' hint')) el.dataset.n = String(n);
-        else delete el.dataset.n;
       });
       trace.draw(
         path,
@@ -150,16 +145,15 @@ export const cover: PuzzleDef = {
       chipsEl.replaceChildren(
         ...order.map((k) =>
           found.includes(k)
-            ? h('span', { class: 'cover-chip done', style: `--c:${color(k)}` }, words[k])
+            ? h('span', { class: 'word-pill cover-chip done', style: `--c:${color(k)}` }, words[k])
             : h(
                 'span',
-                { class: 'cover-chip', title: showLens ? P(words[k].length, ['letter', 'letters'], ['lettre', 'lettres']) : '' },
+                { class: 'word-pill cover-chip', title: showLens ? P(words[k].length, ['letter', 'letters'], ['lettre', 'lettres']) : '' },
                 showLens ? '•'.repeat(words[k].length) : '?',
               ),
         ),
       );
-      hintBtn.disabled = won;
-      ctx.status(L(`${found.length}/${K} words`, `${found.length}/${K} mots`));
+      ctx.status(`${found.length} / ${P(K, ['word', 'words'], ['mot', 'mots'])}`);
     };
 
     const claim = (k: number) => {
@@ -199,24 +193,10 @@ export const cover: PuzzleDef = {
       const ok = isWord(w);
       if (ok === null) return say(L('loading words…', 'chargement des mots…'));
       shake(word);
+      // A rejected answer is a mistake; a real word that isn't hidden here is just a try.
+      if (!ok) ctx.mistake();
       say(ok ? L('Real word, not hidden here', 'Vrai mot, mais pas caché ici') : L('Not a word', 'Mot inconnu'));
     };
-
-    // Hint: the next letter of a word (the one already started, else the shortest left); costs a mistake.
-    const hintTarget = () => {
-      const left = order.filter((k) => !found.includes(k) && shown[k] < words[k].length);
-      return left.find((k) => shown[k] > 0) ?? left[0];
-    };
-    const hintBtn = btn(L('Hint', 'Indice'), () => {
-      if (won) return;
-      const k = hintTarget();
-      if (k === undefined) return;
-      ctx.touch();
-      shown[k]++;
-      ctx.mistake();
-      render();
-    });
-    ctx.controls(hintBtn);
 
     const stopInput = traceInput(grid, {
       cols,
@@ -232,16 +212,12 @@ export const cover: PuzzleDef = {
     });
 
     // ---------- resume ----------
-    const sv = ctx.saved as { f?: unknown; r?: unknown; p?: unknown } | undefined;
+    const sv = ctx.saved as { f?: unknown; p?: unknown } | undefined;
     if (sv && typeof sv === 'object') {
       if (Array.isArray(sv.f))
         for (const k of sv.f) {
           if (Number.isInteger(k) && k >= 0 && k < K && !found.includes(k) && found.length < K - 1) found.push(k);
         }
-      if (Array.isArray(sv.r))
-        sv.r.forEach((v, k) => {
-          if (k < K && Number.isInteger(v)) shown[k] = Math.max(0, Math.min(words[k].length, v));
-        });
       if (Array.isArray(sv.p)) {
         const p: number[] = [];
         for (const i of sv.p) {
@@ -388,7 +364,7 @@ export const cover: PuzzleDef = {
     return {
       check,
       hint,
-      snapshot: () => ({ f: found, r: shown, p: path }),
+      snapshot: () => ({ f: found, p: path }),
       onKey(e) {
         if (won) return false;
         if (e.key === 'Enter') {

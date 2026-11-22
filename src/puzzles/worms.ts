@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, PALETTE, s, shake } from '../core/ui';
+import { board, h, PALETTE, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { int, keyDir, type Dir } from './movekit/kit';
 import { stepper } from './movekit/pushgen';
 import { applyMove, estimate, generateWorms, isHome, loneTables, occupancy, solveWorms, type WormSpec } from './movekit/wormgen';
@@ -210,12 +210,10 @@ export const worms: PuzzleDef = {
       const home = ws.filter((sq, k) => isHome(sq, gsets[k])).length;
       const moves = history.length;
       ctx.status(
-        done
-          ? L(`Solved in ${moves} · best ${optimal}`, `Réussi en ${moves} · min. ${optimal}`)
-          : L(
-              `Moves ${moves} · best ${optimal} · ${home}/${ws.length} home`,
-              `Coups ${moves} · min. ${optimal} · ${home}/${ws.length} placés`,
-            ),
+        `${P(moves, ['move', 'moves'], ['coup', 'coups'])} · ${L(
+          `best ${optimal} · ${home} / ${ws.length} home`,
+          `min. ${optimal} · ${home} / ${ws.length} placés`,
+        )}`,
       );
     };
 
@@ -411,10 +409,11 @@ export const worms: PuzzleDef = {
       };
     };
 
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), restart, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(grid);
     render();
 
+    // No check(): a worm can always crawl back the way it came (tail first), so no position is a dead end.
     return {
       snapshot: () => ({ w: ws, h: history, s: sel }),
       hint,
@@ -435,11 +434,11 @@ export const worms: PuzzleDef = {
           render();
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           restart();
           return true;
         }

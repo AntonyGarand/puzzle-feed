@@ -31,11 +31,11 @@
   width: var(--mini);
   height: var(--mini);
   border: var(--bw) solid var(--ink);
-  border-radius: 6px;
+  border-radius: var(--r-cell);
   overflow: hidden;
   background: var(--ink);
   gap: 1px;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
 }
 [data-puzzle='copy-paste'] .cp-mini i {
   display: block;
@@ -71,33 +71,25 @@
 [data-puzzle='copy-paste'] .cp-tools .key:disabled {
   opacity: 0.4;
 }
+/* Colours, border and the low state come from playkit/moves-left.css. */
 [data-puzzle='copy-paste'] .cp-left {
   margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 4px 10px;
-  background: var(--accent);
-  color: var(--on-tone);
-  border: var(--bw) solid var(--ink);
-  border-radius: 12px;
-  box-shadow: 3px 3px 0 var(--ink);
+  border-radius: var(--r);
   text-align: center;
-  transition: background 0.2s;
 }
 [data-puzzle='copy-paste'] .cp-num {
   font-size: 28px;
   line-height: 1.1;
-  font-variant-numeric: tabular-nums;
 }
 [data-puzzle='copy-paste'] .cp-lbl {
   font-size: 11px;
   font-weight: 700;
   max-width: 64px;
   line-height: 1.15;
-}
-[data-puzzle='copy-paste'] .cp-head.low .cp-left {
-  background: var(--bad);
 }
 [data-puzzle='copy-paste'] .cp-board {
   touch-action: none;

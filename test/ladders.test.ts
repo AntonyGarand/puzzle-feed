@@ -91,6 +91,7 @@ describe('ladders', () => {
       mistake: () => {},
       touch: () => {},
       status: () => {},
+      lives: () => {},
       controls: () => {},
     };
     ladders.create(ctx);

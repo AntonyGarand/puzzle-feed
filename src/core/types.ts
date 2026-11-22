@@ -80,6 +80,12 @@ export interface PuzzleCtx {
   mistake(): void;
   /** Mark that the player has started interacting. */
   touch(): void;
+  /**
+   * Lives left, shown as hearts in the card header (next to the mistakes counter). Call it on every
+   * render for games with a fixed number of lives; never call it otherwise. Losing a life is a mistake
+   * too: call `mistake()` as well.
+   */
+  lives(left: number, max: number): void;
   /** Short status line shown in the card footer. */
   status(text: string): void;
   /** Extra buttons shown in the card footer. */

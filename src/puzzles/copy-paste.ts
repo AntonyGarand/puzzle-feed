@@ -1,8 +1,9 @@
 import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, restartBtn, shake, undoBtn } from '../core/ui';
 import './copy-paste.css';
+import './playkit/moves-left.css';
 
 /** A rectangular block of colours, row-major. */
 interface Block {
@@ -212,8 +213,8 @@ export const copyPaste: PuzzleDef = {
         'Copier est gratuit, mais les collages sont comptés : le compteur indique combien il en reste.',
       ),
       L(
-        'Out of pastes? Undo steps back one paste; Reset starts over. Keys: R turns, F mirrors, Z undoes.',
-        'Plus de collages? Annuler recule d’un collage; Recommencer repart de zéro. Touches : R tourne, F retourne, Z annule.',
+        'Out of pastes? Undo steps back one paste; Restart starts over. Keys: T turns, F mirrors, Z undoes, R restarts.',
+        'Plus de collages? Annuler recule d’un collage; Repartir recommence du début. Touches : T tourne, F retourne, Z annule, R repart.',
       ),
     ],
     tips: [
@@ -278,7 +279,7 @@ export const copyPaste: PuzzleDef = {
         h('div', { class: 'cp-cap' }, L('Clipboard', 'Presse-papiers')),
         h('div', { class: 'cp-cliprow' }, clipEl, turns && tools),
       ),
-      h('div', { class: 'cp-left' }, leftNum, leftLbl),
+      h('div', { class: 'cp-left moves-left' }, leftNum, leftLbl),
     );
     const grid = board(n, n, 'cp-board');
     const cells = g.map((_, i) => {
@@ -323,6 +324,15 @@ export const copyPaste: PuzzleDef = {
       leftNum.textContent = String(left);
       leftLbl.textContent = L(left === 1 ? 'paste left' : 'pastes left', left < 2 ? 'collage restant' : 'collages restants');
       head.classList.toggle('low', left === 0 && !done);
+      // The pill above the board counts the pastes left: the status says what to do next.
+      if (!done)
+        ctx.status(
+          left === 0 && !sameGrid(g, target)
+            ? L('No pastes left · undo', 'Plus de collages · annulez')
+            : clip
+              ? L('Tap a cell to paste · drag to copy', 'Touchez une case pour coller · glissez pour copier')
+              : L('Drag over your board to copy', 'Glissez sur votre grille pour copier'),
+        );
     };
 
     const copy = (s: Rect) => {
@@ -349,7 +359,6 @@ export const copyPaste: PuzzleDef = {
       ctx.touch();
       if (hist.length >= limit) {
         shake(grid);
-        ctx.status(L('No pastes left — undo or reset', 'Plus de collages — annulez ou recommencez'));
         return;
       }
       const ng = pasteAt(g, n, clip, Math.floor(i / n), i % n);
@@ -360,24 +369,19 @@ export const copyPaste: PuzzleDef = {
       hist.push(g);
       g = ng;
       src = null;
-      status();
       render();
       if (sameGrid(g, target)) {
         done = true;
         render();
         ctx.solved();
-      } else if (hist.length >= limit) {
-        shake(grid);
-        ctx.status(L('No pastes left — undo or reset', 'Plus de collages — annulez ou recommencez'));
-      }
+      } else if (hist.length >= limit) shake(grid);
     };
-    const status = () => ctx.status(L(`${hist.length} / ${limit} pastes used`, `${hist.length} / ${limit} collages utilisés`));
     const undo = () => {
+      if (done) return;
       const prev = hist.pop();
-      if (!prev || done) return;
+      if (!prev) return;
       g = prev;
       src = null;
-      status();
       render();
     };
     const reset = () => {
@@ -385,7 +389,6 @@ export const copyPaste: PuzzleDef = {
       g = start;
       hist = [];
       src = null;
-      status();
       render();
     };
 
@@ -576,9 +579,7 @@ export const copyPaste: PuzzleDef = {
     };
 
     root.append(head, grid);
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Reset', 'Recommencer'), reset, 'ghost'));
-    status();
-    if (hist.length >= limit) ctx.status(L('No pastes left — undo or reset', 'Plus de collages — annulez ou recommencez'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
     render();
     return {
       snapshot: () => ({ g, hist, clip, src }),
@@ -587,7 +588,8 @@ export const copyPaste: PuzzleDef = {
       onKey(e) {
         const key = e.key.toLowerCase();
         if (key === 'z' || key === 'backspace') undo();
-        else if (key === 'r' && turns) turn();
+        else if (key === 'r') reset();
+        else if (key === 't' && turns) turn();
         else if (key === 'f' && flips) mirror();
         else return false;
         return true;

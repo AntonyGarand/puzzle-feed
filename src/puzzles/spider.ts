@@ -1,7 +1,7 @@
 import './spider.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, shake } from '../core/ui';
+import { h, restartBtn, shake, undoBtn } from '../core/ui';
 import { cardEl, elAt, fan, label, leCard, pileEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
 import {
   bestDestS,
@@ -71,8 +71,8 @@ export const spider: PuzzleDef = {
         'Touchez la pioche (en haut à gauche) pour donner une carte sur chaque colonne. Impossible de donner tant qu’une colonne est vide.',
       ),
       L(
-        'Easy and Medium use one suit, Hard and Expert two, Master all four; higher levels have more cards and columns. Undo: Z or Backspace; deal: Space or D.',
-        'Facile et Moyen utilisent une sorte, Difficile et Expert deux, Maître les quatre; plus le niveau monte, plus il y a de cartes et de colonnes. Annuler : Z ou Retour arrière; donner : Espace ou D.',
+        'Easy and Medium use one suit, Hard and Expert two, Master all four; higher levels have more cards and columns. Undo: Z or Backspace; restart: R; deal: Space or D.',
+        'Facile et Moyen utilisent une sorte, Difficile et Expert deux, Maître les quatre; plus le niveau monte, plus il y a de cartes et de colonnes. Annuler : Z ou Retour arrière; repartir : R; donner : Espace ou D.',
       ),
     ],
     tips: [
@@ -109,10 +109,22 @@ export const spider: PuzzleDef = {
     }
     const table = tableEl(cfg.cols, TOP + cfg.tab, cfg.suits.length > 2 ? 'four-colour' : '');
     let over = false;
+    /** No deal left and no way to turn a card or finish a run: shuffling runs around can't win (undo can). */
+    let doomed = false;
+    /** Set while the guide plays a move of the deal's winning line: the position stays winnable, no need to check. */
+    let onWinningLine = false;
+    const judge = () => {
+      doomed = !onWinningLine && (!hasMoveS(s) || !progressS(s));
+    };
 
     const status = () => {
+      const head = `${L('Runs', 'Suites')} ${s.done.length} / ${runs} · ${P(s.moves, ['move', 'moves'], ['coup', 'coups'])}`;
+      if (doomed) {
+        ctx.status(`${head} · ${L('no useful moves left · undo', 'plus aucun coup utile · annulez')}`);
+        return;
+      }
       const deals = s.stock.length / cfg.cols;
-      ctx.status(`${L('Runs', 'Suites')} ${s.done.length}/${runs} · ${L('Deals', 'Donnes')} ${deals} · ${L('Moves', 'Coups')} ${s.moves}`);
+      ctx.status(`${head} · ${P(deals, ['deal left', 'deals left'], ['donne restante', 'donnes restantes'])}`);
     };
 
     const colCache: ({ key: string; el: HTMLElement } | undefined)[] = [];
@@ -147,28 +159,14 @@ export const spider: PuzzleDef = {
       table.replaceChildren(...kids);
     };
 
-    /** Set while the guide plays a move of the deal's winning line: the position stays winnable, no need to check. */
-    let onWinningLine = false;
     const after = () => {
       render();
       if (wonS(s)) {
         over = true;
-        ctx.status(
-          L(
-            `All ${runs} runs cleared in ${s.moves} moves`,
-            `Les ${runs} suites sont faites en ${P(s.moves, ['coup', 'coups'], ['coup', 'coups'])}`,
-          ),
-        );
         ctx.solved();
         return;
       }
-      // No deal left and no way to turn a card or finish a run: shuffling runs around can't win.
-      if (!onWinningLine && (!hasMoveS(s) || !progressS(s))) {
-        over = true;
-        ctx.status(L('No useful moves left', 'Plus aucun coup utile'));
-        ctx.failed();
-        return;
-      }
+      judge();
       status();
     };
 
@@ -228,11 +226,25 @@ export const spider: PuzzleDef = {
       ctx.touch();
       s = prev;
       render();
+      judge();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    /** Deal the same game again (undoable). */
+    const restart = () => {
+      if (over || JSON.stringify(s) === JSON.stringify(built.s)) return;
+      ctx.touch();
+      hist.push(s);
+      s = structuredClone(built.s);
+      render();
+      judge();
+      status();
+    };
+    /** Undo the last move, or deal the same game again when there is nothing to undo. */
+    const backOut = () => (hist.size ? undo() : restart());
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(table);
     render();
+    if (sv) judge();
     status();
 
     /** Fast deep copy of a position. */
@@ -411,6 +423,7 @@ export const spider: PuzzleDef = {
             for (let prev = hist.pop(); prev; prev = lineAt?.has(keyOf(prev)) ? null : hist.pop()) s = prev;
             ctx.touch();
             render();
+            judge();
             status();
           },
         };
@@ -532,15 +545,36 @@ export const spider: PuzzleDef = {
       return stuckHint();
     };
 
+    /** Dead end: no card can turn over, no run can finish and no row is left to deal. */
+    const check = (): Hint | null => {
+      if (over || !doomed) return null;
+      return {
+        kind: 'stuck',
+        text: L(
+          'No way to win from here: no card can turn over, no run can be finished and no row is left to deal. Undo.',
+          'Impossible de gagner d’ici : aucune carte ne peut se retourner, aucune suite se compléter, et il ne reste aucune rangée à donner. Annulez.',
+        ),
+        at: [topEl(table, 's')!],
+        action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+        play: backOut,
+      };
+    };
+
     return {
       hint,
+      check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
-        if (e.key === 'z' || e.key === 'Backspace') {
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'backspace') {
           undo();
           return true;
         }
-        if (e.key === ' ' || e.key === 'd') {
+        if (k === 'r') {
+          restart();
+          return true;
+        }
+        if (e.key === ' ' || k === 'd') {
           if (!over) {
             ctx.touch();
             deal();

@@ -32,10 +32,12 @@
 [data-puzzle='mosaic'] .cell.done .mo-n {
   opacity: 0.35;
 }
-[data-puzzle='mosaic'] .cell.over .mo-n {
+[data-puzzle='mosaic'] .mo-n.err,
+[data-puzzle='mosaic'] .mo-n.short {
   color: var(--bad);
 }
-[data-puzzle='mosaic'] .cell.on.over .mo-n {
+[data-puzzle='mosaic'] .cell.on .mo-n.err,
+[data-puzzle='mosaic'] .cell.on .mo-n.short {
   color: var(--on-tone);
   text-decoration: underline wavy var(--bad);
 }
@@ -43,23 +45,4 @@
   outline: 3px solid var(--ink);
   outline-offset: 1px;
   z-index: 1;
-}
-/* long-press progress: a ring closes in while holding, then the cell turns into ✕ */
-[data-puzzle='mosaic'] .mo-grid .cell.lp::before {
-  content: '';
-  position: absolute;
-  inset: 14%;
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  animation: mo-press 0.35s linear forwards;
-}
-@keyframes mo-press {
-  from {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(0.6);
-    opacity: 1;
-  }
 }

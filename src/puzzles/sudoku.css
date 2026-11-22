@@ -1,0 +1,17 @@
+[data-puzzle='sudoku'] {
+  --accent: var(--p2);
+}
+
+/* givens are ink, entries are tone-coloured */
+[data-puzzle='sudoku'] .sudoku .cell:not(.given) {
+  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
+}
+[data-puzzle='sudoku'] .sudoku .cell.sel:not(.given) {
+  color: var(--on-tone);
+}
+[data-puzzle='sudoku'] .sudoku .cell.alt {
+  background: color-mix(in srgb, var(--accent) 12%, var(--cell-alt));
+}
+[data-puzzle='sudoku'] .sudoku .cell.alt.peer {
+  background: color-mix(in srgb, var(--accent) 24%, var(--cell-alt));
+}

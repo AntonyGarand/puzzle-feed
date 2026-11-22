@@ -112,6 +112,8 @@ export const pairs: PuzzleDef = {
     };
     /** A mismatched pair stays face up for a moment, then flips back on its own (or on the next tap). */
     let hideTimer = 0;
+    /** The miss shakes once the second card has turned. */
+    let shakeTimer = 0;
     const render = () => {
       els.forEach((el, i) => {
         const up = matched[i] || open.includes(i) || over;
@@ -123,9 +125,9 @@ export const pairs: PuzzleDef = {
       const found = matched.filter(Boolean).length / 2;
       const left = limit - tries;
       ctx.status(
-        `${L('Pairs', 'Paires')} ${found}/${np} · ${
+        `${found} / ${P(np, ['pair', 'pairs'], ['paire', 'paires'])} · ${
           limit
-            ? L(`${left} ${left === 1 ? 'try' : 'tries'} left`, `${left} ${left < 2 ? 'essai restant' : 'essais restants'}`)
+            ? P(left, ['try left', 'tries left'], ['essai restant', 'essais restants'])
             : P(tries, ['try', 'tries'], ['essai', 'essais'])
         }`,
       );
@@ -172,8 +174,13 @@ export const pairs: PuzzleDef = {
           fx(els[a], POP, 360, 260);
           fx(els[b], POP, 360, 260);
         } else {
-          fx(els[a], SHAKE, 380, 300);
-          fx(els[b], SHAKE, 380, 300);
+          clearTimeout(shakeTimer);
+          shakeTimer = window.setTimeout(() => {
+            if (open.length === 2 && open[0] === a && open[1] === b) {
+              shake(els[a]);
+              shake(els[b]);
+            }
+          }, 300);
           hideTimer = window.setTimeout(() => {
             if (open.length === 2 && open[0] === a && open[1] === b) {
               open = [];
@@ -282,17 +289,13 @@ export const pairs: PuzzleDef = {
     return {
       snapshot: () => ({ m: matched.map(Number), seen: seen.map(Number), open, tries }),
       hint,
-      destroy: () => clearTimeout(hideTimer),
+      destroy: () => {
+        clearTimeout(hideTimer);
+        clearTimeout(shakeTimer);
+      },
     };
   },
 };
 
+/** On `scale`, not movekit's `transform` POP: a matched card keeps its settle offset (`transform`) while it pops. */
 const POP: Keyframe[] = [{ scale: '1' }, { scale: '1.12', offset: 0.4 }, { scale: '0.97', offset: 0.75 }, { scale: '1' }];
-const SHAKE: Keyframe[] = [
-  { translate: '0' },
-  { translate: '-7px' },
-  { translate: '6px' },
-  { translate: '-4px' },
-  { translate: '2px' },
-  { translate: '0' },
-];
