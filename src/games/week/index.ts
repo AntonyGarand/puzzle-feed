@@ -1,6 +1,7 @@
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { board, btn, h, restartBtn, shake, undoBtn } from '../../ui/dom';
+import { dragPoint, TOUCH_LIFT_CELLS } from '../../ui/drag';
 import { anim } from '../../kits/move/kit';
 import {
   bestPut,
@@ -270,7 +271,7 @@ export const week: PuzzleDef = {
       if (!place(sel, topAround(w, ext(shapeOf(sel)), i))) shake(grid);
     };
 
-    // Drag (from the tray or the board): a ghost follows the pointer, lifted above the finger on touch.
+    // Drag (from the tray or the board): a ghost follows the pointer; on touch it floats above the finger and runs ahead of it.
     let drag: {
       k: number;
       id: number;
@@ -278,7 +279,7 @@ export const week: PuzzleDef = {
       sy: number;
       active: boolean;
       ghost: HTMLElement | null;
-      lift: number;
+      touch: boolean;
       fromBoard: boolean;
       before: { pos: number[]; rot: number[] } | null;
     } | null = null;
@@ -296,7 +297,7 @@ export const week: PuzzleDef = {
         sy: e.clientY,
         active: false,
         ghost: null,
-        lift: e.pointerType === 'touch' ? 1 : 0,
+        touch: e.pointerType === 'touch',
         fromBoard,
         before: null,
       };
@@ -328,8 +329,9 @@ export const week: PuzzleDef = {
       const ex = ext(shapeOf(k));
       const gw = ex.w * g.pitch,
         gh = ex.h * g.pitch;
-      const gx = e.clientX - gw / 2,
-        gy = e.clientY - gh / 2 - drag.lift * (gh / 2 + g.pitch * 1.2);
+      const at = dragPoint(drag, e.clientX, e.clientY, gh / 2 + g.pitch * TOUCH_LIFT_CELLS);
+      const gx = at.x - gw / 2,
+        gy = at.y - gh / 2;
       drag.ghost!.style.left = `${gx}px`;
       drag.ghost!.style.top = `${gy}px`;
       const r = Math.round((gy - g.oy) / g.pitch),
@@ -357,7 +359,10 @@ export const week: PuzzleDef = {
       }
       if (g.before) {
         const gr = grid.getBoundingClientRect();
-        const outside = e.clientX < gr.left || e.clientX > gr.right || e.clientY < gr.top || e.clientY > gr.bottom;
+        const { pitch } = geom();
+        const ex = ext(shapeOf(g.k));
+        const at = dragPoint(g, e.clientX, e.clientY, (ex.h * pitch) / 2 + pitch * TOUCH_LIFT_CELLS);
+        const outside = at.x < gr.left || at.x > gr.right || at.y < gr.top || at.y > gr.bottom;
         if (outside && !cancel) {
           // Dropped off the board: back to the tray.
           hist.push(g.before);

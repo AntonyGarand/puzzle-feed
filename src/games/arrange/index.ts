@@ -1,6 +1,7 @@
 import { L } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { board, clearBtn, h, PALETTE, shake, undoBtn } from '../../ui/dom';
+import { dragPoint, TOUCH_LIFT_CELLS } from '../../ui/drag';
 import { genArrange, type Shape } from './gen';
 import { innerRect } from '../../kits/path/grid';
 import {
@@ -33,6 +34,8 @@ type Drag = {
   sx: number;
   sy: number;
   moved: boolean;
+  /** Touch drags float the piece above the finger and amplify its travel (see `dragPoint`). */
+  touch: boolean;
   ghost?: HTMLElement;
   /** Position when the gesture began, recorded for undo if the gesture changes the board. */
   before: Pos;
@@ -214,15 +217,23 @@ export const arrange: PuzzleDef = {
       const cs = r.width / cols;
       return { R: Math.floor((y - r.top) / cs), C: Math.floor((x - r.left) / cs), cs };
     };
+    /** Where the grabbed cell of the held piece is for a pointer at (x, y). */
+    const held = (dg: Drag, x: number, y: number) => {
+      const { cs } = boardCell(x, y);
+      const below = Math.max(...shapeOf(dg.p).map((q) => q[0])) - dg.dr + 0.5;
+      return dragPoint(dg, x, y, (below + TOUCH_LIFT_CELLS) * cs);
+    };
     const ghostAt = (x: number, y: number) => {
       if (!drag?.ghost) return;
       const { cs } = boardCell(x, y);
-      drag.ghost.style.left = `${x - (drag.dc + 0.5) * cs}px`;
-      drag.ghost.style.top = `${y - (drag.dr + 0.5) * cs}px`;
+      const at = held(drag, x, y);
+      drag.ghost.style.left = `${at.x - (drag.dc + 0.5) * cs}px`;
+      drag.ghost.style.top = `${at.y - (drag.dr + 0.5) * cs}px`;
     };
     const target = (x: number, y: number) => {
       if (!drag) return null;
-      const { R, C } = boardCell(x, y);
+      const at = held(drag, x, y);
+      const { R, C } = boardCell(at.x, at.y);
       const r0 = R - drag.dr,
         c0 = C - drag.dc;
       return fits(drag.p, r0, c0) ? ([r0, c0] as [number, number]) : null;
@@ -288,7 +299,8 @@ export const arrange: PuzzleDef = {
         const t = e.type === 'pointerup' ? (recompute(), dragTarget(dg, e.clientX, e.clientY)) : null;
         if (t) place[dg.p] = t;
         else {
-          const { R, C } = boardCell(e.clientX, e.clientY);
+          const at = held(dg, e.clientX, e.clientY);
+          const { R, C } = boardCell(at.x, at.y);
           const onBoard = R >= 0 && R < rows && C >= 0 && C < cols;
           place[dg.p] = onBoard ? dg.from : null; // bad spot on the board: put it back; off the board: to the tray
         }
@@ -346,7 +358,19 @@ export const arrange: PuzzleDef = {
         (b, q) => (Math.abs(q[0] - fr) + Math.abs(q[1] - fc) < Math.abs(b[0] - fr) + Math.abs(b[1] - fc) ? q : b),
         sh[0],
       );
-      begin(e, { p, id: e.pointerId, x: e.clientX, y: e.clientY, dr, dc, from: null, sx: e.clientX, sy: e.clientY, moved: false });
+      begin(e, {
+        p,
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        dr,
+        dc,
+        from: null,
+        sx: e.clientX,
+        sy: e.clientY,
+        moved: false,
+        touch: e.pointerType === 'touch',
+      });
     });
     grid.addEventListener('pointerdown', (e) => {
       if (drag) return;
@@ -355,7 +379,7 @@ export const arrange: PuzzleDef = {
       const p = owner[R * cols + C];
       if (p < 0 || !place[p]) return;
       const [r0, c0] = place[p];
-      const at = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY };
+      const at = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, touch: e.pointerType === 'touch' };
       begin(e, { p, ...at, dr: R - r0, dc: C - c0, from: [r0, c0], moved: false });
     });
 
