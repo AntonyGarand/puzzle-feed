@@ -67,6 +67,16 @@ Every game follows the same rules, so a player who knows one game knows how all 
 - Every game keeps a status line while playing. Join facts with `·`. Write progress as `have / total noun` with spaces around the slash. Write counts and budgets with `P()` (`3 moves left`, never `3 moves` built by hand).
 - Endless games call `ctx.solved({ keepPlaying: true })` when they reach the goal and add a primary **Finish** button.
 
+**Colour and contrast**
+
+- Use tokens, never literal colours. Fills: `--accent`, `--good`, `--bad`, `--p1`…`--p8`. Text, thin lines and ✓ ✗ marks on a surface use `--accent-ink`, `--good-ink` or `--bad-ink`, which hold 4.5:1 in both themes. Text on a bright fill is `--on-tone`.
+- Dimmed text (placeholders, empty slots, a satisfied clue) is `color: var(--faint)`, never `opacity`. `--faint` still holds 4.5:1.
+- Region tints come from `tint(i, pct)` in `logickit/kit.ts`. It is pastel in light mode and a deep jewel tone in dark mode.
+- Shaded ("black") cells use `background: var(--shade) var(--shade-hatch); border-color: var(--shade)`.
+- Colour is never the only cue. When pieces must be matched by colour, add `mark(k)` / `svgMark(k, …)` from `core/symbols.ts` (the "Colour symbols" setting), or a pattern (Word Guess stripes its "wrong place" tiles).
+- Thin coloured lines on the board get an ink casing underneath (Connect, Arrows, Tether, Worms).
+- `npm run e2e:a11y` (needs `npm run dev`) checks contrast, names and target sizes in every game, in light and dark. It must report 0 problems. Add an exception to its `IGNORE` list only with a reason.
+
 ## Checking your work
 
 ```sh

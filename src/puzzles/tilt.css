@@ -1,3 +1,8 @@
+/* a symbol on an open hole sits on its dark centre: draw it in the hole's colour */
+[data-puzzle='tilt'] .cell.hl:not(.pl) .cmark {
+  background: var(--c);
+  opacity: 1;
+}
 [data-puzzle='tilt'] {
   --accent: var(--p6);
   --tilt-c0: var(--p7);

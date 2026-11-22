@@ -10,20 +10,33 @@
   --fg: #111111; /* text */
   --ink: #111111; /* borders & shadows */
   --muted: #5e584e;
+  /* placeholders, finished clues, empty slots: dimmed but still 3:1 on every surface (WCAG non-text / large text) */
+  --faint: #746e64;
   --on-tone: #111111; /* text on bright fills */
   --good: #3ddc84;
   --bad: #ff5a5f;
+  /* --good / --bad / --accent are fills. Text, thin lines and ✓ ✗ marks on a surface use the -ink
+     versions, which hold 4.5:1 on --bg, --cell and --cell-alt in both themes. */
+  --good-ink: #0f7a3c;
+  --bad-ink: #c62f35;
   --hi: #ffd23f; /* site highlight (nav, primary buttons) */
   /* "black" cells (shaded / walls): always darker than an open cell, in both themes, so rules that say
      black / white or shaded read true either way */
   --shade: #111111;
   --on-shade: #ffffff;
+  /* Shaded cells drop their outline (border-color: var(--shade)) and, in dark mode, take a faint hatch:
+     near-black on dark grey is a small step, so they also read by shape and texture. */
+  --shade-hatch: none;
 
   /* physical objects (card faces, chess squares and pieces, black/white pearls): the same tones in both
      themes, so "red on black" or "white pearl" stays true in dark mode. Never use them for UI surfaces. */
   --paper: #fffdf6;
   --paper-alt: #f4ead6;
   --coal: #111111;
+  /* suit inks on --paper (5:1 or better): red, and the four-colour deck's blue and green */
+  --paper-red: #c03a40;
+  --paper-blue: #2f5fd0;
+  --paper-green: #1f7444;
 
   /* shared palette (flood, code breaker, …) */
   --p1: #ff8a3d;
@@ -35,9 +48,24 @@
   --p7: #ff6fb5;
   --p8: #b6e04a; /* lime (was brown) */
 
+  /* region tints (Galaxies, Stars, Fill, Tiles, …): logickit tint() mixes --tN into --cell, scaled by
+     --tint-gain. Light mode uses the bright palette as pastels; dark mode swaps in deep jewel tones so
+     regions stay saturated instead of turning olive and brown, and light text keeps 4.5:1 on them. */
+  --t1: var(--p1);
+  --t2: var(--p2);
+  --t3: var(--p3);
+  --t4: var(--p4);
+  --t5: var(--p5);
+  --t6: var(--p6);
+  --t7: var(--p7);
+  --t8: var(--p8);
+  --tint-gain: 1;
+
   /* per-puzzle tone (overridden per card) */
   --accent: var(--hi);
   --accent-soft: color-mix(in srgb, var(--accent) 32%, var(--cell));
+  /* the accent as text or a thin line on a surface */
+  --accent-ink: color-mix(in oklab, var(--accent) 48%, var(--fg));
 
   --bw: 2.5px;
   --sh: 4px;
@@ -55,8 +83,21 @@
   --fg: #f6f1e7;
   --ink: #f6f1e7;
   --muted: #aaa397;
+  --faint: #938d85;
+  --good-ink: var(--good);
+  --bad-ink: #ff7a7e;
   --shade: #050506;
   --on-shade: var(--fg);
+  --shade-hatch: repeating-linear-gradient(135deg, transparent 0 5px, rgb(255 255 255 / 0.09) 5px 7px);
+  --t1: #a8501c;
+  --t2: #3358b8;
+  --t3: #1d8a59;
+  --t4: #94760a;
+  --t5: #7048b8;
+  --t6: #13878a;
+  --t7: #a83a76;
+  --t8: #5f8216;
+  --tint-gain: 2;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -67,14 +108,28 @@
     --fg: #f6f1e7;
     --ink: #f6f1e7;
     --muted: #aaa397;
+    --faint: #938d85;
+    --good-ink: var(--good);
+    --bad-ink: #ff7a7e;
     --shade: #050506;
     --on-shade: var(--fg);
+    --shade-hatch: repeating-linear-gradient(135deg, transparent 0 5px, rgb(255 255 255 / 0.09) 5px 7px);
+    --t1: #a8501c;
+    --t2: #3358b8;
+    --t3: #1d8a59;
+    --t4: #94760a;
+    --t5: #7048b8;
+    --t6: #13878a;
+    --t7: #a83a76;
+    --t8: #5f8216;
+    --tint-gain: 2;
     color-scheme: dark;
   }
 }
 
 [data-puzzle] {
   --accent-soft: color-mix(in srgb, var(--accent) 32%, var(--cell));
+  --accent-ink: color-mix(in oklab, var(--accent) 48%, var(--fg));
 }
 
 /* ---------- base ---------- */
@@ -128,6 +183,42 @@ h3 {
 }
 .muted {
   color: var(--muted);
+}
+
+/* ---------- colour symbols (core/symbols.ts) ---------- */
+/* One shape per palette colour, on when the "Colour symbols" setting is. The parent carries the colour
+   and must be positioned. */
+.cmark,
+.cmark-svg {
+  display: none;
+}
+:root[data-symbols] .cmark[data-k] {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 48%;
+  height: 48%;
+  max-width: 24px;
+  max-height: 24px;
+  background: var(--on-tone);
+  opacity: 0.8;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+}
+:where(:root[data-symbols] :has(> .cmark[data-k])) {
+  position: relative;
+}
+:root[data-symbols] .cmark-svg {
+  display: inline;
+  fill: var(--on-tone);
+  opacity: 0.8;
+  pointer-events: none;
 }
 .small {
   font-size: 13px;
@@ -1769,6 +1860,7 @@ td a:hover {
 }
 .cat-toggle {
   margin-left: auto;
+  min-height: 24px; /* WCAG 2.5.8 target size */
   font-size: 12px;
   text-transform: none;
   letter-spacing: 0;
@@ -2135,7 +2227,7 @@ dialog.sheet::backdrop {
 }
 .guide-at {
   fill: none;
-  stroke: var(--bad);
+  stroke: var(--bad-ink);
   stroke-width: 4;
   animation:
     guide-in 0.3s ease-out 0.25s both,
@@ -2186,7 +2278,7 @@ dialog.sheet::backdrop {
   font-weight: 600;
 }
 .guide-stage.done + .guide-caption {
-  color: color-mix(in srgb, var(--good) 60%, var(--fg));
+  color: var(--good-ink);
 }
 .guide-row {
   display: flex;
@@ -2305,7 +2397,7 @@ dialog.sheet::backdrop {
   margin: 8px 0 0;
 }
 .code-msg.bad {
-  color: var(--bad);
+  color: var(--bad-ink);
   font-weight: 700;
 }
 .share-row {
@@ -2394,7 +2486,7 @@ dialog.sheet::backdrop {
   font-weight: 700;
 }
 .daily-name .bad {
-  color: var(--bad);
+  color: var(--bad-ink);
   font-weight: 700;
 }
 .daily-summary {
@@ -2605,7 +2697,7 @@ dialog.sheet::backdrop {
 }
 .hint-pop.fix,
 .hint-pop.stuck {
-  border-color: var(--bad);
+  border-color: var(--bad-ink);
   box-shadow: var(--sh) var(--sh) 0 var(--bad);
 }
 .hint-pop p {
@@ -2629,4 +2721,21 @@ dialog.sheet::backdrop {
   stroke-linecap: round;
   stroke-linejoin: round;
   vertical-align: middle;
+}
+
+/* ---------- more contrast (OS setting) ---------- */
+/* Secondary text goes full strength and dimmed text takes the regular muted tone. */
+@media (prefers-contrast: more) {
+  :root {
+    --muted: var(--fg);
+    --faint: #5e584e;
+  }
+  :root[data-theme='dark'] {
+    --faint: #aaa397;
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --faint: #aaa397;
+  }
 }

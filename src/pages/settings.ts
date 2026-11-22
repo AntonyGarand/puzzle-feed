@@ -66,6 +66,31 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         h(
           'div',
           null,
+          h('div', null, L('Colour symbols', 'Symboles de couleur')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'A shape on every colour-coded piece, for colour-blind play.',
+              'Une forme sur chaque pièce colorée, pour jouer sans distinguer les couleurs.',
+            ),
+          ),
+        ),
+        segmented(
+          [
+            { label: L('On', 'Oui'), value: 1 },
+            { label: L('Off', 'Non'), value: 0 },
+          ],
+          p.symbols ? 1 : 0,
+          (v) => update({ symbols: v === 1 }),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
           h('div', null, L('Starting level', 'Niveau de départ')),
           h('div', { class: 'muted small' }, L('For games you have not played yet.', 'Pour les jeux pas encore joués.')),
         ),

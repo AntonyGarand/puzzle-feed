@@ -42,7 +42,7 @@
   fill: var(--ink);
 }
 [data-puzzle='loop'] .lo-svg .vx.err {
-  fill: var(--bad);
+  fill: var(--bad-ink);
   r: 0.12px;
 }
 [data-puzzle='loop'] .lo-svg .lo-n {
@@ -54,8 +54,9 @@
     fill 0.2s;
 }
 [data-puzzle='loop'] .lo-svg .lo-n.done {
-  opacity: 0.3;
+  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
+  fill: var(--faint);
 }
 [data-puzzle='loop'] .lo-svg .lo-n.err {
-  fill: var(--bad);
+  fill: var(--bad-ink);
 }

@@ -69,6 +69,8 @@ function applyTheme() {
   const t = getProfile().theme;
   if (t === 'system') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = t;
+  if (getProfile().symbols) document.documentElement.dataset.symbols = '';
+  else delete document.documentElement.dataset.symbols;
   const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#17161a' : '#fff6e5');
 }

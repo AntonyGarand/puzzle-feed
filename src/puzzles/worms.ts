@@ -1,13 +1,15 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, PALETTE, restartBtn, s, shake, undoBtn } from '../core/ui';
+import { mark, svgMark } from '../core/symbols';
 import { int, keyDir, type Dir } from './movekit/kit';
 import { stepper } from './movekit/pushgen';
 import { applyMove, estimate, generateWorms, isHome, loneTables, occupancy, solveWorms, type WormSpec } from './movekit/wormgen';
 import './worms.css';
 
 /** Worm colours (p8 is the game's tone, used for selection marks). */
-const TONES = [PALETTE[0], PALETTE[1], PALETTE[6], PALETTE[4]];
+const SYM = [0, 1, 6, 4];
+const TONES = SYM.map((k) => PALETTE[k]);
 
 const SPECS: [WormSpec, WormSpec, WormSpec, WormSpec, WormSpec] = [
   { w: 5, h: 5, lens: [2, 3], walls: 1, min: 7, max: 12, extra: 2, cap: 15000, work: 20000 },
@@ -113,12 +115,16 @@ export const worms: PuzzleDef = {
     for (let i = 0; i < n; i++) {
       const g = goalOf.get(i);
       const el = floor[i]
-        ? h('button', {
-            type: 'button',
-            class: 'cell',
-            style: g != null ? `--c:${TONES[g]}` : null,
-            onclick: () => click(i),
-          })
+        ? h(
+            'button',
+            {
+              type: 'button',
+              class: 'cell',
+              style: g != null ? `--c:${TONES[g]}` : null,
+              onclick: () => click(i),
+            },
+            g != null ? mark(SYM[g]) : null,
+          )
         : h('div', { class: 'cell wall' });
       els.push(el);
       grid.append(el);
@@ -157,6 +163,9 @@ export const worms: PuzzleDef = {
       const fx = hx - nx,
         fy = hy - ny;
       g.append(s('circle', { class: 'head', cx: hx, cy: hy, r: 0.34 }));
+      // colour symbol on the tail end, clear of the eyes
+      const [tx, ty] = xy(sq[sq.length - 1]);
+      g.append(svgMark(SYM[k], tx, ty, 0.24));
       for (const side of [-1, 1]) {
         const ex = hx + fx * 0.1 + fy * side * 0.15,
           ey = hy + fy * 0.1 - fx * side * 0.15;
@@ -179,13 +188,13 @@ export const worms: PuzzleDef = {
       if (sel < 0 || done) return out;
       const occ = occupancy(ws, n);
       const sq = ws[sel];
-      for (const [end, mark] of [
+      for (const [end, side] of [
         [sq[sq.length - 1], 2],
         [sq[0], 1],
       ])
         for (let dd = 0; dd < 4; dd++) {
           const y = nb(end, dd);
-          if (y >= 0 && floor[y] && !occ[y]) out.set(y, mark);
+          if (y >= 0 && floor[y] && !occ[y]) out.set(y, side);
         }
       return out;
     };

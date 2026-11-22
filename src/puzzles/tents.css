@@ -13,7 +13,8 @@
     color 0.2s;
 }
 [data-puzzle='tents'] .lk-tents .lk-clue.done {
-  opacity: 0.3;
+  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
+  color: var(--faint);
 }
 [data-puzzle='tents'] .lk-tents .cell {
   overflow: hidden;

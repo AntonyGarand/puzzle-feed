@@ -40,7 +40,8 @@
   min-width: 2.4em;
 }
 [data-puzzle='tracks'] .clue.done {
-  opacity: 0.3;
+  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
+  color: var(--faint);
 }
 
 [data-puzzle='tracks'] .tracks-grid {

@@ -75,7 +75,8 @@
 /* runs that are complete and add up */
 [data-puzzle='cross-sums'] .kakuro .ac.ok,
 [data-puzzle='cross-sums'] .kakuro .dn.ok {
-  opacity: 0.4;
+  /* dimmed, still 4.5:1 on the shaded clue cell */
+  opacity: 0.6;
 }
 [data-puzzle='cross-sums'] .kakuro .ac.on.ok,
 [data-puzzle='cross-sums'] .kakuro .dn.on.ok {

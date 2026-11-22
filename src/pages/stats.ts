@@ -25,6 +25,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
     class: 'input inline',
     value: p.name,
     placeholder: L('Your name', 'Votre nom'),
+    'aria-label': L('Your name', 'Votre nom'),
     maxlength: 32,
     onchange: () => update({ name: nameInput.value.trim() }),
   });

@@ -46,7 +46,8 @@
   padding: 0 5px;
 }
 [data-puzzle='nonogram'] .clue.done {
-  opacity: 0.3;
+  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
+  color: var(--faint);
 }
 [data-puzzle='nonogram'] .nono-grid {
   touch-action: none;
@@ -72,5 +73,5 @@
   z-index: 1;
 }
 [data-puzzle='nonogram'] .clue.err {
-  color: var(--bad);
+  color: var(--bad-ink);
 }

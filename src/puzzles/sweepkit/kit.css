@@ -73,7 +73,7 @@
   clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 :is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.x {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 :is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine::after {
   content: '';

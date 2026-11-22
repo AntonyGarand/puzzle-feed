@@ -86,7 +86,7 @@
 }
 /* wrong flag after a loss: the shared ✕ on a closed tile */
 [data-puzzle='mines'] .lk-mines .cell.x {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 [data-puzzle='mines'] .lk-mines .cell.mine::after {
   content: '';

@@ -21,10 +21,12 @@
   transition: opacity 0.2s;
 }
 [data-puzzle='sightlines'] .cell.done .sl-n {
-  opacity: 0.35;
+  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
+  color: var(--faint);
 }
 [data-puzzle='sightlines'] .sl-grid .cell.shade {
-  background: var(--shade);
+  background: var(--shade) var(--shade-hatch);
+  border-color: var(--shade);
 }
 [data-puzzle='sightlines'] .sl-grid .cell.mark::after {
   content: '';
