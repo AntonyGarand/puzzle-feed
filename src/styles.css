@@ -365,6 +365,8 @@ h3 {
   min-width: 0;
 }
 .level-label {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   font-weight: 700;
   color: var(--muted);
@@ -462,6 +464,385 @@ h3 {
   gap: 18px;
   width: 100%;
 }
+.stage {
+  position: relative;
+}
+
+/* ---------- win panel (laid over a solved board) ---------- */
+.win {
+  --muted: color-mix(in srgb, var(--fg) 80%, var(--cell));
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(3px);
+  animation: win-fade 0.25s ease-out;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    backdrop-filter 0.2s;
+}
+.win.peek {
+  background: transparent;
+  backdrop-filter: none;
+}
+.win.peek .win-card {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  pointer-events: none;
+}
+.win-card {
+  position: relative;
+  width: min(100%, 340px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 18px 18px;
+  margin-top: 26px;
+  border: var(--bw) solid var(--ink);
+  border-radius: calc(var(--r) * 1.6);
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: visible;
+  text-align: center;
+  animation: win-pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.win-badge {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  translate: -50% 0;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: var(--bw) solid var(--ink);
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.win-check {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: var(--on-tone);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: win-draw 0.4s 0.2s ease-out forwards;
+}
+.win-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.win-sub {
+  margin: -4px 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.win-time {
+  width: 100%;
+  padding: 10px 12px 12px;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--accent-soft);
+}
+.win-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.win-tag {
+  padding: 1px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--hi);
+  color: var(--on-tone);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.win-clock {
+  display: block;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.win-was {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.win-stats {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.win-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 4px;
+  border: 2px solid var(--ink);
+  border-radius: var(--r-cell);
+  background: var(--cell-alt);
+  min-width: 0;
+}
+.win-tile span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-tile strong {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.win-tile.good {
+  background: color-mix(in srgb, var(--good) 35%, var(--cell));
+}
+.win-level {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  color: var(--on-tone);
+  background: var(--accent);
+}
+.win-level.down {
+  background: var(--cell-alt);
+  color: var(--fg);
+}
+.win-xp {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--cell-alt);
+  text-align: left;
+}
+.win-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lvl-hex {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--accent);
+  color: var(--on-tone);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lvl-hex.sm {
+  width: 18px;
+  height: 20px;
+  font-size: 10px;
+  margin-right: 5px;
+  vertical-align: -5px;
+}
+.win-xp-row.player .win-hex {
+  background: var(--hi);
+}
+.win-xp-row.up .win-hex {
+  animation: win-hex 0.5s 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.win-xp-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.win-xp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.win-xp-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.win-hex-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+}
+.win-xp-up {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 0 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  line-height: 1.3;
+  animation: win-pop 0.35s 0.9s both;
+  background: var(--good);
+  color: var(--on-tone);
+  font-size: 11px;
+}
+.win-xp-num {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.win-xp-num b {
+  color: var(--fg);
+}
+.win-xp-bar {
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+  overflow: hidden;
+}
+.win-xp-bar i {
+  display: block;
+  height: 100%;
+  width: var(--to);
+  background: var(--accent);
+  animation: win-fill 0.8s 0.35s ease-out both;
+}
+.win-xp-row.player .win-xp-bar i {
+  background: var(--hi);
+}
+.win-xp-gains {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.win-xp-gains li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.win-xp-gains li span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+@keyframes win-fill {
+  from {
+    width: var(--from);
+  }
+}
+@keyframes win-hex {
+  50% {
+    transform: scale(1.3);
+  }
+}
+@media (max-height: 760px) {
+  .win-card {
+    gap: 7px;
+    padding-top: 30px;
+  }
+  .win-clock {
+    font-size: 40px;
+  }
+  .win-title {
+    font-size: 22px;
+  }
+}
+.win-advance {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 5px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--ink);
+  opacity: 0.35;
+  transform-origin: left;
+  animation: win-drain linear forwards;
+}
+.win.peek .win-advance {
+  animation: none;
+  display: none;
+}
+@keyframes win-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes win-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+}
+@keyframes win-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes win-drain {
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (max-width: 360px) {
+  .win-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win,
+  .win-card {
+    animation: none;
+  }
+  .win-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .win-xp-bar i,
+  .win-xp-row.up .win-hex {
+    animation: none;
+  }
+}
 .card.is-skipped .stage {
   opacity: 0.35;
 }
@@ -558,6 +939,15 @@ h3 {
 .btn.primary {
   background: var(--hi);
   color: var(--on-tone);
+}
+.btn.danger {
+  background: var(--bad);
+  color: var(--on-tone);
+}
+.confirm-sheet .sheet-body p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
 }
 .btn.ghost {
   box-shadow: none;
@@ -1218,7 +1608,7 @@ button.cell:active {
 /* Header row and first column stay put while the table scrolls inside its box. */
 .table-wrap.pinned {
   overflow: auto;
-  max-height: calc(100dvh - var(--head) - var(--tabs) - 40px);
+  max-height: 50dvh;
   overscroll-behavior: contain;
 }
 .pinned table {
@@ -1480,6 +1870,13 @@ td a:hover {
   padding: 0 7px;
   border: 2px solid var(--ink);
   border-radius: 999px;
+}
+.lab-meta .lvl-hex {
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
 }
 .lab-meta .resume-pill {
   background: var(--hi);
@@ -2191,4 +2588,160 @@ dialog.sheet::backdrop {
 }
 .auto-hint {
   margin: -4px 0 8px;
+}
+
+/* ---------- XP progress (Profile): heatmap + cumulative line ---------- */
+.xp-progress {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.xp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.xp-filters .select {
+  flex: 1 1 180px;
+  max-width: 280px;
+}
+.xp-summary {
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg);
+}
+.xp-heat-scroll {
+  max-width: 620px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.xp-months,
+.xp-heat {
+  display: grid;
+  grid-template-columns: repeat(26, minmax(10px, 1fr));
+  gap: 3px;
+  min-width: 340px;
+}
+.xp-months {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.xp-heat {
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+}
+.xp-cell {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  background: var(--cell);
+}
+/* one hue, light → dark: empty, then 4 steps of the site green */
+.xp-cell[data-step='1'] {
+  background: color-mix(in srgb, var(--p3) 30%, var(--cell));
+}
+.xp-cell[data-step='2'] {
+  background: color-mix(in srgb, var(--p3) 55%, var(--cell));
+}
+.xp-cell[data-step='3'] {
+  background: color-mix(in srgb, var(--p3) 80%, var(--cell));
+}
+.xp-cell[data-step='4'] {
+  background: color-mix(in srgb, var(--p3) 75%, var(--ink));
+  border-color: var(--ink);
+}
+.xp-heat .xp-cell:hover {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.xp-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.xp-legend .xp-cell {
+  width: 11px;
+}
+.xp-legend .xp-cell:first-of-type {
+  margin-left: 4px;
+}
+.xp-legend .xp-cell:last-of-type {
+  margin-right: 4px;
+}
+.xp-line-wrap {
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  padding: 8px 6px 2px;
+  overflow: hidden;
+}
+.xp-line {
+  display: block;
+  touch-action: pan-y;
+}
+.xp-grid {
+  stroke: var(--muted);
+  stroke-opacity: 0.35;
+  stroke-dasharray: 3 4;
+}
+.xp-base {
+  stroke: var(--muted);
+  stroke-opacity: 0.6;
+}
+.xp-axis {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+.xp-axis.strong {
+  fill: var(--fg);
+}
+.xp-path {
+  fill: none;
+  stroke: var(--p2);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.xp-area {
+  fill: var(--p2);
+  fill-opacity: 0.12;
+}
+.xp-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.xp-dot {
+  fill: var(--p2);
+  stroke: var(--cell);
+  stroke-width: 2;
+}
+.xp-tip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  padding: 5px 9px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--cell);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.xp-tip b {
+  font-weight: 800;
 }

@@ -1,4 +1,5 @@
 import type { Difficulty } from './types';
+import { xpGains, type XpOutcome } from './xp';
 
 type Outcome = 'solved' | 'failed' | 'skipped';
 /** 0 = off, 1 = less, 2 = normal, 3 = more */
@@ -53,6 +54,10 @@ export interface TypeStats {
   time: number;
   best: Partial<Record<Difficulty, number>>;
   recent: Result[];
+  /** Experience earned in this game (profiles from before XP get 10 per past solve). */
+  xp?: number;
+  /** Day (`dayKey`) of the last solve, for the first-of-the-day bonus. */
+  day?: string;
 }
 
 export interface Profile {
@@ -70,6 +75,11 @@ export interface Profile {
   daily: Record<string, DailyDay>;
   /** Puzzles whose off-by-default was already applied, so turning one back on sticks. */
   offApplied?: string[];
+  /**
+   * XP earned per local day (`dayKey`) per game, for the progress charts. Profiles from before XP get
+   * their recent solves (the last 30 per game) filled in at 10 XP each, matching the starting XP.
+   */
+  xpDays?: Record<string, Record<string, number>>;
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -153,7 +163,40 @@ export function prefs(id: string): TypePrefs {
 }
 
 export function stats(id: string): TypeStats {
-  return (profile.stats[id] ??= { played: 0, solved: 0, failed: 0, skipped: 0, time: 0, best: {}, recent: [] });
+  const s = (profile.stats[id] ??= { played: 0, solved: 0, failed: 0, skipped: 0, time: 0, best: {}, recent: [] });
+  s.xp ??= s.solved * 10;
+  return s;
+}
+
+/** XP earned per day: one game's, or every game's (`id` omitted). Days without XP are absent. */
+export function xpByDay(id?: string): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const [day, games] of Object.entries(xpDays())) {
+    const v = id ? (games[id] ?? 0) : Object.values(games).reduce((a, b) => a + b, 0);
+    if (v) out.set(day, v);
+  }
+  return out;
+}
+
+function xpDays() {
+  if (!profile.xpDays) {
+    const d: Record<string, Record<string, number>> = {};
+    for (const [id, s] of Object.entries(profile.stats))
+      for (const r of s.recent) {
+        if (r.o !== 'solved') continue;
+        const g = (d[dayKey(r.at)] ??= {});
+        g[id] = (g[id] ?? 0) + 10;
+      }
+    profile.xpDays = d;
+  }
+  return profile.xpDays;
+}
+
+/** XP across every game. */
+export function totalXp(): number {
+  let n = 0;
+  for (const id in profile.stats) n += stats(id).xp!;
+  return n;
 }
 
 /** Set a fixed level (manual) or hand control back to auto-levelling. */
@@ -192,6 +235,8 @@ export interface RecordOutcome {
   best?: boolean;
   /** Best time at this level before this result, if any. */
   prevBest?: number;
+  /** XP earned by a solve. */
+  xp?: XpOutcome;
 }
 
 /**
@@ -217,6 +262,29 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
     }
     const k = dayKey();
     profile.days[k] = (profile.days[k] ?? 0) + 1;
+    const gains = xpGains({
+      d: r.d,
+      m: r.m,
+      ms: r.ms,
+      parMs,
+      first: prev == null,
+      best: !!out.best,
+      daily: !!r.dy,
+      gameToday: s.day !== k,
+      today: profile.days[k],
+    });
+    s.day = k;
+    const gained = gains.reduce((a, g) => a + g.xp, 0);
+    const before = { game: s.xp!, player: totalXp() };
+    s.xp! += gained;
+    const day = (xpDays()[k] ??= {});
+    day[id] = (day[id] ?? 0) + gained;
+    out.xp = {
+      gains,
+      total: gained,
+      game: { before: before.game, after: s.xp! },
+      player: { before: before.player, after: before.player + gained },
+    };
   } else if (r.o === 'failed') s.failed++;
   else s.skipped++;
 

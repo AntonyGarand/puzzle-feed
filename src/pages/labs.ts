@@ -9,6 +9,8 @@ import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
 import { cogIcon, fmtTime, h, segmented } from '../core/ui';
 import { openSheet } from '../core/sheet';
 import { destroyThumbs, thumb } from '../core/thumb';
+import { levelHex } from '../core/win';
+import { xpLevel } from '../core/xp';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -127,13 +129,16 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
     const pr = prefs(d.id);
     const href = save ? `/game/${d.id}` : `/game/${d.id}/new/${pr.level}`;
     const best = st.best[pr.level];
+    const lvl = levelHex(xpLevel(st.xp!).level, 'sm');
     const chips = save
       ? [
+          lvl,
           h('span', { class: 'resume-pill' }, `${L('Resume', 'Reprendre')} · ${fmtTime(save.elapsed)}`),
           LEVEL_NAMES[save.level],
           ago(save.at),
         ]
       : [
+          lvl,
           `${pr.manual ? '' : 'Auto · '}${LEVEL_NAMES[pr.level]}`,
           st.solved ? P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']) : null,
           best != null ? `${L('best', 'record')} ${fmtTime(best)}` : null,

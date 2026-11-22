@@ -1,5 +1,5 @@
 import { L } from './i18n';
-import { h } from './ui';
+import { btn, h } from './ui';
 
 let open: HTMLDialogElement | null = null;
 
@@ -10,6 +10,42 @@ export function closeSheet(): boolean {
   if (!open?.open) return false;
   open.close();
   return true;
+}
+
+/**
+ * In-app confirmation (instead of `window.confirm`): resolves true when the action button is pressed,
+ * false on Cancel, the close button, the backdrop or Escape.
+ */
+export function confirmSheet(opts: { title: string; message: string; action: string; danger?: boolean }): Promise<boolean> {
+  return new Promise((resolve) => {
+    let ok = false;
+    const go = btn(
+      opts.action,
+      () => {
+        ok = true;
+        close();
+      },
+      'primary',
+    );
+    if (opts.danger) go.classList.add('danger');
+    const close = openSheet({
+      title: opts.title,
+      className: 'confirm-sheet',
+      body: [h('p', null, opts.message)],
+      footer: [btn(L('Cancel', 'Annuler'), () => close(), 'ghost'), go],
+      onClose: () => resolve(ok),
+    });
+  });
+}
+
+/** In-app notice (instead of `window.alert`). */
+export function noticeSheet(title: string, message: string) {
+  const close = openSheet({
+    title,
+    className: 'confirm-sheet',
+    body: [h('p', null, message)],
+    footer: [btn(L('OK', 'OK'), () => close(), 'primary')],
+  });
 }
 
 /**
