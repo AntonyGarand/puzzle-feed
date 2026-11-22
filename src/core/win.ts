@@ -39,8 +39,7 @@ function crossIcon() {
   return s('svg', { viewBox: '0 0 24 24', class: 'win-check', 'aria-hidden': 'true' }, s('path', { d: 'M7 7l10 10M17 7L7 17' }));
 }
 
-const tile = (label: string, value: string, cls = '') =>
-  h('div', { class: `win-tile ${cls}`.trim() }, h('span', null, label), h('strong', null, value));
+const tile = (label: string, value: string) => h('div', { class: 'win-tile' }, h('span', null, label), h('strong', null, value));
 
 const levelPill = (l: { up: boolean; to: string }) =>
   h(
@@ -70,7 +69,7 @@ export function lostCard(w: LostInfo): HTMLElement {
       h(
         'div',
         { class: 'win-stats' },
-        tile(L('Mistakes', 'Erreurs'), w.mistakes ? String(w.mistakes) : L('None', 'Aucune')),
+        tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
         tile(L('Best', 'Record'), w.best == null ? '—' : fmtTime(w.best)),
         tile(L('Solves', 'Réussites'), String(w.solved)),
         tile(L('Win rate', 'Taux'), `${rate}%`),
@@ -96,8 +95,6 @@ export function winCard(w: WinInfo): HTMLElement {
       ? h('span', { class: 'win-tag' }, L('First clear', 'Première fois'))
       : null;
 
-  const underPar = w.ms <= w.parMs;
-
   return h(
     'div',
     { class: 'win', role: 'dialog', 'aria-label': L('Puzzle solved', 'Casse-tête réussi') },
@@ -117,9 +114,9 @@ export function winCard(w: WinInfo): HTMLElement {
       h(
         'div',
         { class: 'win-stats' },
-        tile(L('Mistakes', 'Erreurs'), w.mistakes ? String(w.mistakes) : L('None', 'Aucune'), w.mistakes ? '' : 'good'),
+        tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
         tile(L('Best', 'Record'), best == null ? '—' : fmtTime(best)),
-        tile(L('Par', 'Normale'), fmtTime(w.parMs), underPar ? 'good' : ''),
+        tile(L('Par', 'Normale'), fmtTime(w.parMs)),
         tile(L('Solves', 'Réussites'), String(w.solved)),
       ),
       w.levelUp ? levelPill(w.levelUp) : null,
@@ -171,7 +168,7 @@ function xpBar(label: string, kind: 'game' | 'player', gained: number, before: X
         'div',
         { class: 'win-xp-top' },
         h('span', { class: 'win-xp-name' }, label),
-        h('span', { class: 'win-xp-num' }, h('b', null, `(+${gained})`), `  ${after.into} / ${after.need} XP`),
+        h('span', { class: 'win-xp-num' }, h('b', null, `+${gained}`), `${after.into} / ${after.need} XP`),
       ),
       h('div', { class: 'win-xp-bar' }, fill),
     ),
@@ -188,6 +185,7 @@ function xpSection(x: XpOutcome, game: string) {
       'ul',
       { class: 'win-xp-gains' },
       ...x.gains.map((g) => h('li', null, h('span', null, reason(g, game)), h('span', null, `+${g.xp} XP`))),
+      h('li', { class: 'win-xp-total' }, h('span', null, L('Total', 'Total')), h('span', null, `+${x.total} XP`)),
     ),
   );
 }

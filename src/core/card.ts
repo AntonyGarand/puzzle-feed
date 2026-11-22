@@ -625,7 +625,13 @@ export class Card {
     if (panel) {
       const p = panel;
       // Tap the panel to peek at the finished board (tap again to bring it back); this stops auto-advance.
+      // Only taps that start on the panel count: on touch screens, the tap that ended the puzzle fires its
+      // `click` after the panel is added, hit-tested onto it, which would hide the panel straight away.
+      let pressed = false;
+      p.addEventListener('pointerdown', () => (pressed = true));
       p.addEventListener('click', () => {
+        if (!pressed) return;
+        pressed = false;
         p.classList.toggle('peek');
         clearTimeout(this.advanceTimer);
       });
