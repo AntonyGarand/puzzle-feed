@@ -1,0 +1,51 @@
+[data-puzzle='fill'] {
+  --accent: var(--p8);
+}
+/* One framed plate: thin rules between cells, thick ink where two groups meet. */
+[data-puzzle='fill'] .grid.fill-plate {
+  gap: 0;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell);
+  overflow: hidden;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  background: var(--cell);
+  touch-action: none;
+}
+[data-puzzle='fill'] .fill-plate .cell {
+  --thin: color-mix(in srgb, var(--ink) 22%, transparent);
+  --thick: 1.5px solid var(--ink);
+  border: 0;
+  border-right: 1px solid var(--thin);
+  border-bottom: 1px solid var(--thin);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--rc, var(--cell));
+  color: color-mix(in srgb, var(--fg) 70%, var(--cell));
+  font-weight: 600;
+  cursor: pointer;
+}
+[data-puzzle='fill'] .fill-plate .cell.given {
+  color: var(--fg);
+  font-weight: 800;
+}
+[data-puzzle='fill'] .fill-plate button.cell:active {
+  transform: none;
+}
+[data-puzzle='fill'] .fill-plate .cell.bt {
+  border-top: var(--thick);
+}
+[data-puzzle='fill'] .fill-plate .cell.br {
+  border-right: var(--thick);
+}
+[data-puzzle='fill'] .fill-plate .cell.bb {
+  border-bottom: var(--thick);
+}
+[data-puzzle='fill'] .fill-plate .cell.bl {
+  border-left: var(--thick);
+}
+[data-puzzle='fill'] .fill-plate .cell.sel {
+  background: color-mix(in srgb, var(--accent) 55%, var(--rc, var(--cell)));
+  box-shadow: inset 0 0 0 3px var(--ink);
+  color: var(--fg);
+}

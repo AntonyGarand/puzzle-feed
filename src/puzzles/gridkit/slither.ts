@@ -17,7 +17,7 @@ export interface Geo {
   ec: number[][];
 }
 
-function geometry(w: number, h: number): Geo {
+export function geometry(w: number, h: number): Geo {
   const H = (h + 1) * w;
   const E = H + h * (w + 1);
   const ea: number[] = [],
@@ -266,8 +266,11 @@ function count(g: Geo, clue: number[], limit: number, budget: number) {
   return { count: found, nodes };
 }
 
-/** Random hole-free region whose boundary is one simple loop. */
-function region(w: number, h: number, frac: number, rng: Rng): boolean[] {
+/**
+ * Random hole-free region whose boundary is one simple loop. `thin` < 1 only sometimes accepts a cell
+ * touching the region on more than one side, for a branchier region with a longer, wigglier boundary.
+ */
+export function region(w: number, h: number, frac: number, rng: Rng, thin = 1): boolean[] {
   const N = w * h;
   const inR = new Array<boolean>(N).fill(false);
   const at = (r: number, c: number) => r >= 0 && r < h && c >= 0 && c < w && inR[r * w + c];
@@ -320,12 +323,35 @@ function region(w: number, h: number, frac: number, rng: Rng): boolean[] {
     if (inR[i]) continue;
     const r = Math.floor(i / w),
       c = i % w;
-    if (!(at(r - 1, c) || at(r + 1, c) || at(r, c - 1) || at(r, c + 1))) continue;
+    const touch = +at(r - 1, c) + +at(r + 1, c) + +at(r, c - 1) + +at(r, c + 1);
+    if (!touch) continue;
+    if (thin < 1 && touch > 1 && !rng.chance(thin)) continue;
     inR[i] = true;
     if (pinchFree(i) && holeFree()) size++;
     else inR[i] = false;
   }
   return inR;
+}
+
+/** Edges on the boundary of a set of cells, or null when they aren't one simple loop. */
+export function boundary(g: Geo, inR: boolean[]): boolean[] | null {
+  const { w, h } = g;
+  const cellIn = (r: number, c: number) => r >= 0 && r < h && c >= 0 && c < w && inR[r * w + c];
+  const sol = new Array<boolean>(g.E).fill(false);
+  const H = (h + 1) * w;
+  for (let e = 0; e < g.E; e++) {
+    if (e < H) {
+      const r = Math.floor(e / w),
+        c = e % w;
+      sol[e] = cellIn(r - 1, c) !== cellIn(r, c);
+    } else {
+      const k = e - H;
+      const r = Math.floor(k / (w + 1)),
+        c = k % (w + 1);
+      sol[e] = cellIn(r, c - 1) !== cellIn(r, c);
+    }
+  }
+  return isSingleLoop(g, (e) => sol[e]) ? sol : null;
 }
 
 export interface Loop {
@@ -343,23 +369,8 @@ export function genLoop(w: number, h: number, keep: number, rng: Rng): Loop {
   let budget = 60000; // total solver nodes (deterministic, unlike a clock)
   let last: Loop | null = null;
   for (let attempt = 0; attempt < 20; attempt++) {
-    const inR = region(w, h, rng.int(45, 60) / 100, rng);
-    const cellIn = (r: number, c: number) => r >= 0 && r < h && c >= 0 && c < w && inR[r * w + c];
-    const sol = new Array<boolean>(g.E).fill(false);
-    for (let e = 0; e < g.E; e++) {
-      const H = (h + 1) * w;
-      if (e < H) {
-        const r = Math.floor(e / w),
-          c = e % w;
-        sol[e] = cellIn(r - 1, c) !== cellIn(r, c);
-      } else {
-        const k = e - H;
-        const r = Math.floor(k / (w + 1)),
-          c = k % (w + 1);
-        sol[e] = cellIn(r, c - 1) !== cellIn(r, c);
-      }
-    }
-    if (!isSingleLoop(g, (e) => sol[e])) continue;
+    const sol = boundary(g, region(w, h, rng.int(45, 60) / 100, rng));
+    if (!sol) continue;
     const clue = g.ce.map((es) => es.filter((e) => sol[e]).length);
     const full = count(g, clue, 2, 6000);
     budget -= full.nodes;
