@@ -7,14 +7,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, Hint, PuzzleCtx, PuzzleInstance } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, Hint } from '../src/core/types';
+import { mountGame } from './support/mount';
 
 const IDS = ['slide', 'unblock', 'push', 'tether', 'worms', 'tilt', 'arrows', 'week'];
 const ONLY = (process.env['ONLY'] ?? '').split(',').filter(Boolean);
@@ -23,25 +17,10 @@ const SLOW_MS = 800;
 const KEYS = ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Tab', ' ', 'e'];
 
 function make(id: string, d: Difficulty, seed: number) {
-  const def = PUZZLES.find((p) => p.id === id)!;
-  const root = document.createElement('div');
-  document.body.append(root);
-  let outcome: '' | 'solved' | 'failed' = '';
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    solved: () => (outcome ||= 'solved'),
-    failed: () => (outcome ||= 'failed'),
-    mistake() {},
-    touch() {},
-    status() {},
-    lives: () => {},
-    controls: (...els) => root.append(...els),
-  };
-  const inst: PuzzleInstance = def.create(ctx) || {};
+  const g = mountGame(id, d, seed, { attach: true, controlsInRoot: true });
+  const { root, inst } = g;
   inst.activate?.();
-  return { root, inst, outcome: () => outcome, destroy: () => (inst.destroy?.(), root.remove()) };
+  return { root, inst, outcome: () => g.outcome, destroy: () => (inst.destroy?.(), root.remove()) };
 }
 
 function mess(g: ReturnType<typeof make>, rng: Rng, n: number) {

@@ -2,47 +2,22 @@
 // The word games in Québec French: generation speed, not solved at start, resume round-trip, a–z only.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests } from '../src/core/i18n';
-import { Rng } from '../src/core/rng';
-import { LEVELS, type Difficulty, type PuzzleCtx, type PuzzleDef } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
+import { LEVELS, type Difficulty, type PuzzleDef } from '../src/core/types';
 import { answers, commonOfLength, fold, isWord, letterKey, whenDict } from '../src/puzzles/wordkit/lexicon';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import { mountGame, puzzle } from './support/mount';
+import { expectResumes } from './support/resume';
 
 const IDS = ['anagram', 'word-guess', 'hunt', 'tower', 'cover'];
-const GAMES = IDS.map((id) => [id, PUZZLES.find((p) => p.id === id)!] as const);
+const GAMES = IDS.map((id) => [id, puzzle(id)] as const);
 
 beforeAll(() => _setLocaleForTests('fr'));
 afterAll(() => _setLocaleForTests('en'));
 
 function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
-  const root = document.createElement('div');
-  const events: string[] = [];
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    saved,
-    solved: () => events.push('solved'),
-    failed: () => events.push('failed'),
-    mistake: () => events.push('mistake'),
-    touch() {},
-    status() {},
-    lives() {},
-    controls() {},
-  };
-  const inst = def.create(ctx) || {};
-  return { root, inst, events, isDone: () => events.includes('solved') || events.includes('failed') };
+  const g = mountGame(def, d, seed, { saved });
+  const { root, inst } = g;
+  return { root, inst, events: g.events, isDone: () => g.outcome !== '' };
 }
-
-const view = (root: HTMLElement) =>
-  [...root.querySelectorAll<HTMLElement>('.cell, .peg, .term, .chip, .big, .dot, .fb i')]
-    .map((e) => `${e.className}|${e.textContent}|${e.getAttribute('style') ?? ''}`)
-    .join('\n');
 
 /** Letters shown on the board (tiles, grid cells, tower rows). */
 const shown = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('.cell')].map((e) => e.textContent ?? '').join('');
@@ -106,22 +81,5 @@ describe.each(GAMES)('%s (fr)', (_id, def) => {
     }
   });
 
-  it.each([1, 3, 5] as Difficulty[])('resumes at level %i', (d) => {
-    for (let seed = 11; seed < 16; seed++) {
-      const a = make(def, d, seed);
-      const pick = new Rng(seed * 31);
-      for (let k = 0; k < 6 && !a.isDone(); k++) {
-        const buttons = [...a.root.querySelectorAll<HTMLButtonElement>('button')];
-        if (!buttons.length) break;
-        pick.pick(buttons).click();
-      }
-      if (a.isDone()) continue;
-      const snap = JSON.parse(JSON.stringify(a.inst.snapshot?.() ?? null));
-      expect(snap, 'puzzle must implement snapshot()').not.toBeNull();
-      const b = make(def, d, seed, snap);
-      expect(view(b.root)).toBe(view(a.root));
-      a.inst.destroy?.();
-      b.inst.destroy?.();
-    }
-  });
+  it.each([1, 3, 5] as Difficulty[])('resumes at level %i', (d) => expectResumes(def, d));
 });

@@ -2,7 +2,7 @@
 // Dead ends and lost positions: games must notice them (end the card, or say so when Undo can fix it).
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { LEVELS, type Difficulty, type PuzzleCtx, type PuzzleDef, type PuzzleInstance } from '../src/core/types';
+import { LEVELS } from '../src/core/types';
 import { outOfReach } from '../src/puzzles/flood';
 import { pairs } from '../src/puzzles/pairs';
 import { genGems, ROCK, slide, solveGems } from '../src/puzzles/pathkit/gems-gen';
@@ -12,36 +12,7 @@ import { generateRoom, stepper, stuckCrates } from '../src/puzzles/movekit/pushg
 import { target } from '../src/puzzles/target';
 import { tower } from '../src/puzzles/tower';
 import { trail } from '../src/puzzles/trail';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
-
-function play(def: PuzzleDef, d: Difficulty, seed: number) {
-  const g = {
-    root: document.createElement('div'),
-    events: [] as string[],
-    status: '',
-    controls: [] as HTMLElement[],
-    inst: {} as PuzzleInstance,
-  };
-  const c: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root: g.root,
-    solved: () => g.events.push('solved'),
-    failed: () => g.events.push('failed'),
-    mistake: () => g.events.push('mistake'),
-    touch: () => {},
-    status: (s) => (g.status = s),
-    lives: () => {},
-    controls: (...els) => (g.controls = els),
-  };
-  g.inst = def.create(c) || {};
-  return g;
-}
+import { mountGame } from './support/mount';
 
 describe('flood', () => {
   it('is lost as soon as more colours remain than moves', () => {
@@ -130,7 +101,7 @@ describe('gems', () => {
 
 describe('pairs', () => {
   it('ends the game once fewer tries are left than pairs to find', () => {
-    const g = play(pairs, 5, 42);
+    const g = mountGame(pairs, 5, 42);
     const cards = [...g.root.querySelectorAll<HTMLElement>('.pc')];
     const face = (i: number) => cards[i].querySelector('.pc-face')!.innerHTML;
     const np = cards.length / 2;
@@ -173,7 +144,7 @@ describe('target', () => {
   it('says so when the target can no longer be reached', () => {
     let flagged = 0;
     for (let seed = 1; seed <= 6; seed++) {
-      const g = play(target, 2, seed);
+      const g = mountGame(target, 2, seed);
       const goal = Number(g.root.querySelector('.big')!.textContent);
       const undo = g.controls[0];
       const chips = () => [...g.root.querySelectorAll<HTMLElement>('.chip')];
@@ -208,9 +179,9 @@ describe('guides play through to a win', () => {
   it.each([trail, tower].map((p) => [p.id, p] as const))('%s', (_id, def) => {
     for (const d of LEVELS)
       for (let seed = 1; seed <= 4; seed++) {
-        const g = play(def, d, seed * 104729 + d * 31);
-        for (let k = 0, hint = g.inst.hint!(); hint && k < 300 && !g.events.includes('solved'); hint = g.inst.hint!(), k++) hint.play();
-        expect(g.events, `${def.id} level ${d} seed ${seed}`).toContain('solved');
+        const g = mountGame(def, d, seed * 104729 + d * 31);
+        for (let k = 0, hint = g.inst.hint!(); hint && k < 300 && g.outcome !== 'solved'; hint = g.inst.hint!(), k++) hint.play();
+        expect(g.outcome, `${def.id} level ${d} seed ${seed}`).toBe('solved');
       }
   });
 });

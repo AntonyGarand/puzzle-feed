@@ -1,32 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../src/core/rng';
-import type { PuzzleCtx } from '../src/core/types';
 import { connect } from '../src/puzzles/connect';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import { mountGame } from './support/mount';
 
 function make(seed: number, saved?: unknown) {
-  const root = document.createElement('div');
-  const ctx: PuzzleCtx = {
-    difficulty: 3,
-    rng: new Rng(seed),
-    root,
-    saved,
-    solved() {},
-    failed() {},
-    mistake() {},
-    touch() {},
-    status() {},
-    lives() {},
-    controls() {},
-  };
-  connect.create(ctx);
-  return root;
+  return mountGame(connect, 3, seed, { saved }).root;
 }
 
 describe('connect X marks', () => {

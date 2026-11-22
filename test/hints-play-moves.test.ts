@@ -6,41 +6,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, Hint, PuzzleCtx, PuzzleInstance } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, Hint } from '../src/core/types';
+import { mountGame } from './support/mount';
 
 /** Games messed up with arrow keys (or taps, for pegs and collapse). */
 const GAMES = ['trail', 'lawn', 'gems', 'echo', 'pegs', 'collapse'];
 const KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'q', 'z', 'c'];
 
 function make(id: string, d: Difficulty, seed: number) {
-  const def = PUZZLES.find((p) => p.id === id)!;
-  const root = document.createElement('div');
-  document.body.append(root);
-  let outcome = '';
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    solved: (o) => {
-      if (!o?.keepPlaying || !outcome) outcome ||= 'solved';
-    },
-    failed: () => (outcome ||= 'failed'),
-    mistake() {},
-    touch() {},
-    status() {},
-    lives: () => {},
-    controls: (...els) => root.append(...els),
-  };
-  const inst: PuzzleInstance = def.create(ctx) || {};
+  const g = mountGame(id, d, seed, { attach: true, controlsInRoot: true });
+  const { root, inst } = g;
   inst.activate?.();
-  return { root, inst, outcome: () => outcome };
+  return { root, inst, outcome: () => g.outcome };
 }
 
 describe.each(GAMES)('%s hint button after arrow keys', (id) => {

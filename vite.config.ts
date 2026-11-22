@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
 import { copyFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,6 +48,15 @@ export default defineConfig(({ mode }) => {
     preview: { port: 5181 },
     build: { target: 'es2022', sourcemap: !android },
     define: { __APP_VERSION__: JSON.stringify(buildVersion()) },
+    test: {
+      setupFiles: ['test/support/setup.ts'],
+      // Most suites play every game at several levels and seeds in one test: give them room on a busy machine.
+      testTimeout: 30_000,
+      // Lets timing assertions stand down under coverage instrumentation (see test/puzzles.test.ts).
+      env: { COVERAGE: process.argv.includes('--coverage') ? '1' : '' },
+      // `npm run test:coverage`: line/branch coverage of src/ (HTML report in coverage/).
+      coverage: { provider: 'v8', include: ['src/**/*.ts'], reporter: ['text-summary', 'html', 'json-summary'] },
+    },
     plugins: [
       pagesFallback(),
       // Installable app that works fully offline: every built file (JS, CSS, fonts, both dictionaries,

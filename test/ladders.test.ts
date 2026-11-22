@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { byLevel, LEVELS, type PuzzleCtx } from '../src/core/types';
+import { byLevel, LEVELS } from '../src/core/types';
 import { destsL, genL, LADDER_LEVELS, moveL, playLineL, solveL, type LState } from '../src/puzzles/cardkit/ladder';
 import { ladders } from '../src/puzzles/ladders';
+import { mountGame } from './support/mount';
 
 /** Card id: suit (0 ♠, 1 ♥, 2 ♦, 3 ♣) * 13 + rank - 1. */
 const C = (suit: number, rank: number) => suit * 13 + rank - 1;
@@ -64,37 +65,24 @@ describe('ladders', () => {
   });
 
   it('cycles a re-tapped card to its next spot', () => {
-    const root = document.createElement('div');
-    const ctx: PuzzleCtx = {
-      difficulty: 1,
-      rng: new Rng(1),
-      root,
-      saved: {
-        s: {
-          cols: [
-            [C(0, 12), C(0, 10)],
-            [C(1, 12), C(2, 10)],
-            [C(1, 11), C(3, 9)],
-            [C(3, 13), C(3, 12), C(3, 11), C(3, 10), C(0, 9), C(1, 9), C(2, 9)],
-            [C(1, 13), C(2, 13), C(0, 11), C(2, 11), C(1, 10)],
-            [C(0, 13), C(2, 12)],
-          ],
-          cells: [-1, -1],
-          done: [],
-          low: 9,
-          moves: 0,
-        },
-        hist: [],
+    const saved = {
+      s: {
+        cols: [
+          [C(0, 12), C(0, 10)],
+          [C(1, 12), C(2, 10)],
+          [C(1, 11), C(3, 9)],
+          [C(3, 13), C(3, 12), C(3, 11), C(3, 10), C(0, 9), C(1, 9), C(2, 9)],
+          [C(1, 13), C(2, 13), C(0, 11), C(2, 11), C(1, 10)],
+          [C(0, 13), C(2, 12)],
+        ],
+        cells: [-1, -1],
+        done: [],
+        low: 9,
+        moves: 0,
       },
-      solved: () => {},
-      failed: () => {},
-      mistake: () => {},
-      touch: () => {},
-      status: () => {},
-      lives: () => {},
-      controls: () => {},
+      hist: [],
     };
-    ladders.create(ctx);
+    const { root } = mountGame(ladders, 1, 1, { saved });
     const tap = (p: string, i: number) => root.querySelector<HTMLElement>(`[data-p="${p}"][data-i="${i}"]`)!.click();
     tap('t2', 1); // 9♣ → the 10♥ (longest ladder) first; 10♠ and 10♦ also fit
     const find = () => [...root.querySelectorAll<HTMLElement>('.pc')].find((e) => e.getAttribute('aria-label')?.startsWith('9♣'))!;

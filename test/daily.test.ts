@@ -5,6 +5,7 @@ import { _setLocaleForTests } from '../src/core/i18n';
 import { getProfile, prefs, record, recordDaily, resetProfile, stats } from '../src/core/store';
 import { LEVELS, type Difficulty } from '../src/core/types';
 import { PUZZLES } from '../src/puzzles';
+import { puzzle } from './support/mount';
 
 const solveAll = (date: string, level: Difficulty) => {
   const list = getDaily(date, level, PUZZLES);
@@ -27,7 +28,7 @@ describe('daily lists', () => {
       const list = generateDaily('2026-11-20', l, PUZZLES);
       expect(list).toHaveLength(DAILY_SIZE);
       expect(new Set(list.map((x) => x.id)).size).toBe(DAILY_SIZE);
-      const cats = new Set(list.map((x) => PUZZLES.find((p) => p.id === x.id)!.category));
+      const cats = new Set(list.map((x) => puzzle(x.id).category));
       expect(cats.size).toBe(DAILY_SIZE);
       for (const x of list) expect(x.seed).toBe(x.seed >>> 0);
     }

@@ -77,7 +77,12 @@
         "allowNumber": true
       }
     ],
-    "vitest/expect-expect": "error",
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expectResumes"]
+      }
+    ],
     "vitest/no-disabled-tests": "error",
     "vitest/no-focused-tests": "error",
     "vitest/no-identical-title": "error",

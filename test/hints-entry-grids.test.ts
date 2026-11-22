@@ -6,37 +6,17 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, PuzzleCtx, PuzzleDef, PuzzleInstance } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, PuzzleDef, PuzzleInstance } from '../src/core/types';
+import { mountGame, puzzle } from './support/mount';
 
 const IDS = ['jigsaw-sudoku', 'killer-sudoku', 'cross-sums', 'math-cages', 'skyscrapers', 'unequal', 'singles', 'eclipse'];
 const SLOW_MS = 1500;
 
 function make(def: PuzzleDef, d: Difficulty, seed: number) {
-  const root = document.createElement('div');
-  document.body.append(root);
-  let outcome = '';
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    solved: () => (outcome ||= 'solved'),
-    failed: () => (outcome ||= 'failed'),
-    mistake() {},
-    touch() {},
-    status() {},
-    lives: () => {},
-    controls: (...els) => root.append(...els),
-  };
-  const inst: PuzzleInstance = def.create(ctx) || {};
+  const g = mountGame(def, d, seed, { attach: true, controlsInRoot: true });
+  const { root, inst } = g;
   inst.activate?.();
-  return { root, inst, outcome: () => outcome, destroy: () => root.remove() };
+  return { root, inst, outcome: () => g.outcome, destroy: () => root.remove() };
 }
 
 /** Select random cells and type random keys (digits, and for eclipse 1/2/Space/Backspace). */
@@ -52,7 +32,7 @@ function typeJunk(g: ReturnType<typeof make>, rng: Rng, k: number) {
 const json = (inst: PuzzleInstance) => JSON.stringify(inst.snapshot?.());
 
 describe.each(IDS)('%s', (id) => {
-  const def = PUZZLES.find((p) => p.id === id)!;
+  const def = puzzle(id);
   it.each([1, 2, 3, 4, 5] as Difficulty[])(
     'level %i: finishes from a clean board and after typed mistakes',
     (d) => {

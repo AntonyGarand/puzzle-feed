@@ -1,12 +1,13 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { byLevel, LEVELS, type Difficulty, type PuzzleCtx } from '../src/core/types';
+import { byLevel, LEVELS, type Difficulty } from '../src/core/types';
 import { genF, solveF } from '../src/puzzles/cardkit/freecell';
 import { genK, greedyK, hasProgress, type KRules, type KState } from '../src/puzzles/cardkit/klondike';
 import { deadP, genP, solveP, type PState } from '../src/puzzles/cardkit/pyramid';
 import { genS, hasMoveS, playLineS, progressS, type SState } from '../src/puzzles/cardkit/spider';
 import { pyramid } from '../src/puzzles/pyramid';
+import { mountGame } from './support/mount';
 
 const SEEDS = 12;
 const seedOf = (k: number, d: number) => k * 7919 + d;
@@ -70,23 +71,8 @@ describe('pyramid', () => {
   });
 
   function play(saved: unknown) {
-    const events: string[] = [];
-    let line = '';
-    const ctx: PuzzleCtx = {
-      difficulty: 1,
-      rng: new Rng(1),
-      root: document.createElement('div'),
-      saved,
-      solved: () => events.push('solved'),
-      failed: () => events.push('failed'),
-      mistake: () => events.push('mistake'),
-      touch: () => {},
-      status: (t) => (line = t),
-      lives: () => {},
-      controls: () => {},
-    };
-    const inst = pyramid.create(ctx) || {};
-    return { inst, events, line: () => line };
+    const g = mountGame(pyramid, 1, 1, { saved });
+    return { inst: g.inst, events: g.events, line: () => g.status };
   }
 
   it('flags a dead game on Easy as a dead end (undo, not a loss) instead of recycling the stock forever', () => {
