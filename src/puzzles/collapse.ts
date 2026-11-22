@@ -194,7 +194,7 @@ export const collapse: PuzzleDef = {
       const el = (e.target as Element).closest<HTMLElement>('[data-i]');
       clearHover();
       if (!el) return;
-      const [x, y] = at(Number(el.dataset.i));
+      const [x, y] = at(Number(el.dataset['i']));
       const grp = groupAt(cols, x, y);
       if (grp.length < 2) return;
       hovered = grp.map(([a, b]) => cells[(H - 1 - b) * W + a]);

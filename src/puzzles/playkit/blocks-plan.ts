@@ -52,7 +52,7 @@ function openness(b: number[], n: number) {
       const filled = at(r, c);
       if (!filled) {
         v += 2;
-        const walls = +at(r - 1, c) + +at(r + 1, c) + +at(r, c - 1) + +at(r, c + 1);
+        const walls = Number(at(r - 1, c)) + Number(at(r + 1, c)) + Number(at(r, c - 1)) + Number(at(r, c + 1));
         if (walls === 4) v -= 14;
         else if (walls === 3) v -= 3;
       }

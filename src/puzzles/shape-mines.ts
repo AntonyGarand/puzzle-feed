@@ -109,7 +109,7 @@ export const shapeMines: PuzzleDef = {
       grid.append(el);
       return el;
     });
-    const shown = [...new Set(kind)].sort();
+    const shown = [...new Set(kind)].sort((a, b) => a - b);
     const legend = h(
       'div',
       { class: 'sm-legend' },
@@ -328,7 +328,7 @@ export const shapeMines: PuzzleDef = {
         if (i >= 0) toggleFlag(i);
         return i >= 0;
       },
-      destroy: press.cancel,
+      destroy: () => press.cancel(),
     };
   },
 };

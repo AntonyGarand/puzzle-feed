@@ -225,7 +225,7 @@ export const factory: PuzzleDef = {
       swallow = true;
       setTimeout(() => (swallow = false), 350);
       const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest?.<HTMLElement>('.fx-slot');
-      const to = e.type === 'pointerup' && over ? Number(over.dataset.slot) : e.type === 'pointerup' ? -1 : g.from;
+      const to = e.type === 'pointerup' && over ? Number(over.dataset['slot']) : e.type === 'pointerup' ? -1 : g.from;
       drop(g.tile, g.from, to);
     };
     const begin = (e: PointerEvent, tile: number, from: number) => {

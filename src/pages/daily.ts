@@ -93,7 +93,7 @@ export function renderDaily(el: HTMLElement, defs: PuzzleDef[], level?: Difficul
       ? h('strong', null, L(`${LEVEL_NAMES[lvl]} list complete!`, `Liste ${LEVEL_NAMES[lvl].toLowerCase()} terminée!`))
       : h('strong', null, L(`${solved.length}/${list.length} solved`, `${solved.length}/${list.length} réussies`)),
     solved.length ? ` · ${L('total', 'total')} ${fmtTime(total)}` : '',
-    complete && st.byLevel[lvl].bestTotal != null ? ` · ${L('best', 'record')} ${fmtTime(st.byLevel[lvl].bestTotal!)}` : '',
+    complete && st.byLevel[lvl].bestTotal != null ? ` · ${L('best', 'record')} ${fmtTime(st.byLevel[lvl].bestTotal)}` : '',
   );
 
   // Last 4 weeks: how many lists were completed each day.

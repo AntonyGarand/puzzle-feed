@@ -408,7 +408,7 @@ export const captureChess: PuzzleDef = {
     grid.addEventListener('pointerdown', (e) => {
       if (over) return;
       const el = (e.target as Element).closest<HTMLElement>('[data-i]');
-      const sq = el ? Number(el.dataset.i) : -1;
+      const sq = el ? Number(el.dataset['i']) : -1;
       if (sq < 0 || !cur.type[sq] || (sel >= 0 && targets().has(sq))) return;
       ctx.touch();
       dragging = true;
@@ -423,7 +423,7 @@ export const captureChess: PuzzleDef = {
       dragging = false;
       if (over || sel < 0) return;
       const el = document.elementFromPoint?.(e.clientX, e.clientY)?.closest<HTMLElement>('[data-i]');
-      const sq = el && grid.contains(el) ? Number(el.dataset.i) : -1;
+      const sq = el && grid.contains(el) ? Number(el.dataset['i']) : -1;
       if (sq < 0 || sq === sel || !targets().has(sq)) return;
       justPicked = false;
       play(sel * 64 + sq);

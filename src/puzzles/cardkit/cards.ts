@@ -147,16 +147,17 @@ function collect(root: Element, ok: (el: HTMLElement) => boolean, out: HTMLEleme
 
 /** Card (or slot, i = -1) element for pile p / index i on a rendered table (guide hints). */
 export const elAt = (table: HTMLElement, p: string, i: number): HTMLElement | null =>
-  collect(table, (el) => el.dataset.p === p && el.dataset.i === String(i))[0] ?? null;
+  collect(table, (el) => el.dataset['p'] === p && el.dataset['i'] === String(i))[0] ?? null;
 
 /** Topmost rendered element of pile p: its top card, or its empty slot. */
 export function topEl(table: HTMLElement, p: string): HTMLElement | null {
-  const all = collect(table, (el) => el.dataset.p === p);
+  const all = collect(table, (el) => el.dataset['p'] === p);
   return all.length ? all[all.length - 1] : null;
 }
 
 /** Pile containers whose id starts with `prefix` (e.g. 'f' for every foundation). */
-export const pilesEl = (table: HTMLElement, prefix: string): HTMLElement[] => collect(table, (el) => !!el.dataset.pile?.startsWith(prefix));
+export const pilesEl = (table: HTMLElement, prefix: string): HTMLElement[] =>
+  collect(table, (el) => !!el.dataset['pile']?.startsWith(prefix));
 
 /** Capitalise the first letter (sentence starts like "Le 7♥…"). */
 export const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);

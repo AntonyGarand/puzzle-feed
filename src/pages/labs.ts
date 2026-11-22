@@ -266,7 +266,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
     for (const sec of el.querySelectorAll<HTMLElement>('section.cat')) {
       let n = 0;
       for (const t of sec.querySelectorAll<HTMLElement>('.lab-tile')) {
-        const hit = words.every((w) => t.dataset.search!.includes(w));
+        const hit = words.every((w) => t.dataset['search']!.includes(w));
         t.hidden = !hit;
         if (hit) n++;
       }

@@ -119,7 +119,7 @@ export const lights: PuzzleDef = {
     };
     const sv = ctx.saved as { on?: unknown; moves?: unknown; hist?: unknown } | undefined;
     if (sv && Array.isArray(sv.on) && sv.on.length === on.length && sv.on.every((v) => typeof v === 'boolean')) {
-      sv.on.forEach((v, i) => (on[i] = v as boolean));
+      sv.on.forEach((v, i) => (on[i] = v));
       const count = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : 0);
       moves = count(sv.moves);
       if (Array.isArray(sv.hist))

@@ -1,6 +1,7 @@
 // Generator and propagation solver for "who lives where" deduction grids.
 // Items are `group * n + value`; every group is a permutation of the n houses (positions 0..n-1).
 import type { Rng } from '../../core/rng';
+import { popcount } from '../../core/bits';
 
 export type ClueType = 'same' | 'diff' | 'at' | 'notAt' | 'adj' | 'before' | 'next' | 'either';
 
@@ -57,15 +58,6 @@ function support(n: number, t: ClueType, rev: boolean): Uint8Array {
   return s;
 }
 
-const bits = (m: number) => {
-  let c = 0;
-  while (m) {
-    m &= m - 1;
-    c++;
-  }
-  return c;
-};
-
 /**
  * Narrow every item's set of possible houses (bitmask) as far as single clues and "each value once
  * per group" allow. Returns false on a contradiction.
@@ -113,7 +105,7 @@ export function propagate(n: number, groups: number, clues: readonly Clue[], dom
       const o = g * n;
       for (let v = 0; v < n; v++) {
         const m = dom[o + v];
-        if (bits(m) !== 1) continue;
+        if (popcount(m) !== 1) continue;
         for (let w = 0; w < n; w++) if (w !== v && dom[o + w] & m && !set(o + w, dom[o + w] & ~m)) return false;
       }
       for (let p = 0; p < n; p++) {
@@ -132,7 +124,7 @@ export function propagate(n: number, groups: number, clues: readonly Clue[], dom
   return true;
 }
 
-const isSolved = (dom: Uint8Array) => dom.every((m) => bits(m) === 1);
+const isSolved = (dom: Uint8Array) => dom.every((m) => popcount(m) === 1);
 
 export interface DeductPuzzle {
   /** Position of every item in the solution. */
@@ -216,7 +208,7 @@ export function generateDeduct(o: DeductOpts): DeductPuzzle {
   };
 
   const fresh = () => new Uint8Array(size).fill((1 << n) - 1);
-  const total = (d: Uint8Array) => d.reduce((s, m) => s + bits(m), 0);
+  const total = (d: Uint8Array) => d.reduce((s, m) => s + popcount(m), 0);
   const clues: Clue[] = [];
   const seen = new Set<string>();
   let dom = fresh();
@@ -232,7 +224,7 @@ export function generateDeduct(o: DeductOpts): DeductPuzzle {
   }
   // Fallback: pin whatever is still open.
   for (let i = 0; i < size && !isSolved(dom); i++) {
-    if (bits(dom[i]) === 1) continue;
+    if (popcount(dom[i]) === 1) continue;
     clues.push({ t: 'at', a: i, b: -1, c: -1, p: pos[i] });
     propagate(n, groups, clues, dom);
   }

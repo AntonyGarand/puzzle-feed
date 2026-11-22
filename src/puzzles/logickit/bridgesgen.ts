@@ -173,7 +173,8 @@ function solveBridges(
 function spread(n: number, isl: { r: number; c: number }[]) {
   const rs = isl.map((s) => s.r),
     cs = isl.map((s) => s.c);
-  const edges = +(Math.min(...rs) === 0) + +(Math.max(...rs) === n - 1) + +(Math.min(...cs) === 0) + +(Math.max(...cs) === n - 1);
+  const edges =
+    Number(Math.min(...rs) === 0) + Number(Math.max(...rs) === n - 1) + Number(Math.min(...cs) === 0) + Number(Math.max(...cs) === n - 1);
   const zone = (v: number) => Math.min(2, Math.floor((v * 3) / n));
   const zones = new Set(isl.map((s) => zone(s.r) * 3 + zone(s.c))).size;
   return edges * 10 + zones;

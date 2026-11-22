@@ -17,13 +17,13 @@ export interface CardOptions {
   /** Labs mode: fixed levels (doesn't touch feed prefs), no auto-advance, "New puzzle" instead of "Next". */
   lab?: boolean;
   /** Start at this level instead of the puzzle's current level. */
-  level?: Difficulty;
+  level?: Difficulty | undefined;
   /** Resume this saved puzzle on first mount. */
-  resume?: Save;
+  resume?: Save | undefined;
   /** Play this exact seed on first mount (with `level`). */
-  seed?: number;
+  seed?: number | undefined;
   /** The first mount is a shared puzzle: separate save slot, no auto-levelling. */
-  shared?: boolean;
+  shared?: boolean | undefined;
   /** Called after every (re)generation, e.g. to keep the URL in sync. */
   onMount?: (card: Card) => void;
   /**
@@ -40,10 +40,10 @@ export interface DailyRef {
 }
 
 interface Launch {
-  level?: Difficulty;
-  resume?: Save;
-  seed?: number;
-  shared?: boolean;
+  level?: Difficulty | undefined;
+  resume?: Save | undefined;
+  seed?: number | undefined;
+  shared?: boolean | undefined;
 }
 
 export class Card {
@@ -161,7 +161,7 @@ export class Card {
         'aria-label': L('Hint', 'Indice'),
       },
       bulbIcon(),
-    ) as HTMLButtonElement;
+    );
     this.hintBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.hintUi) this.closeHint();
@@ -190,7 +190,7 @@ export class Card {
   private showHint() {
     if (this.done || !this.mounted) return;
     this.closeHint();
-    let hint: Hint | null = null;
+    let hint: Hint | null;
     try {
       hint = this.inst.check?.() ?? this.inst.hint?.() ?? null;
     } catch (err) {
@@ -203,7 +203,7 @@ export class Card {
       this.queueSave();
       telemetry.track('puzzle.hint', { ...this.trackAttrs(), 'hint.kind': hint.kind ?? 'step', 'hint.count': this.hints });
     }
-    const layer = svg('svg', { class: 'guide-layer hint-layer', 'aria-hidden': 'true' }) as SVGSVGElement;
+    const layer = svg('svg', { class: 'guide-layer hint-layer', 'aria-hidden': 'true' });
     const kind = hint?.kind ?? 'step';
     const action =
       hint?.action ?? (kind === 'fix' ? L('Fix it', 'Corriger') : kind === 'stuck' ? L('Undo', 'Annuler') : L('Play it', 'Jouer le coup'));
@@ -416,11 +416,11 @@ export class Card {
     this.levelEl.replaceChildren(levelHex(xpLevel(xp).level, 'sm'), LEVEL_NAMES[this.level] + tag);
   }
 
-  private syncLives(left: number, max: number) {
-    left = Math.max(0, Math.min(max, left));
+  private syncLives(count: number, max: number) {
+    const left = Math.max(0, Math.min(max, count));
     const el = this.livesEl;
-    const lost = el.dataset.left !== '' && left < Number(el.dataset.left);
-    el.dataset.left = String(left);
+    const lost = el.dataset['left'] !== '' && left < Number(el.dataset['left']);
+    el.dataset['left'] = String(left);
     el.hidden = false;
     el.setAttribute('aria-label', P(left, ['life left', 'lives left'], ['vie restante', 'vies restantes']));
     el.replaceChildren(...Array.from({ length: max }, (_, i) => h('i', { class: i < left ? 'on' : '' })));
@@ -481,10 +481,10 @@ export class Card {
     if (Math.max(root.getBoundingClientRect().height - H, root.scrollWidth - W) > 0.5) set(lo);
   }
 
-  mount(launch: Launch | null = this.launch) {
+  mount(first: Launch | null = this.launch) {
     this.launch = null; // the launch options only apply to the first mount
     // A daily card always replays its own puzzle.
-    if (this.opts.daily) launch = { level: this.opts.daily.level, seed: this.opts.seed, resume: launch?.resume };
+    const launch = this.opts.daily ? { level: this.opts.daily.level, seed: this.opts.seed, resume: first?.resume } : first;
     this.gen++;
     // Word games generate from the locale's word list: a save from the other language can't be resumed.
     const resume = launch?.resume && (!this.def.localized || (launch.resume.locale ?? 'en') === wordLocale()) ? launch.resume : undefined;
@@ -503,7 +503,7 @@ export class Card {
     this.el.classList.remove('is-solved', 'is-failed', 'is-skipped');
     this.stage.inert = false;
     this.livesEl.hidden = true;
-    this.livesEl.dataset.left = '';
+    this.livesEl.dataset['left'] = '';
     this.foot.replaceChildren(this.statusEl, h('div', { class: 'actions' }, this.def.undo ? this.undoBtn : null, this.controlsEl));
     this.syncLevelSel();
     this.syncMistakes();
@@ -768,11 +768,11 @@ export class Card {
     });
   }
 
-  private finish(o: 'solved' | 'failed' | 'skipped') {
+  private finish(result: 'solved' | 'failed' | 'skipped') {
     if (this.done) return;
     // An endless game that already reached its goal ends as a solve, timed at the goal, recorded once.
     const early = this.reached;
-    if (early) o = 'solved';
+    const o = early ? 'solved' : result;
     const ms = early ? early.ms : Math.round(this.time());
     this.done = true;
     this.closeHint();

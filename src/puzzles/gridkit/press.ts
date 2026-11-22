@@ -8,7 +8,7 @@ export function tapOrHold(grid: HTMLElement, onTap: (i: number) => void, onHold:
   let start: { x: number; y: number; el: HTMLElement } | null = null;
   const indexOf = (t: EventTarget | null) => {
     const el = (t as Element | null)?.closest?.('[data-i]') as HTMLElement | null;
-    return el && grid.contains(el) ? { el, i: Number(el.dataset.i) } : null;
+    return el && grid.contains(el) ? { el, i: Number(el.dataset['i']) } : null;
   };
   const cancel = () => {
     clearTimeout(timer);

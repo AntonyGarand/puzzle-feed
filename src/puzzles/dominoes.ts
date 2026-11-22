@@ -147,7 +147,7 @@ export const dominoes: PuzzleDef = {
         z = cells[N - 1].getBoundingClientRect();
       if (!(z.right > a.left) || !(e.clientX || e.clientY)) {
         const t = (e.target as Element | null)?.closest?.('[data-i]') as HTMLElement | null;
-        return { i: t ? Number(t.dataset.i) : -1, edge: -1 };
+        return { i: t ? Number(t.dataset['i']) : -1, edge: -1 };
       }
       const fx = ((e.clientX - a.left) / (z.right - a.left)) * cols;
       const fy = ((e.clientY - a.top) / (z.bottom - a.top)) * rows;

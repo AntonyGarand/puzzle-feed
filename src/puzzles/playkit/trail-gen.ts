@@ -22,8 +22,8 @@ function hamPath(rng: Rng, n: number): number[] {
   const N = n * n;
   const p: number[] = [];
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) p.push(r * n + (r % 2 ? n - 1 - c : c));
-  const reverse = (lo: number, hi: number) => {
-    for (; lo < hi; lo++, hi--) [p[lo], p[hi]] = [p[hi], p[lo]];
+  const reverse = (from: number, to: number) => {
+    for (let lo = from, hi = to; lo < hi; lo++, hi--) [p[lo], p[hi]] = [p[hi], p[lo]];
   };
   for (let it = 0; it < N * 40; it++) {
     if (rng.chance(0.5)) reverse(0, N - 1);

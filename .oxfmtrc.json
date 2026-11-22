@@ -10,6 +10,7 @@
     "src/puzzles/wordkit/common*.ts",
     "package-lock.json",
     "android/**",
-    "android-foss/**"
+    "android-foss/**",
+    ".claude/**"
   ]
 }

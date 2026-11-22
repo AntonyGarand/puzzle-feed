@@ -222,7 +222,7 @@ export const nonogram: PuzzleDef = {
     };
     const cellAt = (x: number, y: number) => {
       const el = document.elementFromPoint(x, y) as HTMLElement | null;
-      const i = el?.dataset.i;
+      const i = el?.dataset['i'];
       return el && grid.contains(el) && i != null ? Number(i) : -1;
     };
     grid.addEventListener('contextmenu', (e) => e.preventDefault());

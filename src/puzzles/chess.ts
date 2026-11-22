@@ -85,7 +85,7 @@ export const chess: PuzzleDef = {
       // replay defensively: each white move must be legal
       let b = start;
       const ok: number[] = [];
-      for (const m of sv.moves as number[]) {
+      for (const m of sv.moves) {
         const white = ok.length % 2 === 0;
         if (!legal(b, white).includes(m)) break;
         ok.push(m);

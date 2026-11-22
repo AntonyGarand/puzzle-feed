@@ -289,7 +289,7 @@ export const mow: PuzzleDef = {
         if (i >= 0) toggleFlag(i);
         return i >= 0;
       },
-      destroy: press.cancel,
+      destroy: () => press.cancel(),
     };
   },
 };

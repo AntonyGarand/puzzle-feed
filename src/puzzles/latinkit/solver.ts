@@ -1,5 +1,6 @@
 import type { Rng } from '../../core/rng';
 import { lineUnits, solve } from '../sudokukit/solver';
+import { popcount } from '../../core/bits';
 
 /** A constraint listing every allowed value tuple (flat, `cells.length` values each) for some cells. */
 export interface Table {
@@ -14,12 +15,6 @@ interface LatinResult {
   solutions: number[][];
   nodes: number;
 }
-
-const popcount = (x: number) => {
-  let k = 0;
-  for (; x; x &= x - 1) k++;
-  return k;
-};
 
 /** Random n×n Latin square (values 1..n), drawn from `rng`. */
 export function randomLatin(n: number, rng: Rng): number[] {

@@ -84,8 +84,8 @@ function cutPath(rng: Rng, path: number[], n: number, k: number, maxLen: number)
 }
 
 /** Join two lines end to end while the result stays clean, until only `k` are left. */
-function mergeDown(rng: Rng, lines: number[][], n: number, k: number, maxLen: number): number[][] | null {
-  lines = lines.map((l) => [...l]);
+function mergeDown(rng: Rng, start: number[][], n: number, k: number, maxLen: number): number[][] | null {
+  let lines = start.map((l) => [...l]);
   const of = new Int32Array(n * n);
   while (lines.length > k) {
     lines.forEach((l, i) => l.forEach((v) => (of[v] = i)));

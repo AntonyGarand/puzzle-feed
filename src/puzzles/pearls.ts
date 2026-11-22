@@ -202,7 +202,7 @@ export const pearls: PuzzleDef = {
       const right = e.pointerType === 'mouse' && e.button === 2;
       if (e.pointerType === 'mouse' && e.button !== 0 && !right) return;
       const pt = toUnits(e);
-      let edge = -1;
+      let edge: number;
       if (pt) edge = edgeAt(pt.x, pt.y);
       else {
         const t = (e.target as Element | null)?.closest?.('[data-e]');

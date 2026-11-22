@@ -98,7 +98,7 @@ async function setupAndroidUpdates() {
     }
   };
   void check();
-  setInterval(check, CHECK_EVERY_MS);
+  setInterval(() => void check(), CHECK_EVERY_MS);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) switchNow();
     else void check();

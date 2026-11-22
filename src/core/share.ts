@@ -10,7 +10,7 @@ export interface ShareCode {
   id: string;
   level: Difficulty;
   seed: number;
-  locale?: Locale;
+  locale?: Locale | undefined;
 }
 
 export function encodeCode(c: ShareCode): string {

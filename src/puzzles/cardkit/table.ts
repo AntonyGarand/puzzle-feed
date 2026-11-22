@@ -47,7 +47,7 @@ export function bindTable(table: HTMLElement, hooks: TableHooks): () => void {
     if (performance.now() < suppress) return;
     const el = target(e);
     if (!el || !table.contains(el)) return;
-    hooks.tap(el.dataset.p!, Number(el.dataset.i));
+    hooks.tap(el.dataset['p']!, Number(el.dataset['i']));
   };
 
   const reset = (d = drag) => {
@@ -78,10 +78,10 @@ export function bindTable(table: HTMLElement, hooks: TableHooks): () => void {
     if (e.button > 0 || drag) return;
     const el = target(e);
     if (!el || !el.classList.contains('pc')) return;
-    const p = el.dataset.p!;
-    const i = Number(el.dataset.i);
+    const p = el.dataset['p']!;
+    const i = Number(el.dataset['i']);
     if (!hooks.canDrag(p, i)) return;
-    const els = [...table.querySelectorAll<HTMLElement>('.pc[data-p]')].filter((c) => c.dataset.p === p && Number(c.dataset.i) >= i);
+    const els = [...table.querySelectorAll<HTMLElement>('.pc[data-p]')].filter((c) => c.dataset['p'] === p && Number(c.dataset['i']) >= i);
     const touch = e.pointerType === 'touch';
     const id = e.pointerId;
     const timer = touch ? window.setTimeout(() => lift(id), HOLD_MS) : 0;
@@ -128,8 +128,8 @@ export function bindTable(table: HTMLElement, hooks: TableHooks): () => void {
     let best: string | null = null;
     let bestA = 0;
     for (const pile of table.querySelectorAll<HTMLElement>('[data-pile]')) {
-      if (pile.dataset.pile === d.p) continue;
-      if (hooks.accepts && !hooks.accepts(d.p, d.i, pile.dataset.pile!)) continue;
+      if (pile.dataset['pile'] === d.p) continue;
+      if (hooks.accepts && !hooks.accepts(d.p, d.i, pile.dataset['pile']!)) continue;
       const r = pile.getBoundingClientRect();
       const w = Math.min(lead.right, r.right) - Math.max(lead.left, r.left);
       const hh = Math.min(lead.bottom, r.bottom) - Math.max(lead.top, r.top);
@@ -137,7 +137,7 @@ export function bindTable(table: HTMLElement, hooks: TableHooks): () => void {
       if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) a += lead.width * lead.height;
       if (a > bestA) {
         bestA = a;
-        best = pile.dataset.pile!;
+        best = pile.dataset['pile']!;
       }
     }
     const moved = best != null && hooks.drop(d.p, d.i, best);

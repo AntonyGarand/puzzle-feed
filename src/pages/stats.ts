@@ -100,7 +100,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
   ];
 
   const fileInput = h('input', { type: 'file', accept: 'application/json', hidden: true });
-  fileInput.addEventListener('change', async () => {
+  const importFile = async () => {
     const f = fileInput.files?.[0];
     if (!f) return;
     try {
@@ -112,7 +112,8 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         `${L('That file isn’t a puzzle feed profile.', 'Ce fichier n’est pas un profil puzzle feed.')} (${(e as Error).message})`,
       );
     }
-  });
+  };
+  fileInput.addEventListener('change', () => void importFile());
 
   el.replaceChildren(
     h(
@@ -193,27 +194,25 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
           'ghost',
         ),
         btn(L('Import', 'Importer'), () => fileInput.click(), 'ghost'),
-        btn(
-          L('Reset everything', 'Tout effacer'),
-          async () => {
-            const ok = await confirmSheet({
-              title: L('Reset everything?', 'Tout effacer?'),
-              message: L(
-                'This erases your profile, stats, XP, settings and unfinished games on this device. It can’t be undone. Export first to keep a copy.',
-                'Cela efface votre profil, vos statistiques, votre XP, vos réglages et vos parties en cours sur cet appareil. C’est irréversible. Exportez d’abord pour en garder une copie.',
-              ),
-              action: L('Erase everything', 'Tout effacer'),
-              danger: true,
-            });
-            if (!ok) return;
-            resetProfile();
-            clearAllSaves();
-            renderStats(el, defs);
-          },
-          'ghost',
-        ),
+        btn(L('Reset everything', 'Tout effacer'), () => void resetEverything(), 'ghost'),
         fileInput,
       ),
     ),
   );
+
+  async function resetEverything() {
+    const ok = await confirmSheet({
+      title: L('Reset everything?', 'Tout effacer?'),
+      message: L(
+        'This erases your profile, stats, XP, settings and unfinished games on this device. It can’t be undone. Export first to keep a copy.',
+        'Cela efface votre profil, vos statistiques, votre XP, vos réglages et vos parties en cours sur cet appareil. C’est irréversible. Exportez d’abord pour en garder une copie.',
+      ),
+      action: L('Erase everything', 'Tout effacer'),
+      danger: true,
+    });
+    if (!ok) return;
+    resetProfile();
+    clearAllSaves();
+    renderStats(el, defs);
+  }
 }

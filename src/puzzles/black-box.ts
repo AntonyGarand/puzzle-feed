@@ -455,7 +455,7 @@ export const blackBox: PuzzleDef = {
       hint,
       snapshot: () => ({ rays: fired, guess: [...guess], checks }),
       onKey(e) {
-        if (e.key !== 'Enter' || (document.activeElement as Element | null)?.closest?.('.bb')) return false;
+        if (e.key !== 'Enter' || document.activeElement?.closest?.('.bb')) return false;
         check();
         return true;
       },

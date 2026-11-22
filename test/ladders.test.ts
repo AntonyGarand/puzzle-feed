@@ -98,10 +98,10 @@ describe('ladders', () => {
     const tap = (p: string, i: number) => root.querySelector<HTMLElement>(`[data-p="${p}"][data-i="${i}"]`)!.click();
     tap('t2', 1); // 9♣ → the 10♥ (longest ladder) first; 10♠ and 10♦ also fit
     const find = () => [...root.querySelectorAll<HTMLElement>('.pc')].find((e) => e.getAttribute('aria-label')?.startsWith('9♣'))!;
-    expect(find().dataset.p).toBe('t4');
+    expect(find().dataset['p']).toBe('t4');
     tap('t4', 5);
-    expect(find().dataset.p).toBe('t0');
+    expect(find().dataset['p']).toBe('t0');
     tap('t0', 2);
-    expect(find().dataset.p).toBe('t1');
+    expect(find().dataset['p']).toBe('t1');
   });
 });

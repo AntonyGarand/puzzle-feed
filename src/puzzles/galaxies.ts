@@ -170,7 +170,7 @@ export const galaxies: PuzzleDef = {
     const tap = (i: number, judge = true): 'add' | 'remove' | null => {
       if (done) return null;
       ctx.touch();
-      let mode: 'add' | 'remove' | null = null;
+      let mode: 'add' | 'remove' | null;
       if (given[i] >= 0) {
         cur = given[i];
         mode = 'add';

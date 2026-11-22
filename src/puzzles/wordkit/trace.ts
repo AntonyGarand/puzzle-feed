@@ -77,7 +77,7 @@ export interface TraceOpts {
   /** First interaction. */
   touch(): void;
   /** Cells that may be traced (default: all). */
-  free?(i: number): boolean;
+  free?: (i: number) => boolean;
 }
 
 /**
@@ -96,7 +96,7 @@ export function traceInput(grid: HTMLElement, o: TraceOpts): () => void {
     const dx = x - (r.left + r.width / 2),
       dy = y - (r.top + r.height / 2);
     // only count the inner part of a cell so diagonal drags don't clip neighbours
-    return dx * dx + dy * dy <= (r.width * 0.42) ** 2 ? Number(c.dataset.i) : -1;
+    return dx * dx + dy * dy <= (r.width * 0.42) ** 2 ? Number(c.dataset['i']) : -1;
   };
   const extend = (i: number) => {
     const path = o.path();
@@ -115,7 +115,7 @@ export function traceInput(grid: HTMLElement, o: TraceOpts): () => void {
     if (!o.active()) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-i]');
     if (!el) return;
-    const i = Number(el.dataset.i);
+    const i = Number(el.dataset['i']);
     o.touch();
     e.preventDefault();
     if (!free(i)) return;

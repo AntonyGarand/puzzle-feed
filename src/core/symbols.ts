@@ -40,7 +40,7 @@ export function mark(k: number): HTMLElement {
 /** Point an existing {@link mark} at another colour (or hide it with `k < 0`). */
 export function setMark(el: HTMLElement, k: number) {
   if (k < 0) el.removeAttribute('data-k');
-  else el.dataset.k = String(k % PATHS.length);
+  else el.dataset['k'] = String(k % PATHS.length);
 }
 
 /** SVG symbol for palette colour `k`, centred on (cx, cy) and fitting a circle of radius `r`. */

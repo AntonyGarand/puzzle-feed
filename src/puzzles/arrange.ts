@@ -107,8 +107,8 @@ export const arrange: PuzzleDef = {
     const tray = h('div', { class: 'arrange-tray', style: `--bc:${Math.max(rows, cols)}` });
     const fillMini = (el: HTMLElement, sh: Shape) => {
       const key = sh.join(' ');
-      if (el.dataset.sh === key) return;
-      el.dataset.sh = key;
+      if (el.dataset['sh'] === key) return;
+      el.dataset['sh'] = key;
       const hgt = Math.max(...sh.map((q) => q[0])) + 1,
         wid = Math.max(...sh.map((q) => q[1])) + 1;
       el.style.setProperty('--pr', String(hgt));
@@ -325,7 +325,7 @@ export const arrange: PuzzleDef = {
     tray.addEventListener('pointerdown', (e) => {
       const el = (e.target as Element | null)?.closest?.('.arr-piece') as HTMLElement | null;
       if (!el || e.button > 0 || drag) return;
-      const p = Number(el.dataset.p);
+      const p = Number(el.dataset['p']);
       const sh = shapeOf(p);
       const rc = innerRect(el);
       const hgt = Math.max(...sh.map((q) => q[0])) + 1,
@@ -345,7 +345,7 @@ export const arrange: PuzzleDef = {
       if (R < 0 || R >= rows || C < 0 || C >= cols) return;
       const p = owner[R * cols + C];
       if (p < 0 || !place[p]) return;
-      const [r0, c0] = place[p]!;
+      const [r0, c0] = place[p];
       const at = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY };
       begin(e, { p, ...at, dr: R - r0, dc: C - c0, from: [r0, c0], moved: false });
     });

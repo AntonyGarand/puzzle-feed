@@ -35,7 +35,9 @@ describe('connect X marks', () => {
       const root = make(seed);
       const n = Math.round(Math.sqrt(root.querySelectorAll('.cell').length));
       // circles come in pairs, one pair per colour
-      const dots = [...root.querySelectorAll('circle')].map((e) => (+e.getAttribute('cy')! - 0.5) * n + (+e.getAttribute('cx')! - 0.5));
+      const dots = [...root.querySelectorAll('circle')].map(
+        (e) => (Number(e.getAttribute('cy')!) - 0.5) * n + (Number(e.getAttribute('cx')!) - 0.5),
+      );
       const isDot = new Set(dots);
       for (let di = 0; di < dots.length; di++) {
         const d = dots[di];

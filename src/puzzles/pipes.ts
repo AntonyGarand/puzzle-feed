@@ -10,7 +10,8 @@ const DIRS = [
   { bit: 4, dr: 1, dc: 0, opp: 1 },
   { bit: 8, dr: 0, dc: -1, opp: 2 },
 ];
-const rot = (m: number, k: number) => {
+const rot = (mask: number, k: number) => {
+  let m = mask;
   for (let i = 0; i < ((k % 4) + 4) % 4; i++) m = ((m << 1) | (m >> 3)) & 15;
   return m;
 };

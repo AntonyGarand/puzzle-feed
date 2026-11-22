@@ -115,7 +115,7 @@ function assist(g: ReturnType<typeof make>, opts: { cleanStart: boolean }) {
   return { log, last };
 }
 
-const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean);
+const ONLY = (process.env['ONLY'] ?? '').split(',').filter(Boolean);
 const games = PUZZLES.filter((p) => !ONLY.length || ONLY.includes(p.id));
 
 describe.each(games.map((p) => [p.id, p] as const))('%s hint button', (id, def) => {

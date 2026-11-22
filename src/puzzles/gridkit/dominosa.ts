@@ -32,7 +32,8 @@ export const fullSet = (n: number) => {
 function tiling(cols: number, rows: number, rng: Rng): number[] {
   const N = cols * rows;
   const mate = new Array<number>(N).fill(-1);
-  const rec = (i: number): boolean => {
+  const rec = (from: number): boolean => {
+    let i = from;
     while (i < N && mate[i] >= 0) i++;
     if (i >= N) return true;
     const opts: number[] = [];

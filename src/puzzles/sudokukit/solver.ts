@@ -1,4 +1,5 @@
 import type { Rng } from '../../core/rng';
+import { popcount } from '../../core/bits';
 
 /** A group of cells whose digits must all differ; optionally they must also add up to `sum`. */
 export interface Unit {
@@ -22,12 +23,6 @@ export interface SolveResult {
   aborted: boolean;
   solutions: number[][];
 }
-
-const popcount = (x: number) => {
-  let k = 0;
-  for (; x; x &= x - 1) k++;
-  return k;
-};
 
 // COMBO[(avail * 10 + k) * 46 + s] = digits (bit v-1) that occur in some k-subset of `avail` adding to s.
 let COMBO: Uint16Array | null = null;
@@ -191,7 +186,6 @@ export function solve(p: Problem, grid: number[], limit: number, budget: number,
             if (!g[c] && cm[c] & b) {
               best = c;
               bestMask = b;
-              bestN = 1;
               break;
             }
           break;

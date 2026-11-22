@@ -129,8 +129,9 @@ export function solveMow(w: number, adj: number[][], grass: number[], pos: numbe
 }
 
 /** A plain greedy player (fixed tie-breaks). Boards it finishes are too easy to keep. */
-function greedySolves(adj: number[][], grass: number[], pos: number, rule: 0 | 1): boolean {
+function greedySolves(adj: number[][], grass: number[], start: number, rule: 0 | 1): boolean {
   const g = grass.slice();
+  let pos = start;
   let left = g.reduce((a, b) => a + b, 0);
   while (left) {
     const opts = movesFrom(adj, g, pos);

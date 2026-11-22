@@ -17,7 +17,7 @@ import { PUZZLES } from '../src/puzzles';
 (globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 
 const IDS = ['slide', 'unblock', 'push', 'tether', 'worms', 'tilt', 'arrows', 'week'];
-const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean);
+const ONLY = (process.env['ONLY'] ?? '').split(',').filter(Boolean);
 /** Generous for happy-dom; a browser is several times faster. */
 const SLOW_MS = 800;
 const KEYS = ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Tab', ' ', 'e'];

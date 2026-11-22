@@ -214,7 +214,7 @@ export const queens: PuzzleDef = {
         at: [cells[r * n + q[r]!]],
         action: L('Remove it', 'L’enlever'),
         play: () => {
-          if (q[r] != null) tap(r, q[r]!);
+          if (q[r] != null) tap(r, q[r]);
         },
       });
       const fits = (qq: (number | null)[]) => sols.some((cand) => qq.every((x, r) => x == null || x === cand[r]));

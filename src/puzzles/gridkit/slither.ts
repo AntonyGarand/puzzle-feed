@@ -145,7 +145,8 @@ function count(g: Geo, clue: number[], limit: number, budget: number) {
   const chain = (e0: number, seen: Uint8Array) => {
     let n = 1;
     seen[e0] = 1;
-    const run = (v: number): number => {
+    const run = (start: number): number => {
+      let v = start;
       let prev = e0;
       for (;;) {
         let next = -1;
@@ -323,7 +324,7 @@ export function region(w: number, h: number, frac: number, rng: Rng, thin = 1): 
     if (inR[i]) continue;
     const r = Math.floor(i / w),
       c = i % w;
-    const touch = +at(r - 1, c) + +at(r + 1, c) + +at(r, c - 1) + +at(r, c + 1);
+    const touch = Number(at(r - 1, c)) + Number(at(r + 1, c)) + Number(at(r, c - 1)) + Number(at(r, c + 1));
     if (!touch) continue;
     if (thin < 1 && touch > 1 && !rng.chance(thin)) continue;
     inR[i] = true;

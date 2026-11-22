@@ -107,7 +107,7 @@ function makeCages(n: number, sol: number[], maxSize: number, singles: number, o
     .filter((g) => g.length)
     .map((cells) => {
       const vs = cells.map((c) => sol[c]);
-      if (cells.length === 1) return { cells, op: '' as Op, target: vs[0] };
+      if (cells.length === 1) return { cells, op: '', target: vs[0] };
       const sum = vs.reduce((a, b) => a + b, 0);
       const prod = vs.reduce((a, b) => a * b, 1);
       const choices: [Op, number, number][] = []; // op, target, weight

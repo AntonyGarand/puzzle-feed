@@ -15,8 +15,8 @@ import { PUZZLES } from '../src/puzzles';
 (globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 
 const IDS = ['arrange', 'beehive', 'connect', 'tracks', 'untangle', 'zigzag', 'maze', 'pipes', 'queens', 'nonogram', 'lights'];
-const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean);
-const SEEDS = Number(process.env.SEEDS ?? 4);
+const ONLY = (process.env['ONLY'] ?? '').split(',').filter(Boolean);
+const SEEDS = Number(process.env['SEEDS'] ?? 4);
 const SLOW_MS = 600;
 
 function make(id: string, d: Difficulty, seed: number) {
@@ -43,7 +43,7 @@ function make(id: string, d: Difficulty, seed: number) {
 
 // Every element reports the same 300×300 box, so pointer coordinates map onto board cells.
 Element.prototype.getBoundingClientRect = function () {
-  return { left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON() {} } as DOMRect;
+  return { left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON() {} };
 };
 
 const pe = (type: string, x: number, y: number) =>
@@ -119,7 +119,7 @@ describe.each(IDS.filter((id) => !ONLY.length || ONLY.includes(id)))('%s', (id) 
       }
     }
     expect(problems).toEqual([]);
-    if (process.env.STATS)
+    if (process.env['STATS'])
       console.log(
         id,
         d,

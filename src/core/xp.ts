@@ -56,7 +56,8 @@ export function xpGains(r: {
 }
 
 /** Game and player levels share one curve: level 1 needs 100 XP, then 150, 200, … */
-export function xpLevel(xp: number): XpLevel {
+export function xpLevel(total: number): XpLevel {
+  let xp = total;
   let level = 1;
   let need = 100;
   while (xp >= need) {

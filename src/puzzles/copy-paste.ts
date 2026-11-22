@@ -395,7 +395,7 @@ export const copyPaste: PuzzleDef = {
     // ---- Pointer: drag = copy a rectangle, tap = paste ----
     const cellAt = (x: number, y: number) => {
       const el = document.elementFromPoint(x, y) as HTMLElement | null;
-      const i = el?.dataset.i;
+      const i = el?.dataset['i'];
       return el && grid.contains(el) && i != null ? Number(i) : -1;
     };
     grid.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -443,7 +443,7 @@ export const copyPaste: PuzzleDef = {
     const sv = ctx.saved as { g?: unknown; hist?: unknown; clip?: unknown; src?: unknown } | undefined;
     if (sv && okCells(sv.g, n * n, k) && Array.isArray(sv.hist) && sv.hist.length <= limit && sv.hist.every((x) => okCells(x, n * n, k))) {
       g = sv.g;
-      hist = sv.hist as number[][];
+      hist = sv.hist;
       const c = sv.clip as Block | null;
       if (c && Number.isInteger(c.w) && Number.isInteger(c.h) && c.w >= 1 && c.h >= 1 && c.w <= n && c.h <= n && okCells(c.v, c.w * c.h, k))
         clip = { w: c.w, h: c.h, v: c.v };
@@ -515,7 +515,7 @@ export const copyPaste: PuzzleDef = {
       const foot = cells.filter((_, i) => inRect({ r: op.r, c: op.c, w: need.w, h: need.h }, i));
       const srcCells = cells.filter((_, i) => inRect(op.src, i));
       const fixed = foot.filter((el) => {
-        const i = Number(el.dataset.i);
+        const i = Number(el.dataset['i']);
         return g[i] !== after[i];
       });
       if (clip && sameBlock(clip, need))

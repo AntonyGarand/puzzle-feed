@@ -67,10 +67,10 @@ app.append(header, feed.el, lab.el, page);
 
 function applyTheme() {
   const t = getProfile().theme;
-  if (t === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = t;
-  if (getProfile().symbols) document.documentElement.dataset.symbols = '';
-  else delete document.documentElement.dataset.symbols;
+  if (t === 'system') delete document.documentElement.dataset['theme'];
+  else document.documentElement.dataset['theme'] = t;
+  if (getProfile().symbols) document.documentElement.dataset['symbols'] = '';
+  else delete document.documentElement.dataset['symbols'];
   const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#17161a' : '#fff6e5');
 }
@@ -194,7 +194,8 @@ applyTheme();
 upgradeHashRoute();
 // A reload that dropped the route (e.g. the app reloading its start page) goes back to it.
 // Sessions from before path routing stored "#/…"; upgradeHashRoute() turns those into paths too.
-const lastRoute = isReload && location.pathname === '/' ? sessionGet<string>('route') : undefined;
+const storedRoute = isReload && location.pathname === '/' ? sessionGet('route') : undefined;
+const lastRoute = typeof storedRoute === 'string' ? storedRoute : undefined;
 if (lastRoute && lastRoute !== '/') {
   history.replaceState(null, '', lastRoute);
   upgradeHashRoute();

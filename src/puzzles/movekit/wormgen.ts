@@ -336,5 +336,5 @@ export function generateWorms(rng: Rng, spec: WormSpec): WormRoom {
     best = { w, h, floor, goals, start: ws, optimal: sol.length };
     if (sol.length >= min && over >= extra) break;
   }
-  return best!;
+  return best;
 }

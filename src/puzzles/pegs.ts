@@ -157,7 +157,7 @@ export const pegs: PuzzleDef = {
     grid.addEventListener('pointerdown', (e) => {
       if (over) return;
       const el = (e.target as Element).closest<HTMLElement>('[data-i]');
-      const i = el ? Number(el.dataset.i) : -1;
+      const i = el ? Number(el.dataset['i']) : -1;
       if (i < 0 || !peg[i] || i === sel) return;
       ctx.touch();
       sel = i;
@@ -167,7 +167,7 @@ export const pegs: PuzzleDef = {
     grid.addEventListener('pointerup', (e) => {
       if (over || sel < 0) return;
       const el = document.elementFromPoint?.(e.clientX, e.clientY)?.closest<HTMLElement>('[data-i]');
-      const i = el && grid.contains(el) ? Number(el.dataset.i) : -1;
+      const i = el && grid.contains(el) ? Number(el.dataset['i']) : -1;
       const j = targets().find((t) => t.to === i);
       if (!j) return;
       justPicked = false;

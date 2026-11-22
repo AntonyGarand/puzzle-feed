@@ -167,13 +167,13 @@ export const sightlines: PuzzleDef = {
     const cellAt = (x: number, y: number) => {
       const el = document.elementFromPoint(x, y) as HTMLElement | null;
       const c = el?.closest?.('[data-i]') as HTMLElement | null;
-      return c && grid.contains(c) ? Number(c.dataset.i) : -1;
+      return c && grid.contains(c) ? Number(c.dataset['i']) : -1;
     };
     grid.addEventListener('contextmenu', (e) => e.preventDefault());
     grid.addEventListener('pointerdown', (e) => {
       if (done || stroke) return;
       const t = (e.target as Element | null)?.closest?.('[data-i]') as HTMLElement | null;
-      const i = t && grid.contains(t) ? Number(t.dataset.i) : cellAt(e.clientX, e.clientY);
+      const i = t && grid.contains(t) ? Number(t.dataset['i']) : cellAt(e.clientX, e.clientY);
       if (i < 0 || given[i]) return;
       e.preventDefault();
       if (cur >= 0) {

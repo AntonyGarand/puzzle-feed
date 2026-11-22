@@ -316,7 +316,7 @@ const FALLBACK: Puzzle = (() => {
 })();
 
 export function generate(rng: Rng, level: number): Puzzle {
-  let p: Puzzle | null = null;
+  let p: Puzzle | null;
   if (level === 1) p = mate1(rng, W1, B1, 400);
   else if (level === 2) p = mate1(rng, W2, B2, 400);
   else if (level === 3) p = mate2(rng, W1, B1, 300);

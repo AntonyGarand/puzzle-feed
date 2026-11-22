@@ -4,7 +4,7 @@ import { Card, isUndoKey } from './card';
 import { getSave } from './saves';
 import { isReload, sessionGet, sessionSet } from './session';
 import { onChange, prefs } from './store';
-import type { Difficulty, PuzzleDef } from './types';
+import { LEVELS, type Difficulty, type PuzzleDef } from './types';
 import { h } from './ui';
 
 const WEIGHTS = [0, 1, 2.5, 5];
@@ -16,6 +16,18 @@ interface Spot {
   id: string;
   seed: number;
   level: Difficulty;
+}
+
+/** A stored feed position, or undefined if sessionStorage held something else. */
+function asSpot(v: unknown): Spot | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const s = v as Partial<Spot>;
+  return (s.only === null || typeof s.only === 'string') &&
+    typeof s.id === 'string' &&
+    typeof s.seed === 'number' &&
+    LEVELS.includes(s.level as Difficulty)
+    ? (s as Spot)
+    : undefined;
 }
 
 export class Feed {
@@ -30,7 +42,7 @@ export class Feed {
   /** When set, the feed only deals this puzzle type (practice mode). */
   private only: string | null = null;
   /** After a reload: the card to put back first. */
-  private restore = isReload ? sessionGet<Spot | null>('feed') : undefined;
+  private restore = isReload ? asSpot(sessionGet('feed')) : undefined;
 
   constructor(private readonly defs: PuzzleDef[]) {
     this.el = h('main', { class: 'feed' });

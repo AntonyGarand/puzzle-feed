@@ -15,7 +15,7 @@ export interface HUnit {
   cells: number[];
   /** Row / column number (0-based). */
   idx?: number;
-  sum?: number;
+  sum?: number | undefined;
   /** Holds every digit 1..n exactly once. */
   full?: boolean;
   /** For runs. */
@@ -416,7 +416,7 @@ export const lineHUnits = (n: number): HUnit[] => [
 export interface Broken {
   text: string;
   /** Clue elements to outline (a sign, a sum label…). */
-  why?: Element[];
+  why?: Element[] | undefined;
   /** Cells at fault: the hint rings them and clears the first one that isn't a given. */
   at: number[];
 }

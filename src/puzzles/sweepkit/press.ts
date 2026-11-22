@@ -16,7 +16,7 @@ export interface Press {
 
 export function cellOf(grid: HTMLElement, target: EventTarget | null): number {
   const t = (target as Element | null)?.closest?.('[data-i]') as HTMLElement | null;
-  return t && grid.contains(t) ? Number(t.dataset.i) : -1;
+  return t && grid.contains(t) ? Number(t.dataset['i']) : -1;
 }
 
 export function gridPress(grid: HTMLElement, cells: HTMLElement[], o: PressOpts): Press {

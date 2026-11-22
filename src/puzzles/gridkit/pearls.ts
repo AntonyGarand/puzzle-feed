@@ -167,7 +167,8 @@ function count(b: Board, pearl: Pearl[], limit: number, budget: number, sols?: I
   const chain = (e0: number, seen: Uint8Array) => {
     let len = 1;
     seen[e0] = 1;
-    const run = (v: number): number => {
+    const run = (start: number): number => {
+      let v = start;
       let prev = e0;
       for (;;) {
         let next = -1;

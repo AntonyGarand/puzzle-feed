@@ -174,7 +174,7 @@ export const connect: PuzzleDef = {
           break;
         }
         // Prefer a step that keeps the line legal; a U-turn is still allowed, just marked.
-        const steps = stepsToward(last, j, n).sort((a, b) => +doublesBack(active, a) - +doublesBack(active, b));
+        const steps = stepsToward(last, j, n).sort((a, b) => Number(doublesBack(active, a)) - Number(doublesBack(active, b)));
         if (!steps.some((x) => tryAdd(active, x))) break;
         recompute();
       }

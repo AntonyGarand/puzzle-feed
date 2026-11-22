@@ -78,7 +78,7 @@ describe('push', () => {
     expect(stuckCrates(w, h, floor, [12], [0])).toEqual([0]);
     expect(stuckCrates(w, h, floor, [12], [7])).toEqual([]);
     // Two crates side by side against the top wall: neither can move.
-    expect(stuckCrates(w, h, floor, [12, 13], [1, 2]).sort()).toEqual([1, 2]);
+    expect(stuckCrates(w, h, floor, [12, 13], [1, 2]).sort((a, b) => a - b)).toEqual([1, 2]);
     // ...unless they're both home.
     expect(stuckCrates(w, h, floor, [1, 2], [1, 2])).toEqual([]);
   });
@@ -195,7 +195,7 @@ describe('target', () => {
               continue;
             }
             const lost = !reach(vs, goal);
-            expect(g.status.includes('out of reach'), `${vs} → ${goal}`).toBe(lost);
+            expect(g.status.includes('out of reach'), `${vs.join(',')} → ${goal}`).toBe(lost);
             if (lost) flagged++;
             undo.click();
           }

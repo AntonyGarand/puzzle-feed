@@ -19,7 +19,7 @@ const neighbours = (n: number, i: number) => {
   }
   return out;
 };
-const exits = (open: number[], i: number) => ((open[i] & 1) + ((open[i] >> 1) & 1) + ((open[i] >> 2) & 1) + ((open[i] >> 3) & 1)) as number;
+const exits = (open: number[], i: number) => (open[i] & 1) + ((open[i] >> 1) & 1) + ((open[i] >> 2) & 1) + ((open[i] >> 3) & 1);
 
 /**
  * Growing-tree carving. Each step extends the newest active cell with probability `newest`, otherwise a
@@ -82,7 +82,7 @@ function braid(open: number[], n: number, rng: Rng, fraction: number) {
       .filter((x) => x.dist >= minLoop);
     if (!candidates.length) continue;
     // Prefer joining another dead end (it removes two dead ends at once), then the longest loop.
-    const pick = candidates.sort((a, b) => +(exits(open, b.j) === 1) - +(exits(open, a.j) === 1) || b.dist - a.dist)[0];
+    const pick = candidates.sort((a, b) => Number(exits(open, b.j) === 1) - Number(exits(open, a.j) === 1) || b.dist - a.dist)[0];
     open[i] |= pick.bit;
     open[pick.j] |= pick.opp;
   }

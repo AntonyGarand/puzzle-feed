@@ -1,7 +1,15 @@
 import { L } from './i18n';
 
 type Child = Node | string | number | null | undefined | false;
+
 type Attrs = Record<string, unknown> | null;
+
+/** Attribute text for a primitive value; anything else is a caller bug, not "[object Object]". */
+function attrText(k: string, v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  throw new TypeError(`h(): attribute "${k}" must be a string, number or boolean`);
+}
 
 function apply(el: Element, attrs: Attrs, kids: Child[]) {
   if (attrs) {
@@ -10,13 +18,13 @@ function apply(el: Element, attrs: Attrs, kids: Child[]) {
       if (k.startsWith('on') && typeof v === 'function') {
         el.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
       } else if (k === 'class') {
-        el.setAttribute('class', String(v));
+        el.setAttribute('class', attrText(k, v));
       } else if (k === 'value' && 'value' in el) {
-        (el as HTMLInputElement).value = String(v);
+        (el as HTMLInputElement).value = attrText(k, v);
       } else if (k === 'checked' && 'checked' in el) {
         (el as HTMLInputElement).checked = Boolean(v);
       } else {
-        el.setAttribute(k, v === true ? '' : String(v));
+        el.setAttribute(k, v === true ? '' : attrText(k, v));
       }
     }
   }
@@ -67,7 +75,7 @@ export function btn(label: string, onclick: (e: MouseEvent) => void, variant: ''
 
 /** Shared key pad: square keys under a board, two even rows past 7 keys. */
 export function pad(
-  keys: { label: string | Node; value: string; class?: string; style?: string; aria?: string }[],
+  keys: { label: string | Node; value: string; class?: string; style?: string | undefined; aria?: string }[],
   onkey: (v: string) => void,
 ): HTMLDivElement {
   // Long pads split into two even rows instead of shrinking every key.

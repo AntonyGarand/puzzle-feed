@@ -62,10 +62,11 @@ export function onSwipe(el: HTMLElement, cb: (d: Dir) => void, onTap?: (e: Point
 
 /** Subtle Web Animations pulse; never touches class/style attributes (so resume views stay identical). */
 export function anim(el: Element, frames: Keyframe[], ms = 160) {
-  const a = (el as HTMLElement).animate;
-  if (typeof a === 'function') {
+  const target = el as HTMLElement;
+  // happy-dom (tests) has no Web Animations API.
+  if (typeof target.animate === 'function') {
     try {
-      a.call(el, frames, { duration: ms, easing: 'ease-out' });
+      target.animate(frames, { duration: ms, easing: 'ease-out' });
     } catch {
       /* ignore */
     }

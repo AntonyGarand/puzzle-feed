@@ -17,9 +17,9 @@ export interface WinInfo {
   solved: number;
   /** Record outcome; `null` when unknown (a resumed run that had already reached its goal). */
   res: RecordOutcome | null;
-  levelUp?: { up: boolean; to: string };
+  levelUp?: { up: boolean; to: string } | undefined;
   /** Auto-advance delay: shows a draining bar along the bottom of the panel. */
-  advanceMs?: number;
+  advanceMs?: number | undefined;
 }
 
 /** A failed attempt: the "Not this time" panel's subset of {@link WinInfo}. */
@@ -32,11 +32,11 @@ export interface LostInfo {
   /** Hints used (shown under the title when any). */
   hints?: number;
   /** Best time at this level, if any. */
-  best?: number;
+  best?: number | undefined;
   /** Attempts of this game that ended (solved or failed), this one included, and how many were solves. */
   played: number;
   solved: number;
-  levelUp?: { up: boolean; to: string };
+  levelUp?: { up: boolean; to: string } | undefined;
 }
 
 function crossIcon() {

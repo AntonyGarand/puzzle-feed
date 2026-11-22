@@ -3,6 +3,7 @@
 // cells as its number. Same-size regions can't touch, since touching equal numbers form one group.
 import type { Rng } from '../../core/rng';
 import { nb4 } from './kit';
+import { popcount } from '../../core/bits';
 
 export interface FillPuzzle {
   /** Solution: region size per cell. */
@@ -21,11 +22,6 @@ interface Geo {
 const geo = (n: number, max: number): Geo => ({ n, max, nb: Array.from({ length: n * n }, (_, i) => nb4(i, n, n)) });
 
 const bit = (v: number) => 1 << v;
-const popcount = (m: number) => {
-  let k = 0;
-  for (; m; m &= m - 1) k++;
-  return k;
-};
 const lowest = (m: number) => 31 - Math.clz32(m & -m);
 
 export interface Regions {
