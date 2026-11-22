@@ -940,6 +940,15 @@ h3 {
   background: var(--hi);
   color: var(--on-tone);
 }
+.btn.danger {
+  background: var(--bad);
+  color: var(--on-tone);
+}
+.confirm-sheet .sheet-body p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
 .btn.ghost {
   box-shadow: none;
   border-color: transparent;
@@ -1599,7 +1608,7 @@ button.cell:active {
 /* Header row and first column stay put while the table scrolls inside its box. */
 .table-wrap.pinned {
   overflow: auto;
-  max-height: calc(100dvh - var(--head) - var(--tabs) - 40px);
+  max-height: 50dvh;
   overscroll-behavior: contain;
 }
 .pinned table {

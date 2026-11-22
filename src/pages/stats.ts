@@ -1,6 +1,7 @@
 import { dailyStats } from '../core/daily';
 import { L, localeTag } from '../core/i18n';
 import { clearAllSaves } from '../core/saves';
+import { confirmSheet, noticeSheet } from '../core/sheet';
 import { dayStreak, exportProfile, getProfile, importProfile, prefs, resetProfile, stats, totalXp, update } from '../core/store';
 import { xpLevel } from '../core/xp';
 import { xpProgress } from './xp-progress';
@@ -105,7 +106,10 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
       importProfile(await f.text());
       renderStats(el, defs);
     } catch (e) {
-      alert((e as Error).message);
+      noticeSheet(
+        L('Import failed', 'Importation impossible'),
+        `${L('That file isn’t a puzzle feed profile.', 'Ce fichier n’est pas un profil puzzle feed.')} (${(e as Error).message})`,
+      );
     }
   });
 
@@ -190,19 +194,20 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         btn(L('Import', 'Importer'), () => fileInput.click(), 'ghost'),
         btn(
           L('Reset everything', 'Tout effacer'),
-          () => {
-            if (
-              confirm(
-                L(
-                  'Erase your profile, stats and settings on this device?',
-                  'Effacer votre profil, vos statistiques et vos réglages sur cet appareil?',
-                ),
-              )
-            ) {
-              resetProfile();
-              clearAllSaves();
-              renderStats(el, defs);
-            }
+          async () => {
+            const ok = await confirmSheet({
+              title: L('Reset everything?', 'Tout effacer?'),
+              message: L(
+                'This erases your profile, stats, XP, settings and unfinished games on this device. It can’t be undone. Export first to keep a copy.',
+                'Cela efface votre profil, vos statistiques, votre XP, vos réglages et vos parties en cours sur cet appareil. C’est irréversible. Exportez d’abord pour en garder une copie.',
+              ),
+              action: L('Erase everything', 'Tout effacer'),
+              danger: true,
+            });
+            if (!ok) return;
+            resetProfile();
+            clearAllSaves();
+            renderStats(el, defs);
           },
           'ghost',
         ),
