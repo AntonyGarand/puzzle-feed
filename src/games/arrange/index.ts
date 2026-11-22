@@ -1,8 +1,23 @@
 import { L } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { board, clearBtn, h, PALETTE, shake, undoBtn } from '../../ui/dom';
-import { genArrange, rotated, type Shape } from './gen';
+import { genArrange, type Shape } from './gen';
 import { innerRect } from '../../kits/path/grid';
+import {
+  copyPos,
+  deadEnd,
+  fitsAt,
+  isSolved,
+  makeSolver,
+  nextStep,
+  occupancy,
+  placeChanged,
+  restore,
+  shapeOf as pieceShape,
+  solCells,
+  type Place,
+  type Pos,
+} from './rules';
 import './style.css';
 
 type Drag = {
@@ -22,8 +37,6 @@ type Drag = {
   /** Position when the gesture began, recorded for undo if the gesture changes the board. */
   before: Pos;
 };
-/** A board position: where each piece sits (null: in the tray) and how it is turned. */
-type Pos = { place: ([number, number] | null)[]; rot: number[] };
 
 export const arrange: PuzzleDef = {
   id: 'arrange',
@@ -81,21 +94,16 @@ export const arrange: PuzzleDef = {
     const K = pieces.length;
     const N = rows * cols;
     const rot = pieces.map(() => (P.rotate ? rng.int(0, 3) : 0));
-    const place: ([number, number] | null)[] = pieces.map(() => null);
+    const place: Place = pieces.map(() => null);
     const order = rng.shuffle(pieces.map((_, i) => i));
-    const shapeOf = (p: number): Shape => rotated(pieces[p].shape, rot[p]);
+    /** The live position: `place` and `rot` are mutated in place. */
+    const cur: Pos = { place, rot };
+    const shapeOf = (p: number): Shape => pieceShape(P, rot, p);
 
-    const owner = new Int16Array(N);
-    const recompute = () => {
-      owner.fill(-1);
-      place.forEach((o, p) => o && shapeOf(p).forEach(([r, c]) => (owner[(o[0] + r) * cols + o[1] + c] = p)));
-    };
-    const fits = (p: number, r0: number, c0: number) =>
-      shapeOf(p).every(([r, c]) => {
-        const rr = r0 + r,
-          cc = c0 + c;
-        return rr >= 0 && rr < rows && cc >= 0 && cc < cols && owner[rr * cols + cc] < 0;
-      });
+    /** Board cells as owning piece (-1: empty), refreshed by `recompute()` (every render). */
+    let owner = occupancy(P, cur);
+    const recompute = () => (owner = occupancy(P, cur));
+    const fits = (p: number, r0: number, c0: number) => fitsAt(P, owner, shapeOf(p), r0, c0);
 
     // ---- DOM ----
     const grid = board(cols, rows, 'arrange-grid');
@@ -133,10 +141,10 @@ export const arrange: PuzzleDef = {
     let finished = false;
     /** Positions before each drop, removal or clear, for undo (turns of placed pieces come back with them). */
     let hist: Pos[] = [];
-    const pos = (): Pos => ({ place: place.map((o) => (o ? [o[0], o[1]] : null)), rot: rot.slice() });
+    const pos = () => copyPos(cur);
     /** Record `before` if the placement changed since. */
     const commit = (before: Pos) => {
-      if (place.some((o, p) => (o?.join() ?? '') !== (before.place[p]?.join() ?? ''))) hist.push(before);
+      if (placeChanged(cur, before)) hist.push(before);
     };
     const undo = () => {
       const prev = hist.pop();
@@ -195,7 +203,7 @@ export const arrange: PuzzleDef = {
       });
       const n = place.filter(Boolean).length;
       ctx.status(L(`${n}/${K} placed${P.rotate ? ' · tap to turn' : ''}`, `${n}/${K} placées${P.rotate ? ' · touchez pour tourner' : ''}`));
-      return n === K;
+      return isSolved(cur);
     };
 
     // ---- dragging ----
@@ -359,158 +367,12 @@ export const arrange: PuzzleDef = {
     ctx.controls(undoBtn(undo), clearBtn(clear));
 
     // ---- resume ----
-    const sv = ctx.saved as { rot?: unknown; place?: unknown } | undefined;
-    if (Array.isArray(sv?.rot) && sv.rot.length === K && sv.rot.every((v) => v === 0 || v === 1 || v === 2 || v === 3)) {
-      (sv.rot as number[]).forEach((v, p) => (rot[p] = P.rotate ? v : 0));
-    }
-    if (Array.isArray(sv?.place) && sv.place.length === K) {
-      (sv.place as unknown[]).forEach((o, p) => {
-        recompute();
-        if (Array.isArray(o) && o.length === 2 && o.every(Number.isInteger) && fits(p, o[0], o[1])) place[p] = [o[0], o[1]];
-      });
-      recompute();
-      if (place.every(Boolean)) place[K - 1] = null; // never resume already solved
-    }
-    const okPos = (v: unknown): v is Pos => {
-      const o = v as Pos | null;
-      return (
-        !!o &&
-        Array.isArray(o.rot) &&
-        o.rot.length === K &&
-        o.rot.every((x) => x === 0 || x === 1 || x === 2 || x === 3) &&
-        Array.isArray(o.place) &&
-        o.place.length === K &&
-        o.place.every(
-          (q) =>
-            q === null ||
-            (Array.isArray(q) && q.length === 2 && q.every(Number.isInteger) && q[0] >= -4 && q[0] < rows && q[1] >= -4 && q[1] < cols),
-        )
-      );
-    };
-    // Each saved position must still be a legal board (no overlap, inside the grid), or undo starts afresh.
-    const legal = (o: Pos) => {
-      const seen = new Set<number>();
-      return o.place.every(
-        (q, p) =>
-          !q ||
-          rotated(pieces[p].shape, P.rotate ? o.rot[p] : 0).every(([r, c]) => {
-            const rr = q[0] + r,
-              cc = q[1] + c,
-              i = rr * cols + cc;
-            if (rr < 0 || rr >= rows || cc < 0 || cc >= cols || seen.has(i)) return false;
-            seen.add(i);
-            return true;
-          }),
-      );
-    };
-    const svHist = (sv as { hist?: unknown } | undefined)?.hist;
-    if (Array.isArray(svHist) && svHist.every((o) => okPos(o) && legal(o)))
-      hist = (svHist as Pos[]).map((o) => ({ place: o.place, rot: P.rotate ? o.rot : o.rot.map(() => 0) }));
+    hist = restore(P, cur, ctx.saved);
+    recompute();
+
     // ---- guide ----
-    const shapeKey = (sh: Shape) =>
-      sh
-        .map((q) => q.join(','))
-        .sort()
-        .join(' ');
-    const solCells = (p: number) => pieces[p].shape.map(([r, c]) => (pieces[p].r + r) * cols + pieces[p].c + c);
+    const solve = makeSolver(P);
     let lastRule = '';
-    /** A placed piece sits where the stored solution has it (same turn). */
-    const atHome = (p: number) => {
-      const o = place[p];
-      return !!o && o[0] === pieces[p].r && o[1] === pieces[p].c && shapeKey(shapeOf(p)) === shapeKey(pieces[p].shape);
-    };
-    const around = (j: number) => {
-      const r = Math.floor(j / cols),
-        c = j % cols;
-      return [r > 0 ? j - cols : -1, r < rows - 1 ? j + cols : -1, c > 0 ? j - 1 : -1, c < cols - 1 ? j + 1 : -1].filter((x) => x >= 0);
-    };
-    /** Connected groups of cells where `free` holds. */
-    const gaps = (free: (i: number) => boolean) => {
-      const seen = new Uint8Array(N);
-      const out: number[][] = [];
-      for (let i = 0; i < N; i++) {
-        if (!free(i) || seen[i]) continue;
-        const reg = [i];
-        seen[i] = 1;
-        for (let t = 0; t < reg.length; t++)
-          for (const x of around(reg[t]))
-            if (free(x) && !seen[x]) {
-              seen[x] = 1;
-              reg.push(x);
-            }
-        out.push(reg);
-      }
-      return out;
-    };
-    type Spot = { p: number; rot: number; r: number; c: number };
-    /**
-     * Fill the empty cells with the pieces left (turning them when allowed), placed pieces staying put.
-     * `capped`: ran out of budget, so null means "don't know".
-     */
-    const solveFill = (budget: number): { sol: Spot[] | null; capped: boolean } => {
-      recompute();
-      const occ = Array.from(owner, (o) => o >= 0);
-      const left = pieces.map((_, p) => p).filter((p) => !place[p]);
-      const forms = left.map((p) => {
-        const keys = new Set<string>();
-        const out: { rot: number; sh: Shape }[] = [];
-        for (const k of P.rotate ? [0, 1, 2, 3] : [rot[p]]) {
-          const sh = rotated(pieces[p].shape, k);
-          const key = shapeKey(sh);
-          if (keys.has(key)) continue;
-          keys.add(key);
-          out.push({ rot: k, sh });
-        }
-        return out;
-      });
-      const minSize = Math.min(...left.map((p) => pieces[p].shape.length));
-      const used = new Uint8Array(left.length);
-      const out: Spot[] = [];
-      let nodes = 0;
-      let capped = false;
-      const rec = (): boolean => {
-        const i = occ.indexOf(false);
-        if (i < 0) return true;
-        if (++nodes > budget) {
-          capped = true;
-          return false;
-        }
-        if (gaps((x) => !occ[x]).some((g) => g.length < minSize)) return false;
-        const R = Math.floor(i / cols),
-          C = i % cols;
-        const tried = new Set<string>();
-        for (let k = 0; k < left.length; k++) {
-          if (used[k]) continue;
-          for (const f of forms[k]) {
-            const key = shapeKey(f.sh);
-            if (tried.has(key)) continue;
-            tried.add(key);
-            const r0 = R - f.sh[0][0],
-              c0 = C - f.sh[0][1];
-            const ix = f.sh.map(([r, c]) => (r0 + r >= 0 && r0 + r < rows && c0 + c >= 0 && c0 + c < cols ? (r0 + r) * cols + c0 + c : -1));
-            if (ix.some((x) => x < 0 || occ[x])) continue;
-            for (const x of ix) occ[x] = true;
-            used[k] = 1;
-            out.push({ p: left[k], rot: f.rot, r: r0, c: c0 });
-            if (rec()) return true;
-            out.pop();
-            used[k] = 0;
-            for (const x of ix) occ[x] = false;
-            if (capped) return false;
-          }
-        }
-        return false;
-      };
-      const ok = rec();
-      return { sol: ok ? out : null, capped: !ok && capped };
-    };
-    /** Solver result for the current placement, kept until something moves or turns. */
-    let memo: { key: string; sol: Spot[] | null; capped: boolean } | null = null;
-    const solveHere = () => {
-      const key = JSON.stringify([place, P.rotate ? 0 : rot]);
-      if (memo?.key !== key) memo = { key, ...solveFill(4000) };
-      return memo;
-    };
     const sendBack = (p: number) => () => {
       if (finished || !place[p]) return;
       ctx.touch();
@@ -518,21 +380,22 @@ export const arrange: PuzzleDef = {
       place[p] = null;
       settle();
     };
+    /** Drop piece `p` at (r, c), as a hint's `play()`. */
+    const dropAt = (p: number, r: number, c: number) => () => {
+      if (finished) return;
+      ctx.touch();
+      hist.push(pos());
+      place[p] = [r, c];
+      settle();
+    };
+    const cellsOf = (p: number) => cells.filter((_, i) => owner[i] === p);
     /** Placed pieces that leave the empty cells impossible to fill: say why, and send one back. */
     const check = (): Hint | null => {
       if (finished) return null;
       recompute();
-      const off = pieces.map((_, p) => p).filter((p) => place[p] && !atHome(p));
-      if (!off.length) return null;
-      const res = solveHere();
-      if (res.sol || res.capped) return null;
-      const left = pieces.map((_, p) => p).filter((p) => !place[p]);
-      const minSize = Math.min(...left.map((p) => pieces[p].shape.length));
-      // The smallest empty gap, and the misplaced piece that touches it most.
-      const gap = gaps((i) => owner[i] < 0).sort((a, b) => a.length - b.length)[0] ?? [];
-      const touch = (p: number) => gap.filter((i) => around(i).some((x) => owner[x] === p)).length;
-      const p = [...off].sort((a, b) => touch(b) - touch(a))[0];
-      const small = gap.length > 0 && gap.length < minSize;
+      const dead = deadEnd(P, cur, solve);
+      if (!dead) return null;
+      const { gap, small, p } = dead;
       return {
         kind: 'fix',
         text: small
@@ -545,172 +408,98 @@ export const arrange: PuzzleDef = {
               'Les pièces restantes ne peuvent pas remplir les trous autour de celle-ci : elle mène à une impasse. Renvoyez-la au bac.',
             ),
         why: small ? gap.map((i) => cells[i]) : [],
-        at: cells.filter((_, i) => owner[i] === p),
+        at: cellsOf(p),
         action: L('Send it back', 'La renvoyer'),
         play: sendBack(p),
-      };
-    };
-    /** The board left the stored solution but can still be finished: follow the solver's way. */
-    const altHint = (sol: Spot[]): Hint | null => {
-      const sp = sol[0];
-      if (!sp) return null;
-      const sh = rotated(pieces[sp.p].shape, sp.rot);
-      if (shapeKey(shapeOf(sp.p)) !== shapeKey(sh))
-        return {
-          text: L(
-            'This piece has to turn to fit the next gap: tap it in the tray to rotate it a quarter turn.',
-            'Cette pièce doit tourner pour entrer dans le prochain trou : touchez-la dans le bac pour lui faire faire un quart de tour.',
-          ),
-          at: [trayEls[sp.p]],
-          play: () => turnPiece(sp.p),
-        };
-      return {
-        text: L(
-          'This piece fits the top-left gap and still leaves room for every other piece. Drag it in.',
-          'Cette pièce entre dans le trou en haut à gauche et laisse encore de la place à toutes les autres. Glissez-la dedans.',
-        ),
-        why: [trayEls[sp.p]],
-        at: sh.map(([r, c]) => cells[(sp.r + r) * cols + sp.c + c]),
-        play: () => {
-          if (finished) return;
-          ctx.touch();
-          hist.push(pos());
-          place[sp.p] = [sp.r, sp.c];
-          settle();
-        },
       };
     };
     const hint = (): Hint | null => {
       if (finished) return null;
       recompute();
-      if (pieces.some((_, p) => place[p] && !atHome(p))) {
-        const res = solveHere();
-        if (res.sol) return altHint(res.sol);
-      }
-      for (let p = 0; p < K; p++) {
-        const o = place[p];
-        if (!o) continue;
-        if (o[0] === pieces[p].r && o[1] === pieces[p].c && shapeKey(shapeOf(p)) === shapeKey(pieces[p].shape)) continue;
-        const own = cells.filter((_, i) => owner[i] === p);
-        return {
-          text: L(
-            'This piece is hard to work around where it is. Tap it to send it back to the tray, and the other pieces will fall into place.',
-            'Cette pièce gêne là où elle est. Touchez-la pour la renvoyer au bac : les autres trouveront leur place.',
-          ),
-          at: own,
-          play: sendBack(p),
-        };
-      }
-      const left = pieces.map((_, p) => p).filter((p) => !place[p]);
-      if (!left.length) return null;
-      const drop = (p: number) => () => {
-        hist.push(pos());
-        place[p] = [pieces[p].r, pieces[p].c];
-        settle();
-      };
-      const spot = (p: number) => solCells(p).map((i) => cells[i]);
-      // Empty regions of the board.
-      const seen = new Uint8Array(N);
-      const regions: number[][] = [];
-      for (let i = 0; i < N; i++) {
-        if (seen[i] || owner[i] >= 0) continue;
-        const reg = [i];
-        seen[i] = 1;
-        for (let k = 0; k < reg.length; k++) {
-          const j = reg[k],
-            r = Math.floor(j / cols),
-            c = j % cols;
-          for (const [rr, cc] of [
-            [r - 1, c],
-            [r + 1, c],
-            [r, c - 1],
-            [r, c + 1],
-          ])
-            if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && !seen[rr * cols + cc] && owner[rr * cols + cc] < 0) {
-              seen[rr * cols + cc] = 1;
-              reg.push(rr * cols + cc);
-            }
-        }
-        regions.push(reg);
-      }
-      const rules: Record<string, () => Hint | null> = {
-        gap: () => {
-          for (const reg of regions)
-            for (const p of left) {
-              const want = solCells(p);
-              if (want.length !== reg.length || !want.every((i) => reg.includes(i))) continue;
-              if (shapeKey(shapeOf(p)) !== shapeKey(pieces[p].shape)) continue;
-              return {
-                text:
-                  left.length === 1
-                    ? L(
-                        'Last piece: the hole left has exactly its shape. Drag it in.',
-                        'Dernière pièce : le trou restant a exactement sa forme. Glissez-la dedans.',
-                      )
-                    : L(
-                        `This ${reg.length}-cell gap is walled off and has exactly this piece’s shape, so only it can fill it.`,
-                        `Ce trou de ${reg.length} cases est fermé et a exactement la forme de cette pièce : elle seule peut le remplir.`,
-                      ),
-                why: [trayEls[p]],
-                at: spot(p),
-                play: drop(p),
-              };
-            }
-          return null;
+      const st = nextStep(P, cur, solve, lastRule);
+      if (!st) return null;
+      if (st.kind === 'gap' || st.kind === 'corner' || st.kind === 'big') lastRule = st.kind;
+      // Steps that drop a tray piece at its solution spot.
+      const drop = (p: number, text: string): Hint => ({
+        text,
+        why: [trayEls[p]],
+        at: solCells(P, p).map((i) => cells[i]),
+        play: () => {
+          hist.push(pos());
+          place[p] = [pieces[p].r, pieces[p].c];
+          settle();
         },
-        corner: () => {
-          const corners = [0, cols - 1, (rows - 1) * cols, N - 1].filter((i) => owner[i] < 0);
-          for (const i of corners) {
-            const p = left.find((q) => solCells(q).includes(i));
-            if (p == null || shapeKey(shapeOf(p)) !== shapeKey(pieces[p].shape)) continue;
-            return {
-              text: L(
-                'Fill the corners first: they’re the hardest cells to reach, and this piece tucks in snugly with no gap.',
-                'Remplissez d’abord les coins : ce sont les cases les plus difficiles à atteindre, et cette pièce s’y loge sans laisser de trou.',
-              ),
-              why: [trayEls[p]],
-              at: spot(p),
-              play: drop(p),
-            };
-          }
-          return null;
-        },
-        big: () => {
-          const p = [...left]
-            .filter((q) => shapeKey(shapeOf(q)) === shapeKey(pieces[q].shape))
-            .sort((a, b) => pieces[b].shape.length - pieces[a].shape.length)[0];
-          if (p == null) return null;
-          const size = pieces[p].shape.length;
-          const edge = solCells(p).some((i) => i < cols || i >= N - cols || i % cols === 0 || i % cols === cols - 1);
+      });
+      switch (st.kind) {
+        case 'alt-turn':
           return {
             text: L(
-              `Place big pieces early: this ${size}-cell one has the fewest spots where it fits${edge ? ', and here it hugs the edge' : ''}.`,
-              `Placez tôt les grosses pièces : celle-ci, de ${size} cases, a le moins d’endroits où elle entre${edge ? ', et ici elle longe le bord' : ''}.`,
+              'This piece has to turn to fit the next gap: tap it in the tray to rotate it a quarter turn.',
+              'Cette pièce doit tourner pour entrer dans le prochain trou : touchez-la dans le bac pour lui faire faire un quart de tour.',
             ),
-            why: [trayEls[p]],
-            at: spot(p),
-            play: drop(p),
+            at: [trayEls[st.p]],
+            play: () => turnPiece(st.p),
           };
-        },
-      };
-      const ruleOrder = ['gap', 'corner', 'big'];
-      for (const r of [...ruleOrder.filter((o) => o !== lastRule), lastRule]) {
-        const found = rules[r]?.();
-        if (found) {
-          lastRule = r;
-          return found;
+        case 'alt-drop': {
+          const sp = st.spot;
+          return {
+            text: L(
+              'This piece fits the top-left gap and still leaves room for every other piece. Drag it in.',
+              'Cette pièce entre dans le trou en haut à gauche et laisse encore de la place à toutes les autres. Glissez-la dedans.',
+            ),
+            why: [trayEls[sp.p]],
+            at: shapeOf(sp.p).map(([r, c]) => cells[(sp.r + r) * cols + sp.c + c]),
+            play: dropAt(sp.p, sp.r, sp.c),
+          };
         }
+        case 'send-back':
+          return {
+            text: L(
+              'This piece is hard to work around where it is. Tap it to send it back to the tray, and the other pieces will fall into place.',
+              'Cette pièce gêne là où elle est. Touchez-la pour la renvoyer au bac : les autres trouveront leur place.',
+            ),
+            at: cellsOf(st.p),
+            play: sendBack(st.p),
+          };
+        case 'gap':
+          return drop(
+            st.p,
+            st.last
+              ? L(
+                  'Last piece: the hole left has exactly its shape. Drag it in.',
+                  'Dernière pièce : le trou restant a exactement sa forme. Glissez-la dedans.',
+                )
+              : L(
+                  `This ${st.size}-cell gap is walled off and has exactly this piece’s shape, so only it can fill it.`,
+                  `Ce trou de ${st.size} cases est fermé et a exactement la forme de cette pièce : elle seule peut le remplir.`,
+                ),
+          );
+        case 'corner':
+          return drop(
+            st.p,
+            L(
+              'Fill the corners first: they’re the hardest cells to reach, and this piece tucks in snugly with no gap.',
+              'Remplissez d’abord les coins : ce sont les cases les plus difficiles à atteindre, et cette pièce s’y loge sans laisser de trou.',
+            ),
+          );
+        case 'big':
+          return drop(
+            st.p,
+            L(
+              `Place big pieces early: this ${st.size}-cell one has the fewest spots where it fits${st.edge ? ', and here it hugs the edge' : ''}.`,
+              `Placez tôt les grosses pièces : celle-ci, de ${st.size} cases, a le moins d’endroits où elle entre${st.edge ? ', et ici elle longe le bord' : ''}.`,
+            ),
+          );
+        case 'turn':
+          return {
+            text: L(
+              'This piece has to turn to fit: tap it in the tray to rotate it a quarter turn.',
+              'Cette pièce doit tourner pour entrer : touchez-la dans le bac pour lui faire faire un quart de tour.',
+            ),
+            at: [trayEls[st.p]],
+            play: () => turnPiece(st.p),
+          };
       }
-      // Every piece left needs turning first.
-      const p = left[0];
-      return {
-        text: L(
-          'This piece has to turn to fit: tap it in the tray to rotate it a quarter turn.',
-          'Cette pièce doit tourner pour entrer : touchez-la dans le bac pour lui faire faire un quart de tour.',
-        ),
-        at: [trayEls[p]],
-        play: () => turnPiece(p),
-      };
     };
 
     root.append(grid, tray);
