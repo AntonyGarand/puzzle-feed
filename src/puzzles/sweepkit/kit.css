@@ -19,24 +19,6 @@
   transform: none;
   box-shadow: inset 0 0 0 var(--sw-edge);
 }
-/* long-press progress */
-:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.lp::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, color-mix(in srgb, var(--bad) 55%, transparent) 0 60%, transparent 62%);
-  animation: sw-press 0.35s linear forwards;
-}
-@keyframes sw-press {
-  from {
-    transform: scale(0);
-    opacity: 0.4;
-  }
-  to {
-    transform: scale(1.4);
-    opacity: 1;
-  }
-}
 /* opened: flat, sunk into the board */
 :is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.open,
 :is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine {

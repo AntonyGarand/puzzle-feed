@@ -1,5 +1,5 @@
 /* Pencil marks inside an empty number cell (sudoku, sudokukit and latinkit grids). */
-.cell .nt {
+[data-puzzle] .cell .nt {
   position: absolute;
   inset: 4% 13% 4% 10%;
   display: grid;
@@ -12,22 +12,22 @@
   line-height: 1;
   color: color-mix(in srgb, currentColor 80%, transparent);
 }
-.cell .nt[hidden] {
+[data-puzzle] .cell .nt[hidden] {
   display: none;
 }
-.cell .nt > span {
+[data-puzzle] .cell .nt > span {
   position: relative;
   visibility: hidden;
 }
-.cell .nt > span.on {
+[data-puzzle] .cell .nt > span.on {
   visibility: visible;
 }
 /* a candidate that can't fit anymore */
-.cell .nt > span.bad {
+[data-puzzle] .cell .nt > span.bad {
   color: var(--bad);
 }
 /* number pad as a keypad block mirroring the note spots, ✎ over ✕ in a column on the right */
-.pad.npad {
+[data-puzzle] .pad.npad {
   display: grid;
   grid-template-columns: repeat(calc(var(--nc) + 1), var(--ks));
   grid-auto-rows: var(--ks);
@@ -35,7 +35,7 @@
   gap: 8px 8px;
   padding-right: 3px;
 }
-.pad.npad .key {
+[data-puzzle] .pad.npad .key {
   height: auto;
   display: flex;
   align-items: center;
@@ -49,7 +49,7 @@
     font-size 0.12s;
 }
 /* note mode: each digit shrinks into its note spot */
-.pad.npad.notes .key:not(.nk, :last-child) {
+[data-puzzle] .pad.npad.notes .key:not(.nk, :last-child) {
   justify-content: var(--jx);
   align-items: var(--jy);
   font-size: 14px;
@@ -57,10 +57,10 @@
   background: color-mix(in srgb, var(--accent) 8%, var(--cell));
 }
 /* the note switch looks pushed in while notes are on */
-.pad.npad .key.nk {
+[data-puzzle] .pad.npad .key.nk {
   font-size: 22px;
 }
-.pad.npad .key.nk.sel {
+[data-puzzle] .pad.npad .key.nk.sel {
   transform: translate(3px, 3px);
   box-shadow: none;
 }

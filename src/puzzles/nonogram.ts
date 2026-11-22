@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import './nonogram.css';
 
 const runs = (line: boolean[]) => {
@@ -133,8 +133,8 @@ export const nonogram: PuzzleDef = {
         'Au clavier : les flèches déplacent, Espace change l’état de la case, X la marque, Suppr l’efface.',
       ),
       L(
-        'A clue fades once its line matches. The puzzle is solved when every line matches.',
-        'Un indice pâlit quand sa ligne correspond. La grille est résolue quand toutes les lignes correspondent.',
+        'A clue fades once its line matches, and turns red when its line has too many filled cells. Clear wipes the board.',
+        'Un indice pâlit quand sa ligne correspond, et devient rouge quand sa ligne a trop de cases remplies. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -174,6 +174,9 @@ export const nonogram: PuzzleDef = {
       return el;
     });
     wrap.append(h('div', { class: 'corner' }), h('div', { class: 'cols' }, ...colEls), h('div', { class: 'rows' }, ...rowEls), grid);
+    /** Counts a mistake when filling overloads a line (checked when the stroke ends). */
+    const watch = ruleBreaks(wrap, ctx.mistake);
+    const clueSum = (cl: number[]) => cl.reduce((a, b) => a + b, 0);
 
     const render = () => {
       const filled = st.map((v) => v === 1);
@@ -182,17 +185,18 @@ export const nonogram: PuzzleDef = {
         el.classList.toggle('x', st[i] === 2);
         el.classList.toggle('cur', i === cur);
       });
-      let ok = true;
-      rowEls.forEach((el, r) => {
-        const m = same(runs(row(filled, r)), rowClues[r]);
+      let ok = true,
+        lines = 0;
+      const line = (el: HTMLElement, ln: boolean[], clue: number[]) => {
+        const m = same(runs(ln), clue);
         el.classList.toggle('done', m);
+        el.classList.toggle('err', ln.filter(Boolean).length > clueSum(clue));
+        if (m) lines++;
         ok &&= m;
-      });
-      colEls.forEach((el, c) => {
-        const m = same(runs(col(filled, c)), colClues[c]);
-        el.classList.toggle('done', m);
-        ok &&= m;
-      });
+      };
+      rowEls.forEach((el, r) => line(el, row(filled, r), rowClues[r]));
+      colEls.forEach((el, c) => line(el, col(filled, c), colClues[c]));
+      ctx.status(`${lines} / ${P(2 * n, ['line', 'lines'], ['ligne', 'lignes'])}`);
       return ok;
     };
 
@@ -262,6 +266,7 @@ export const nonogram: PuzzleDef = {
     const end = (e: PointerEvent) => {
       if (stroke && e.pointerId !== stroke.id) return;
       cancelPress();
+      if (stroke) watch(stroke.to === 1);
       stroke = null;
     };
     window.addEventListener('pointerup', end);
@@ -273,6 +278,16 @@ export const nonogram: PuzzleDef = {
     if (typeof c0 === 'number' && Number.isInteger(c0) && c0 >= -1 && c0 < st.length) cur = c0;
     root.append(wrap);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
 
     /** Cells that disagree with picture `p`: filled where it's empty, or ✕ where it's filled. */
     const wrongFor = (p: boolean[], i: number) => (st[i] === 1 && !p[i]) || (st[i] === 2 && p[i]);
@@ -297,6 +312,7 @@ export const nonogram: PuzzleDef = {
         action: st[i] === 1 ? L('Clear it', 'L’effacer') : L('Remove the ✕', 'Enlever le ✕'),
         play: () => {
           if (!done && st[i]) set(i, 0);
+          watch(false);
         },
       });
       for (const isRow of [true, false])
@@ -392,7 +408,10 @@ export const nonogram: PuzzleDef = {
           return {
             text: L('This cell isn’t part of the picture: clear it.', 'Cette case ne fait pas partie de l’image : effacez-la.'),
             at: [cells[w]],
-            play: () => set(w, 0),
+            play: () => {
+              set(w, 0);
+              watch(false);
+            },
           };
         }
         last = undefined;
@@ -402,7 +421,10 @@ export const nonogram: PuzzleDef = {
             'Aucune ligne seule n’en dit plus pour l’instant. Cette case fait partie de l’image : la remplir convient à sa rangée comme à sa colonne.',
           ),
           at: [cells[i]],
-          play: () => set(i, 1),
+          play: () => {
+            set(i, 1);
+            watch();
+          },
         };
       }
       last = f.kind;
@@ -452,7 +474,10 @@ export const nonogram: PuzzleDef = {
         text,
         why: [(f.row ? rowEls : colEls)[f.k]],
         at: ix.map((i) => cells[i]),
-        play: () => ix.forEach((i) => !done && st[i] === 0 && set(i, f.v)),
+        play: () => {
+          ix.forEach((i) => !done && st[i] === 0 && set(i, f.v));
+          watch(f.v === 1);
+        },
       };
     };
 
@@ -488,6 +513,7 @@ export const nonogram: PuzzleDef = {
         if (next < 0) return false;
         ctx.touch();
         set(cur, next);
+        watch(next === 1);
         return true;
       },
       destroy() {

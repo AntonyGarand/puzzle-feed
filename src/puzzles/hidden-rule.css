@@ -84,6 +84,7 @@
 [data-puzzle='hidden-rule'] .hr-keys {
   display: flex;
   gap: 10px;
+  width: auto;
 }
 [data-puzzle='hidden-rule'] .hr-keys[hidden] {
   display: none;
@@ -121,7 +122,7 @@
 [data-puzzle='hidden-rule'] .hr-empty {
   aspect-ratio: 1;
   box-sizing: border-box;
-  border: 2px dashed var(--muted);
+  border: var(--cbw) dashed var(--muted);
   border-radius: var(--r-cell);
   opacity: 0.5;
 }
@@ -129,7 +130,7 @@
   border-color: var(--ink);
   opacity: 1;
 }
-[data-puzzle='hidden-rule'] .hr-slot.bad .hr-spec {
+[data-puzzle='hidden-rule'] .hr-slot.err .hr-spec {
   border-color: var(--bad);
   box-shadow: var(--csh) var(--csh) 0 var(--bad);
 }

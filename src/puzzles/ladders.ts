@@ -1,7 +1,7 @@
 import './ladders.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, shake } from '../core/ui';
+import { restartBtn, shake, undoBtn } from '../core/ui';
 import { cap, cardEl, elAt, fan, label, leCard, pileEl, pilesEl, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
 import {
   cardAtL,
@@ -67,8 +67,8 @@ export const ladders: PuzzleDef = {
         'Touchez une carte pour l’envoyer à la meilleure place; touchez-la encore pour essayer la suivante. Vous pouvez aussi la glisser (sur écran tactile, maintenez-la un instant d’abord).',
       ),
       L(
-        'Undo takes back a move (Z or Backspace on a keyboard); Restart deals the same game again.',
-        'Annuler reprend un coup (Z ou Retour arrière au clavier); Repartir redonne la même partie.',
+        'Undo takes back a move (Z or Backspace on a keyboard); Restart deals the same game again (R).',
+        'Annuler reprend un coup (Z ou Retour arrière au clavier); Repartir redonne la même partie (R).',
       ),
     ],
     tips: [
@@ -103,16 +103,12 @@ export const ladders: PuzzleDef = {
     /** Proven unwinnable from here, though moves remain (undo can still save it). */
     let doomed = false;
     const judge = () => {
-      doomed = solveL(s, 1000).v === 'dead';
+      doomed = !movesL(s).length || solveL(s, 1000).v === 'dead';
     };
 
     const status = () => {
-      const lad = `${L('Ladders', 'Échelles')} ${s.done.length}/4`;
-      if (doomed) {
-        ctx.status(`${lad} · ${L('No way to win from here · Undo or restart', 'Impossible de gagner d’ici · Annulez ou repartez')}`);
-        return;
-      }
-      ctx.status(`${lad} · ${L('Moves', 'Coups')} ${s.moves}`);
+      const head = `${L('Ladders', 'Échelles')} ${s.done.length} / 4 · ${P(s.moves, ['move', 'moves'], ['coup', 'coups'])}`;
+      ctx.status(doomed ? `${head} · ${L('no way to win from here · undo', 'impossible de gagner d’ici · annulez')}` : head);
     };
 
     const render = () => {
@@ -143,16 +139,7 @@ export const ladders: PuzzleDef = {
       render();
       if (wonL(s)) {
         over = true;
-        ctx.status(
-          L(`All ladders built in ${s.moves} moves`, `Toutes les échelles bâties en ${P(s.moves, ['coup', 'coups'], ['coup', 'coups'])}`),
-        );
         ctx.solved();
-        return;
-      }
-      if (!movesL(s).length) {
-        over = true;
-        ctx.status(L('No moves left', 'Aucun coup possible'));
-        ctx.failed();
         return;
       }
       judge();
@@ -218,7 +205,7 @@ export const ladders: PuzzleDef = {
       judge();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), restart, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(table);
     render();
     if (sv) judge();
@@ -369,11 +356,11 @@ export const ladders: PuzzleDef = {
       check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
-        if (e.key === 'z' || e.key === 'Backspace') {
-          undo();
-          return true;
-        }
-        return false;
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'backspace') undo();
+        else if (k === 'r') restart();
+        else return false;
+        return true;
       },
     };
   },

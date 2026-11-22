@@ -75,7 +75,7 @@
   height: 24px;
   padding: 1px;
   border: 2px solid var(--ink);
-  border-radius: 6px;
+  border-radius: var(--r-cell);
   background: var(--cell);
 }
 [data-puzzle='shape-mines'] .sm-icon .off {

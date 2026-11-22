@@ -1,7 +1,8 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Difficulty, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, shake } from '../core/ui';
+import { h, pad, restartBtn, shake, undoBtn } from '../core/ui';
+import './target.css';
 
 type Op = '+' | '−' | '×' | '÷';
 
@@ -81,12 +82,12 @@ export const target: PuzzleDef = {
         'Une soustraction doit rester au-dessus de zéro et une division doit tomber juste.',
       ),
       L(
-        'When one number is left, it must be the target. Undo steps back one merge; Reset starts over.',
-        'Quand il reste un seul nombre, ce doit être la cible. Annuler défait une fusion; Recommencer repart de zéro.',
+        'When one number is left, it must be the target (a wrong final number counts as a mistake). Undo steps back one merge; Restart starts over.',
+        'Quand il reste un seul nombre, ce doit être la cible (un mauvais résultat final compte comme une erreur). Annuler défait une fusion; Repartir recommence.',
       ),
       L(
-        'Keyboard: 1 to 5 pick numbers, + - * / pick operators, Backspace or Z undoes.',
-        'Clavier : 1 à 5 choisissent les nombres, + - * / les opérateurs, Retour arrière ou Z annule.',
+        'Keyboard: 1 to 5 pick numbers, + - * / pick operators, Backspace or Z undoes, R restarts.',
+        'Clavier : 1 à 5 choisissent les nombres, + - * / les opérateurs, Retour arrière ou Z annule, R recommence.',
       ),
     ],
     tips: [
@@ -112,7 +113,10 @@ export const target: PuzzleDef = {
 
     const goalEl = h('div', { class: 'big' }, goal);
     const chipRow = h('div', { class: 'chips' });
-    const opRow = h('div', { class: 'pad' });
+    const opRow = pad(
+      allOps.map((o) => ({ label: o, value: o })),
+      (o) => tapOp(o as Op),
+    );
 
     const render = () => {
       chipRow.replaceChildren(
@@ -120,9 +124,7 @@ export const target: PuzzleDef = {
           h('button', { type: 'button', class: `chip num ${c.id === sel ? 'sel' : ''}`, onclick: () => tapChip(c.id) }, c.v),
         ),
       );
-      opRow.replaceChildren(
-        ...allOps.map((o) => h('button', { type: 'button', class: `key ${o === op ? 'sel' : ''}`, onclick: () => tapOp(o) }, o)),
-      );
+      allOps.forEach((o, i) => opRow.children[i].classList.toggle('sel', o === op));
     };
 
     const tapChip = (id: number) => {
@@ -143,7 +145,7 @@ export const target: PuzzleDef = {
       const b = chips.find((c) => c.id === id)!;
       const v = apply(a.v, op, b.v);
       if (v == null) {
-        ctx.mistake();
+        // Refused by the rules (negative or uneven): a shake, not a mistake.
         shake(chipRow);
         op = null;
         render();
@@ -155,13 +157,16 @@ export const target: PuzzleDef = {
       sel = merged.id;
       op = null;
       render();
+      if (chips.length === 1 && v === goal) {
+        ctx.solved();
+        return;
+      }
+      status();
       if (chips.length === 1) {
-        if (v === goal) ctx.solved();
-        else {
-          shake(chipRow);
-          ctx.status(L('Not quite — undo and try again', 'Raté — annulez et réessayez'));
-        }
-      } else if (!reachable()) ctx.status(L('Target out of reach — undo', 'Cible hors d’atteinte — annulez'));
+        // A final value that isn't the target: a wrong answer.
+        shake(chipRow);
+        ctx.mistake();
+      }
     };
     const tapOp = (o: Op) => {
       if (sel === null) return;
@@ -174,28 +179,41 @@ export const target: PuzzleDef = {
       chips = prev;
       sel = null;
       op = null;
-      ctx.status('');
       render();
+      status();
     };
+    /** Back to the starting numbers; the position left behind goes on the history, so Undo brings it back. */
     const reset = () => {
-      if (!history.length) return;
+      if (!history.length || chips.length === nums.length) return;
+      history.push(chips);
       chips = history[0];
-      history = [];
       sel = null;
       op = null;
-      ctx.status('');
       render();
+      status();
     };
 
-    const sv = ctx.saved as { chips?: Chip[]; history?: Chip[][]; nextId?: number; sel?: number | null } | undefined;
-    if (Array.isArray(sv?.chips) && sv.chips.length) {
-      chips = sv.chips;
-      history = sv.history ?? [];
-      nextId = sv.nextId ?? 1000;
-      sel = sv.sel != null && chips.some((c) => c.id === sv.sel) ? sv.sel : null;
+    // Resume, checking the saved shape: chips with unique ids, a history of earlier chip rows.
+    const chipList = (v: unknown): Chip[] | null =>
+      Array.isArray(v) &&
+      v.length >= 1 &&
+      v.length <= nums.length &&
+      v.every((c) => c && typeof c === 'object' && Number.isInteger(c.id) && c.id >= 0 && Number.isInteger(c.v) && c.v > 0) &&
+      new Set(v.map((c) => c.id)).size === v.length
+        ? v.map((c) => ({ id: c.id as number, v: c.v as number }))
+        : null;
+    const sv = ctx.saved as { chips?: unknown; history?: unknown; nextId?: unknown; sel?: unknown } | undefined;
+    const sChips = chipList(sv?.chips);
+    const sHist = Array.isArray(sv?.history) ? sv.history.map(chipList) : [];
+    if (sChips && sHist.every(Boolean) && !(sChips.length === 1 && sChips[0].v === goal)) {
+      chips = sChips;
+      history = sHist as Chip[][];
+      const maxId = Math.max(...[chips, ...history].flat().map((c) => c.id));
+      nextId = Number.isInteger(sv?.nextId) && (sv?.nextId as number) > maxId ? (sv?.nextId as number) : maxId + 1;
+      sel = typeof sv?.sel === 'number' && chips.some((c) => c.id === sv.sel) ? sv.sel : null;
     }
     root.append(h('div', { class: 'label' }, L('target', 'cible')), goalEl, chipRow, opRow);
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Reset', 'Recommencer'), reset, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
     render();
 
     // ---- Guide ----
@@ -235,6 +253,15 @@ export const target: PuzzleDef = {
       if (ok === undefined) reach.set(key, (ok = chips.length === 1 ? chips[0].v === goal : !!plan()));
       return ok;
     };
+    /** Numbers left, or why the position is a dead end. */
+    const status = () => {
+      const left = P(chips.length, ['number left', 'numbers left'], ['nombre restant', 'nombres restants']);
+      if (chips.length === 1) ctx.status(L(`${chips[0].v}, not ${goal} · undo`, `${chips[0].v}, pas ${goal} · annulez`));
+      else if (history.length && !reachable())
+        ctx.status(`${left} · ${L('target out of reach · undo', 'cible hors d’atteinte · annulez')}`);
+      else ctx.status(left);
+    };
+    status();
     const chipEl = (id: number) => chipRow.children[chips.findIndex((c) => c.id === id)];
     /** Dead end: the numbers left can't make the goal any more. Undo the last merge (or reset). */
     const check = (): Hint | null => {
@@ -343,8 +370,12 @@ export const target: PuzzleDef = {
           tapOp(map[e.key]);
           return true;
         }
-        if (e.key === 'Backspace' || e.key === 'z') {
+        if (e.key === 'Backspace' || e.key === 'z' || e.key === 'Z') {
           undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          reset();
           return true;
         }
         const n = Number(e.key);

@@ -1,3 +1,5 @@
+import { shake } from '../../core/ui';
+
 /**
  * Shared tap + drag-and-drop for card tables.
  * Every card / slot element carries `data-p` (pile id) and `data-i` (index, -1 for an empty slot);
@@ -139,7 +141,11 @@ export function bindTable(table: HTMLElement, hooks: TableHooks): () => void {
       }
     }
     const moved = best != null && hooks.drop(d.p, d.i, best);
-    if (!moved) reset(d);
+    if (!moved) {
+      // Refused or nowhere to go: the cards snap back and shake, like a tap that can't play.
+      reset(d);
+      for (const el of d.els) if (el.isConnected) shake(el);
+    }
   };
 
   const onCancel = () => {

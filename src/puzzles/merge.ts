@@ -74,7 +74,7 @@ export const canMove = (b: number[], n: number) =>
 export const merge: PuzzleDef = {
   id: 'merge',
   get name() {
-    return '2048';
+    return L('Merge', 'Fusion');
   },
   category: 'numbers',
   get rules() {
@@ -194,15 +194,9 @@ export const merge: PuzzleDef = {
       over = true;
       putBest(d, score);
       render();
-      const tail = score > prevBest && prevBest > 0 ? L(' · new best!', ' · nouveau record!') : '';
-      if (reached) {
-        ctx.status(L(`Final score ${score} · top tile ${best()}${tail}`, `Pointage final ${score} · plus grosse tuile ${best()}${tail}`));
-        ctx.solved();
-      } else {
-        shake(grid);
-        ctx.status(L(`No moves left · score ${score}`, `Plus aucun coup · pointage ${score}`));
-        ctx.failed();
-      }
+      // The card's result footer replaces the status line, so it isn't rewritten here.
+      if (reached) ctx.solved();
+      else ctx.failed();
     };
 
     const move = (dir: Dir) => {

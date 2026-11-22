@@ -1,8 +1,9 @@
-import { L, wordLocale } from '../core/i18n';
+import { L, P, wordLocale } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, h, shake } from '../core/ui';
 import { answers, commonOfLength, isWord, letterKey } from './wordkit/lexicon';
 import { ANAGRAMS, anagramKey, WORDS } from './words';
+import './anagram.css';
 
 export const anagram: PuzzleDef = {
   id: 'anagram',
@@ -77,6 +78,7 @@ export const anagram: PuzzleDef = {
           h('button', { type: 'button', class: `cell ${picked.includes(i) ? 'used' : ''}`, onclick: () => pick(i) }, ch),
         ),
       );
+      ctx.status(`${picked.length} / ${P(len, ['letter', 'letters'], ['lettre', 'lettres'])}`);
     };
     const check = () => {
       if (picked.length < len) return;
@@ -117,9 +119,11 @@ export const anagram: PuzzleDef = {
     };
     ctx.controls(btn(L('Shuffle', 'Mélanger'), reshuffle, 'ghost'));
     const sv = ctx.saved as { letters?: string[]; picked?: number[] } | undefined;
-    if (sv?.letters && [...sv.letters].sort().join('') === [...word].sort().join('')) {
+    if (Array.isArray(sv?.letters) && [...sv.letters].sort().join('') === [...word].sort().join('')) {
       letters = sv.letters;
-      picked = (sv.picked ?? []).filter((i) => i >= 0 && i < len);
+      const saved = Array.isArray(sv.picked) ? sv.picked : [];
+      picked = saved.filter((i, k) => Number.isInteger(i) && i >= 0 && i < len && saved.indexOf(i) === k);
+      if (picked.length >= len) picked = []; // never resume a full (already checked) row
     }
     root.append(slots, tiles);
     render();

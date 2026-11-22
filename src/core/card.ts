@@ -9,7 +9,7 @@ import { encodeCode, shareSection } from './share';
 import { openSheet } from './sheet';
 import { prefs, record, recordDaily, setLevel, setWeight, getProfile, stats, type RecordOutcome, type Weight } from './store';
 import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from './types';
-import { btn, bulbIcon, cogIcon, fmtTime, h, s as svg } from './ui';
+import { btn, bulbIcon, cogIcon, fmtTime, h, s as svg, undoBtn } from './ui';
 import { levelHex, lostCard, winCard } from './win';
 import { xpLevel } from './xp';
 
@@ -55,6 +55,7 @@ export class Card {
   private timerEl!: HTMLElement;
   private levelEl!: HTMLElement;
   private mistakesEl!: HTMLElement;
+  private livesEl!: HTMLElement;
   private hintBtn!: HTMLButtonElement;
   /** The open in-game hint (overlay on the board + bubble over the footer), if any. */
   private hintUi: { el: HTMLElement; layer: SVGSVGElement; hint: Hint | null } | null = null;
@@ -82,7 +83,7 @@ export class Card {
   private root: HTMLElement | null = null;
   /** Undo steps for games with `def.undo`: snapshots, oldest first; the last one is the current state. */
   private history: { state: unknown; key: string }[] = [];
-  private undoBtn = btn(L('Undo', 'Annuler'), () => this.undo(), 'ghost');
+  private undoBtn = undoBtn(() => this.undo());
   private trackTimer = 0;
   private listen: AbortController | null = null;
   /** `gen` of the puzzle already reported as left (scrolled past), so it's reported once. */
@@ -132,6 +133,7 @@ export class Card {
   private build() {
     this.timerEl = h('span', { class: 'timer', title: L('Time', 'Temps') }, '0:00');
     this.mistakesEl = h('span', { class: 'mistakes', title: L('Mistakes', 'Erreurs'), hidden: true });
+    this.livesEl = h('span', { class: 'lives', title: L('Lives', 'Vies'), hidden: true });
     this.levelEl = h('span', { class: 'level-label' });
     this.stage = h('div', { class: 'stage' });
     this.statusEl = h('span', { class: 'status' });
@@ -170,7 +172,7 @@ export class Card {
         'header',
         { class: 'card-head' },
         h('div', { class: 'title' }, h('h2', null, this.def.name), this.levelEl),
-        h('div', { class: 'meta' }, this.mistakesEl, this.timerEl, this.hintBtn, this.makeHelpButton(), settings),
+        h('div', { class: 'meta' }, this.livesEl, this.mistakesEl, this.timerEl, this.hintBtn, this.makeHelpButton(), settings),
       ),
       this.stage,
       this.foot,
@@ -414,6 +416,21 @@ export class Card {
     this.levelEl.replaceChildren(levelHex(xpLevel(xp).level, 'sm'), LEVEL_NAMES[this.level] + tag);
   }
 
+  private syncLives(left: number, max: number) {
+    left = Math.max(0, Math.min(max, left));
+    const el = this.livesEl;
+    const lost = el.dataset.left !== '' && left < Number(el.dataset.left);
+    el.dataset.left = String(left);
+    el.hidden = false;
+    el.setAttribute('aria-label', P(left, ['life left', 'lives left'], ['vie restante', 'vies restantes']));
+    el.replaceChildren(...Array.from({ length: max }, (_, i) => h('i', { class: i < left ? 'on' : '' })));
+    if (lost) {
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    }
+  }
+
   private syncMistakes() {
     this.mistakesEl.hidden = this.mistakes === 0;
     this.mistakesEl.textContent = `✕ ${this.mistakes}`;
@@ -485,6 +502,8 @@ export class Card {
     this.runningSince = this.active ? performance.now() : 0;
     this.el.classList.remove('is-solved', 'is-failed', 'is-skipped');
     this.stage.inert = false;
+    this.livesEl.hidden = true;
+    this.livesEl.dataset.left = '';
     this.foot.replaceChildren(this.statusEl, h('div', { class: 'actions' }, this.def.undo ? this.undoBtn : null, this.controlsEl));
     this.syncLevelSel();
     this.syncMistakes();
@@ -530,6 +549,9 @@ export class Card {
         },
         touch: () => {
           if (live()) this.interacted = true;
+        },
+        lives: (left, max) => {
+          if (igen === this.igen) this.syncLives(left, max);
         },
         status: (t) => {
           if (igen === this.igen) this.statusEl.textContent = t;

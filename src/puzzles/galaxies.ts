@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks, s } from '../core/ui';
 import { dotCells, genGalaxies, mirror } from './logickit/galaxiesgen';
 import { cellFromPointer, colourRegions, edgeClasses, nb4, regionAdjacency, tint } from './logickit/kit';
 import './galaxies.css';
@@ -34,8 +34,8 @@ export const galaxies: PuzzleDef = {
         'Touchez un point (ou une case qu’il touche) pour choisir sa galaxie, puis touchez ou glissez sur des cases pour les ajouter. Leurs jumelles suivent.',
       ),
       L(
-        'Tap a cell of the picked galaxy to remove it (and its twin). Cells whose twin is impossible turn red.',
-        'Touchez une case de la galaxie choisie pour l’enlever (avec sa jumelle). Les cases sans jumelle possible deviennent rouges.',
+        'Tap a cell of the picked galaxy to remove it (and its twin). Cells whose twin is impossible turn red and count as a mistake. Clear wipes the board.',
+        'Touchez une case de la galaxie choisie pour l’enlever (avec sa jumelle). Les cases sans jumelle possible deviennent rouges et comptent comme une erreur. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -77,11 +77,18 @@ export const galaxies: PuzzleDef = {
     const grid = board(n, n, 'gx-plate');
     const cells = own.map((_, i) => {
       // Pointer input goes through the grid; a keyboard/programmatic click (detail 0) taps the cell.
-      const el = h('button', { type: 'button', class: 'cell', 'data-i': i, onclick: (e: MouseEvent) => e.detail === 0 && tap(i) });
+      const el = h('button', {
+        type: 'button',
+        class: 'cell',
+        'data-i': i,
+        onclick: (e: MouseEvent) => e.detail === 0 && tap(i),
+      });
       grid.append(el);
       return el;
     });
     const layer = s('svg', { class: 'gx-dots', viewBox: `0 0 ${2 * n} ${2 * n}`, 'aria-hidden': 'true' });
+    /** Counts a mistake when added cells break the symmetry (judged when the stroke ends). */
+    const watch = ruleBreaks(grid, ctx.mistake);
     const dotEls = dots.map((dot) => {
       const el = s('circle', { class: 'gx-dot', cx: dot.x, cy: dot.y, r: 0.36 });
       layer.append(el);
@@ -156,8 +163,11 @@ export const galaxies: PuzzleDef = {
       if (m >= 0 && own[m] === g && given[m] < 0) own[m] = -1;
     };
 
-    /** A tap on cell `i`: pick a galaxy, add the cell to the picked one, or remove it. Returns the drag mode. */
-    const tap = (i: number): 'add' | 'remove' | null => {
+    /**
+     * A tap on cell `i`: pick a galaxy, add the cell to the picked one, or remove it. Returns the drag mode.
+     * `judge`: count a new rule break as a mistake now (a pointer stroke is judged when it ends instead).
+     */
+    const tap = (i: number, judge = true): 'add' | 'remove' | null => {
       if (done) return null;
       ctx.touch();
       let mode: 'add' | 'remove' | null = null;
@@ -175,6 +185,7 @@ export const galaxies: PuzzleDef = {
         mode = 'add';
       }
       check();
+      if (judge) watch();
       return mode;
     };
 
@@ -189,7 +200,7 @@ export const galaxies: PuzzleDef = {
       } catch {
         /* not capturable */
       }
-      const mode = tap(i);
+      const mode = tap(i, false);
       if (mode) stroke = { mode, last: i, id: e.pointerId };
     });
     grid.addEventListener('pointermove', (e) => {
@@ -206,7 +217,10 @@ export const galaxies: PuzzleDef = {
       check();
     });
     const end = (e: PointerEvent) => {
-      if (stroke && e.pointerId === stroke.id) stroke = null;
+      if (stroke && e.pointerId === stroke.id) {
+        stroke = null;
+        watch();
+      }
     };
     grid.addEventListener('pointerup', end);
     grid.addEventListener('pointercancel', end);
@@ -220,6 +234,18 @@ export const galaxies: PuzzleDef = {
     if (Number.isInteger(sv?.cur) && (sv!.cur as number) >= -1 && (sv!.cur as number) < D) cur = sv!.cur as number;
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || own.every((g, i) => g === given[i])) return;
+        ctx.touch();
+        own.forEach((_, i) => (own[i] = given[i]));
+        cur = -1;
+        stroke = null;
+        render();
+        watch(false);
+      }),
+    );
 
     // ---- Guide: twins, cells only one dot can claim, mistakes to undo. ----
     const cellsOf = (g: number) => dotCells(n, dots[g]).map((i) => cells[i]);

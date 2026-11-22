@@ -34,7 +34,7 @@
   box-shadow: var(--csh) var(--csh) 0 var(--ink);
   cursor: grab;
 }
-[data-puzzle='factory'] .fx-slot.hint {
+[data-puzzle='factory'] .fx-slot.fx-over {
   background: var(--accent-soft);
 }
 [data-puzzle='factory'] .fx-b {

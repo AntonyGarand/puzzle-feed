@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { h, s } from '../core/ui';
+import { clearBtn, h, s } from '../core/ui';
 import { capture } from './pathkit/grid';
 import { loopFault } from './gridkit/loopcheck';
 import { genLoop, isSingleLoop } from './gridkit/slither';
@@ -41,8 +41,8 @@ export const loop: PuzzleDef = {
         'Ou maintenez le doigt sur un côté (ou faites un clic droit) pour y mettre un ✕ directement; maintenez de nouveau pour l’enlever.',
       ),
       L(
-        'Drag from dot to dot to draw several lines at once; start a drag on a line to erase instead.',
-        'Glissez de point en point pour tracer plusieurs lignes d’un coup; commencez sur une ligne pour effacer plutôt.',
+        'Drag from dot to dot to draw several lines at once; start a drag on a line to erase instead. Clear wipes the board.',
+        'Glissez de point en point pour tracer plusieurs lignes d’un coup; commencez sur une ligne pour effacer plutôt. Effacer vide la grille.',
       ),
       L(
         'Numbers fade once they have exactly enough lines (a 0 once its sides are ✕) and turn red with too many.',
@@ -142,7 +142,6 @@ export const loop: PuzzleDef = {
     const after = () => {
       if (!done && render()) {
         done = true;
-        wrap.classList.add('won');
         ctx.solved();
       }
     };
@@ -276,6 +275,15 @@ export const loop: PuzzleDef = {
 
     const sv = ctx.saved as { st?: unknown } | undefined;
     if (Array.isArray(sv?.st) && sv.st.length === E) sv.st.forEach((v, e) => (st[e] = v === 1 || v === 2 ? v : 0));
+    ctx.controls(
+      clearBtn(() => {
+        if (done) return;
+        drag = null;
+        stopHold();
+        st.fill(0);
+        render();
+      }),
+    );
     root.append(wrap);
     render();
     // Guide: numbers first (0, two 3s, corners, full or settled counts), then what each dot allows.

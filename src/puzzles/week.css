@@ -126,9 +126,6 @@
   font-size: 22px;
   color: var(--fg);
 }
-[data-puzzle='week'] .wk-bar.won .wk-pts {
-  color: var(--good);
-}
 [data-puzzle='week'] .wk-bonus {
   color: var(--fg);
 }

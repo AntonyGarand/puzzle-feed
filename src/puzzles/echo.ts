@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, dpad, s, shake } from '../core/ui';
+import { board, btn, dpad, h, restartBtn, s, shake, undoBtn } from '../core/ui';
 import { ACTS, at, enterable, generate, isOpen, nbr, search, track, trimWaits, walk, type GenOpts } from './echokit/gen';
 import { anim, keyDir, onSwipe, POP } from './movekit/kit';
 import './echo.css';
@@ -43,7 +43,7 @@ export const echo: PuzzleDef = {
       ),
       L(
         'Your first run is recorded: move or wait, turn by turn, then press End run (or run out of turns).',
-        'Votre première boucle est enregistrée : bougez ou attendez, tour par tour, puis touchez Terminer (ou épuisez vos tours).',
+        'Votre première boucle est enregistrée : bougez ou attendez, tour par tour, puis touchez Arrêter (ou épuisez vos tours).',
       ),
       L(
         'You restart at the start while your echo replays that run in step with you. Once its recording ends, it stays put. You can share a square with it.',
@@ -58,8 +58,8 @@ export const echo: PuzzleDef = {
         'Commandes : balayez, touchez une case voisine, ou utilisez les flèches à l’écran, les touches fléchées ou WASD. Touchez-vous ou appuyez sur Attendre (Espace) pour attendre; Entrée termine la boucle.',
       ),
       L(
-        'Undo (Z) takes back a turn, even across the end of a run; Reset (R) starts over from the first run.',
-        'Annuler (Z) reprend un tour, même après la fin d’une boucle; Repartir (R) reprend tout depuis la première boucle.',
+        'Undo (Z) takes back a turn, even across the end of a run or a restart; Restart (R) starts over from the first run.',
+        'Annuler (Z) reprend un tour, même après la fin d’une boucle ou un retour au départ; Repartir (R) reprend tout depuis la première boucle.',
       ),
     ],
     tips: [
@@ -97,19 +97,27 @@ export const echo: PuzzleDef = {
     const others = (t: number) => tracks.map((tr) => at(tr, t));
 
     // Restore: every run must replay legally, without having reached the exit.
-    const sv = ctx.saved as { r?: unknown } | undefined;
-    if (Array.isArray(sv?.r) && sv.r.length >= 1 && sv.r.length <= R && sv.r.every((x) => typeof x === 'string' && x.length <= T)) {
+    /** Runs as saved by the player (each replays without reaching the exit), or null. */
+    const validRuns = (v: unknown): string[] | null => {
+      if (!Array.isArray(v) || v.length < 1 || v.length > R || !v.every((x) => typeof x === 'string' && x.length <= T)) return null;
       const tr: number[][] = [];
-      let ok = true;
-      for (const rec of sv.r as string[]) {
+      for (const rec of v as string[]) {
         const t = track(room, rec, tr);
-        if (!t || t.includes(exit)) {
-          ok = false;
-          break;
-        }
+        if (!t || t.includes(exit)) return null;
         tr.push(t);
       }
-      if (ok) runs = (sv.r as string[]).slice();
+      return (v as string[]).slice();
+    };
+    /** Runs before each restart, so undo can step back across it. */
+    let before: string[][] = [];
+    const sv = ctx.saved as { r?: unknown; b?: unknown } | undefined;
+    const svRuns = validRuns(sv?.r);
+    if (svRuns) {
+      runs = svRuns;
+      if (Array.isArray(sv?.b)) {
+        const b = sv.b.map(validRuns);
+        if (b.every(Boolean)) before = b as string[][];
+      }
     }
     sync();
 
@@ -150,7 +158,8 @@ export const echo: PuzzleDef = {
     const phase = h('span', { class: 'echo-phase' });
     const bar = h('div', { class: 'echo-bar' }, h('span', { class: 'echo-runs' }, L('Run', 'Boucle'), runDots), phase);
 
-    const endBtn = btn(L('End run', 'Terminer'), () => endRun(), 'primary');
+    // Not « Terminer »: that's the Finish button of endless games.
+    const endBtn = btn(L('End run', 'Arrêter'), () => endRun(), 'primary');
 
     const centre = (i: number) => {
       const el = els.get(i)!;
@@ -218,7 +227,8 @@ export const echo: PuzzleDef = {
             : L('Reach the exit', 'Rejoignez la sortie');
       // the last run can't be ended: there's no echo to make after it
       endBtn.hidden = done || cur >= R - 1;
-      ctx.status(L(`Turn ${t}/${T}`, `Tour ${t}/${T}`));
+      const turn = L(`Turn ${t} / ${T}`, `Tour ${t} / ${T}`);
+      ctx.status(!done && cur === R - 1 && t >= T ? L(`${turn} · out of turns · undo`, `${turn} · plus de tours · annulez`) : turn);
       draw();
     };
 
@@ -268,12 +278,14 @@ export const echo: PuzzleDef = {
       const cur = runs.length - 1;
       if (runs[cur]) runs[cur] = runs[cur].slice(0, -1);
       else if (cur > 0) runs.pop();
+      else if (before.length) runs = before.pop()!;
       else return;
       sync();
       render();
     };
     const reset = () => {
       if (done || (runs.length === 1 && !runs[0])) return;
+      before.push(runs);
       runs = [''];
       sync();
       render();
@@ -521,12 +533,12 @@ export const echo: PuzzleDef = {
     };
 
     const keys = dpad(act, undefined, { label: L('Wait', 'Attendre'), onclick: () => act(4) });
-    ctx.controls(endBtn, btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Reset', 'Repartir'), reset, 'ghost'));
+    ctx.controls(endBtn, undoBtn(undo), restartBtn(reset));
     root.append(bar, grid, keys);
     render();
 
     return {
-      snapshot: () => ({ r: runs }),
+      snapshot: () => ({ r: runs, b: before }),
       check,
       hint,
       activate: draw,
@@ -545,11 +557,11 @@ export const echo: PuzzleDef = {
           endRun();
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           reset();
           return true;
         }

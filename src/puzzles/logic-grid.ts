@@ -1,7 +1,7 @@
 import './logic-grid.css';
 import { L, locale, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, PALETTE, pad } from '../core/ui';
+import { board, clearBtn, h, PALETTE, pad } from '../core/ui';
 import { type Clue, type ClueType, clueItems, generateDeduct, holds, propagate } from './logickit/deductgen';
 
 /** One value of an attribute: its icon and its phrases (subject, predicate, negated predicate, bare word). */
@@ -166,7 +166,7 @@ const plain = (s: string) => s.replace(MARK, '');
 export const logicGrid: PuzzleDef = {
   id: 'logic-grid',
   get name() {
-    return L('Logic grid', 'Grille logique');
+    return L('Logic Grid', 'Grille logique');
   },
   category: 'logic',
   undo: true,
@@ -189,8 +189,8 @@ export const logicGrid: PuzzleDef = {
         '« À côté » veut dire une maison voisine; « juste à gauche », la maison juste avant; « quelque part à gauche », n’importe quelle maison avant. « Soit A, soit B » veut dire exactement l’un des deux.',
       ),
       L(
-        'Tap a cell, then a value on the pad to place it. Tap the same value again to erase it.',
-        'Touchez une case, puis une valeur du pavé pour la placer. Touchez la même valeur de nouveau pour l’effacer.',
+        'Tap a cell, then a value on the pad to place it. Tap the same value again to erase it; Clear wipes the whole grid.',
+        'Touchez une case, puis une valeur du pavé pour la placer. Touchez la même valeur de nouveau pour l’effacer; Effacer vide toute la grille.',
       ),
       L(
         'Switch the pad to ✗ to rule values out of a cell: the cell then lists what is still possible.',
@@ -403,7 +403,7 @@ export const logicGrid: PuzzleDef = {
       });
       clueEls.forEach((el, k) => {
         const st = clueState(k, pos);
-        const cls = `lg-clue${st === 1 ? ' ok' : st === -1 ? ' bad' : ''}${struck[k] ? ' done' : ''}`;
+        const cls = `lg-clue${st === 1 ? ' ok' : st === -1 ? ' err' : ''}${struck[k] ? ' done' : ''}`;
         if (el.className !== cls) el.className = cls;
       });
       renderPad();
@@ -462,7 +462,17 @@ export const logicGrid: PuzzleDef = {
       render();
     };
 
+    /** Clear: wipe every placed value, rule-out mark and crossed-off clue. */
+    const clear = () => {
+      if (done || !(vals.some((v) => v >= 0) || xs.some(Boolean) || struck.some(Boolean))) return;
+      ctx.touch();
+      vals.fill(-1);
+      xs.fill(0);
+      struck.fill(0);
+      render();
+    };
     ctx.root.append(h('div', { class: 'lg-wrap', style: `--k:${K}` }, grid, clueBox, padSlot));
+    ctx.controls(clearBtn(clear));
     render();
 
     // ---- guide ----

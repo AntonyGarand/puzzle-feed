@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { h, s, shake } from '../core/ui';
+import { clearBtn, h, ruleBreaks, s, shake } from '../core/ui';
 import { connected, genBridges } from './logickit/bridgesgen';
 import './bridges.css';
 
@@ -33,8 +33,8 @@ export const bridges: PuzzleDef = {
       ),
       L('You can also tap a bridge to change it the same way.', 'Vous pouvez aussi toucher un pont pour le modifier de la même façon.'),
       L(
-        'Complete islands change colour; islands with too many bridges are marked.',
-        'Les îles complètes changent de couleur; celles qui ont trop de ponts sont signalées.',
+        'Complete islands change colour; an island with too many bridges turns red and counts as a mistake. Clear wipes the board.',
+        'Les îles complètes changent de couleur; une île avec trop de ponts devient rouge et compte comme une erreur. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -96,6 +96,8 @@ export const bridges: PuzzleDef = {
       return g;
     });
     const wrap = h('div', { class: 'lk-bridges' }, svg);
+    /** Counts a mistake when a bridge overloads an island. */
+    const watch = ruleBreaks(wrap, ctx.mistake);
 
     const render = () => {
       gBr.replaceChildren();
@@ -116,7 +118,7 @@ export const bridges: PuzzleDef = {
         ok += sum === need ? 1 : 0;
         g.setAttribute('class', `isl${sum === need ? ' done' : sum > need ? ' err' : ''}${sel === i ? ' sel' : ''}`);
       });
-      ctx.status(L(`${ok} / ${islands.length} islands`, `${ok} / ${islands.length} îles`));
+      ctx.status(`${ok} / ${P(islands.length, ['island', 'islands'], ['île', 'îles'])}`);
       return ok === islands.length && connected(islands.length, edges, b);
     };
 
@@ -129,7 +131,9 @@ export const bridges: PuzzleDef = {
       b[k] = nv;
     };
     const after = () => {
-      if (render() && !done) {
+      const won = render();
+      watch();
+      if (won && !done) {
         done = true;
         sel = -1;
         render();
@@ -252,6 +256,17 @@ export const bridges: PuzzleDef = {
     if (Number.isInteger(sv?.sel) && (sv!.sel as number) >= -1 && (sv!.sel as number) < islands.length) sel = sv!.sel as number;
     root.append(wrap);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || b.every((v) => !v)) return;
+        ctx.touch();
+        b.fill(0);
+        sel = -1;
+        render();
+        watch(false);
+      }),
+    );
     /** Too many bridges somewhere (the answer is unique): a broken rule first, else a dead end. */
     const check = (): Hint | null => {
       if (done) return null;

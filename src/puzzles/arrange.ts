@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, PALETTE, shake } from '../core/ui';
+import { board, clearBtn, h, PALETTE, shake, undoBtn } from '../core/ui';
 import { genArrange, rotated, type Shape } from './pathkit/arrange-gen';
 import { innerRect } from './pathkit/grid';
 import './arrange.css';
@@ -19,7 +19,11 @@ type Drag = {
   sy: number;
   moved: boolean;
   ghost?: HTMLElement;
+  /** Position when the gesture began, recorded for undo if the gesture changes the board. */
+  before: Pos;
 };
+/** A board position: where each piece sits (null: in the tray) and how it is turned. */
+type Pos = { place: ([number, number] | null)[]; rot: number[] };
 
 export const arrange: PuzzleDef = {
   id: 'arrange',
@@ -27,7 +31,6 @@ export const arrange: PuzzleDef = {
     return L('Arrange', 'Assembler');
   },
   category: 'moves',
-  undo: true,
   get rules() {
     return L('Drag every piece onto the board to fill it exactly.', 'Glissez les pièces pour remplir toute la grille.');
   },
@@ -47,10 +50,13 @@ export const arrange: PuzzleDef = {
         'Glissez une pièce placée pour la déplacer. Touchez-la, ou sortez-la de la grille, pour la renvoyer au bac.',
       ),
       L(
-        'From Hard up, pieces come turned. Tap one in the tray to turn it; while dragging, tap with a second finger, scroll or press R.',
-        'À partir de Difficile, les pièces arrivent tournées. Touchez-en une dans le bac pour la tourner; en la glissant, touchez avec un 2e doigt, utilisez la molette ou appuyez sur R.',
+        'From Hard up, pieces come turned. Tap one in the tray to turn it; while dragging, tap with a second finger, scroll or press T.',
+        'À partir de Difficile, les pièces arrivent tournées. Touchez-en une dans le bac pour la tourner; en la glissant, touchez avec un 2e doigt, utilisez la molette ou appuyez sur T.',
       ),
-      L('Clear sends every piece back to the tray.', 'Vider renvoie toutes les pièces au bac.'),
+      L(
+        'Undo (Z) takes back the last drop or removal; Clear sends every piece back to the tray.',
+        'Annuler (Z) reprend le dernier dépôt ou retrait; Effacer renvoie toutes les pièces au bac.',
+      ),
     ],
     tips: [
       L(
@@ -125,6 +131,23 @@ export const arrange: PuzzleDef = {
     order.forEach((p) => tray.append(trayEls[p]));
 
     let finished = false;
+    /** Positions before each drop, removal or clear, for undo (turns of placed pieces come back with them). */
+    let hist: Pos[] = [];
+    const pos = (): Pos => ({ place: place.map((o) => (o ? [o[0], o[1]] : null)), rot: rot.slice() });
+    /** Record `before` if the placement changed since. */
+    const commit = (before: Pos) => {
+      if (place.some((o, p) => (o?.join() ?? '') !== (before.place[p]?.join() ?? ''))) hist.push(before);
+    };
+    const undo = () => {
+      const prev = hist.pop();
+      if (!prev || finished || drag) return;
+      prev.place.forEach((o, p) => {
+        place[p] = o;
+        // Pieces in the tray keep the turn the player gave them since.
+        if (o) rot[p] = prev.rot[p];
+      });
+      render();
+    };
     const turnPiece = (p: number) => {
       ctx.touch();
       rot[p] = (rot[p] + 1) % 4;
@@ -162,7 +185,7 @@ export const arrange: PuzzleDef = {
           if (diff(r, c - 1)) cls += ' el';
           el.setAttribute('style', `--c:${PALETTE[pieces[p].colour]}`);
         } else el.removeAttribute('style');
-        if (pv.has(i)) cls += ' hint';
+        if (pv.has(i)) cls += ' drop';
         el.className = cls;
       });
       trayEls.forEach((el, p) => {
@@ -250,6 +273,7 @@ export const arrange: PuzzleDef = {
       if (!dg) return;
       drag = null;
       preview = [];
+      const before = dg.before;
       if (dg.moved) {
         dg.ghost?.remove();
         const t = e.type === 'pointerup' ? (recompute(), dragTarget(dg, e.clientX, e.clientY)) : null;
@@ -269,6 +293,7 @@ export const arrange: PuzzleDef = {
         else shake(trayEls[dg.p]);
         return;
       }
+      commit(before);
       settle();
     };
     /** Redraw and check for the win after a piece lands or leaves. */
@@ -285,9 +310,9 @@ export const arrange: PuzzleDef = {
       drag = prev;
       return t;
     };
-    const begin = (e: PointerEvent, dg: Drag) => {
+    const begin = (e: PointerEvent, dg: Omit<Drag, 'before'>) => {
       if (finished) return;
-      drag = dg;
+      drag = { ...dg, before: pos() };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onUp);
@@ -325,17 +350,13 @@ export const arrange: PuzzleDef = {
       begin(e, { p, ...at, dr: R - r0, dc: C - c0, from: [r0, c0], moved: false });
     });
 
-    ctx.controls(
-      btn(
-        L('Clear', 'Vider'),
-        () => {
-          if (finished) return;
-          place.fill(null);
-          render();
-        },
-        'ghost',
-      ),
-    );
+    const clear = () => {
+      if (finished || drag || !place.some(Boolean)) return;
+      hist.push(pos());
+      place.fill(null);
+      render();
+    };
+    ctx.controls(undoBtn(undo), clearBtn(clear));
 
     // ---- resume ----
     const sv = ctx.saved as { rot?: unknown; place?: unknown } | undefined;
@@ -350,6 +371,41 @@ export const arrange: PuzzleDef = {
       recompute();
       if (place.every(Boolean)) place[K - 1] = null; // never resume already solved
     }
+    const okPos = (v: unknown): v is Pos => {
+      const o = v as Pos | null;
+      return (
+        !!o &&
+        Array.isArray(o.rot) &&
+        o.rot.length === K &&
+        o.rot.every((x) => x === 0 || x === 1 || x === 2 || x === 3) &&
+        Array.isArray(o.place) &&
+        o.place.length === K &&
+        o.place.every(
+          (q) =>
+            q === null ||
+            (Array.isArray(q) && q.length === 2 && q.every(Number.isInteger) && q[0] >= -4 && q[0] < rows && q[1] >= -4 && q[1] < cols),
+        )
+      );
+    };
+    // Each saved position must still be a legal board (no overlap, inside the grid), or undo starts afresh.
+    const legal = (o: Pos) => {
+      const seen = new Set<number>();
+      return o.place.every(
+        (q, p) =>
+          !q ||
+          rotated(pieces[p].shape, P.rotate ? o.rot[p] : 0).every(([r, c]) => {
+            const rr = q[0] + r,
+              cc = q[1] + c,
+              i = rr * cols + cc;
+            if (rr < 0 || rr >= rows || cc < 0 || cc >= cols || seen.has(i)) return false;
+            seen.add(i);
+            return true;
+          }),
+      );
+    };
+    const svHist = (sv as { hist?: unknown } | undefined)?.hist;
+    if (Array.isArray(svHist) && svHist.every((o) => okPos(o) && legal(o)))
+      hist = (svHist as Pos[]).map((o) => ({ place: o.place, rot: P.rotate ? o.rot : o.rot.map(() => 0) }));
     // ---- guide ----
     const shapeKey = (sh: Shape) =>
       sh
@@ -458,6 +514,7 @@ export const arrange: PuzzleDef = {
     const sendBack = (p: number) => () => {
       if (finished || !place[p]) return;
       ctx.touch();
+      hist.push(pos());
       place[p] = null;
       settle();
     };
@@ -517,6 +574,7 @@ export const arrange: PuzzleDef = {
         play: () => {
           if (finished) return;
           ctx.touch();
+          hist.push(pos());
           place[sp.p] = [sp.r, sp.c];
           settle();
         },
@@ -546,6 +604,7 @@ export const arrange: PuzzleDef = {
       const left = pieces.map((_, p) => p).filter((p) => !place[p]);
       if (!left.length) return null;
       const drop = (p: number) => () => {
+        hist.push(pos());
         place[p] = [pieces[p].r, pieces[p].c];
         settle();
       };
@@ -659,9 +718,14 @@ export const arrange: PuzzleDef = {
     return {
       hint,
       check,
-      snapshot: () => ({ rot, place }),
+      snapshot: () => ({ rot, place, hist }),
       onKey(e) {
-        if (!P.rotate || finished || (e.key !== 'r' && e.key !== 'R')) return false;
+        if (finished) return false;
+        if ((e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') && !drag) {
+          undo();
+          return true;
+        }
+        if (!P.rotate || (e.key !== 't' && e.key !== 'T')) return false;
         if (drag?.moved) turnHeld();
         else {
           // a tray piece with keyboard focus

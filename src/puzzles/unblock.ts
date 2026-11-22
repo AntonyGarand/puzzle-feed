@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, PALETTE } from '../core/ui';
+import { h, PALETTE, restartBtn, shake, undoBtn } from '../core/ui';
 import { int, isIntArr, keyDir } from './movekit/kit';
 import { nextUnblockMove } from './movekit/unblock-hint';
 import { EXIT_ROW, generateUnblock, N, range } from './movekit/unblockgen';
@@ -34,8 +34,8 @@ export const unblock: PuzzleDef = {
         'Déplacer le même bloc de suite compte pour un seul coup. « min. » indique le plus petit nombre de coups possible.',
       ),
       L(
-        'Keyboard: Tab or Space picks a block, arrow keys move it, Z undoes.',
-        'Au clavier : Tab ou Espace choisit un bloc, les flèches le déplacent, Z annule.',
+        'Keyboard: Tab or Space picks a block, arrow keys move it, Z undoes, R restarts.',
+        'Au clavier : Tab ou Espace choisit un bloc, les flèches le déplacent, Z annule, R fait repartir.',
       ),
       L(
         'Undo steps back; Restart puts every block back where it started.',
@@ -127,11 +127,7 @@ export const unblock: PuzzleDef = {
         place(i, pos[i]);
         els[i].classList.toggle('sel', i === sel);
       });
-      ctx.status(
-        done
-          ? L(`Solved in ${moves} · best ${optimal}`, `Réussi en ${moves} · min. ${optimal}`)
-          : L(`Moves ${moves} · best ${optimal}`, `Coups ${moves} · min. ${optimal}`),
-      );
+      ctx.status(`${P(moves, ['move', 'moves'], ['coup', 'coups'])} · ${L(`best ${optimal}`, `min. ${optimal}`)}`);
     };
 
     const commit = (i: number, p: number) => {
@@ -166,9 +162,10 @@ export const unblock: PuzzleDef = {
       render();
     };
     const restart = () => {
-      if (done || !history.length) return;
+      if (done || (moves === 0 && pos.every((p, i) => p === start[i]))) return;
       history.push({ pos: pos.slice(), moves, last });
       pos = start.slice();
+      moves = 0;
       last = -1;
       render();
     };
@@ -339,10 +336,11 @@ export const unblock: PuzzleDef = {
       };
     };
 
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), restart, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(wrap);
     render();
 
+    // No check(): every slide can be slid back, so a position is never a dead end.
     return {
       snapshot: () => ({ pos, moves, last, sel, history }),
       hint,
@@ -353,8 +351,12 @@ export const unblock: PuzzleDef = {
           render();
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') {
           undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          restart();
           return true;
         }
         const k = keyDir(e);
@@ -365,11 +367,11 @@ export const unblock: PuzzleDef = {
           return true;
         }
         const b = blocks[sel];
-        if (b.hz !== (k === 1 || k === 3)) return true;
         const step = k === 1 || k === 2 ? 1 : -1;
         const [a, z] = range(blocks, pos, sel);
         const p = pos[sel] + step;
-        if (p >= a && p <= z) commit(sel, p);
+        if (b.hz === (k === 1 || k === 3) && p >= a && p <= z) commit(sel, p);
+        else shake(els[sel]);
         return true;
       },
     };

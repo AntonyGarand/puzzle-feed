@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, pad } from '../core/ui';
+import { board, clearBtn, h, pad } from '../core/ui';
 import { cellFromPointer, nb4, tint } from './logickit/kit';
 import { candidates, exits, genFill, groupReach, regions } from './logickit/fillgen';
 import './fill.css';
@@ -53,8 +53,8 @@ export const fill: PuzzleDef = {
         'Les traits épais montrent où finissent les groupes. Un groupe trop grand, ou enfermé trop petit, passe au rouge.',
       ),
       L(
-        'Keyboard: arrow keys move, number keys fill, Backspace or 0 clears.',
-        'Clavier : flèches pour se déplacer, chiffres pour remplir, Retour arrière ou 0 pour effacer.',
+        'Keyboard: arrow keys move, number keys fill, Backspace or 0 clears. Clear wipes all your numbers.',
+        'Clavier : flèches pour se déplacer, chiffres pour remplir, Retour arrière ou 0 pour effacer. Effacer retire tous vos chiffres.',
       ),
     ],
     tips: [
@@ -215,6 +215,14 @@ export const fill: PuzzleDef = {
         else if (sel >= 0 && vals[sel]) input(vals[sel]);
       }),
     );
+    /** Clear: wipe every number you entered (givens stay). */
+    const clear = () => {
+      if (done || !vals.some((v, i) => v && !given[i])) return;
+      ctx.touch();
+      vals.forEach((_, i) => !given[i] && (vals[i] = 0));
+      render();
+    };
+    ctx.controls(clearBtn(clear));
     render();
 
     // ---------- guide ----------

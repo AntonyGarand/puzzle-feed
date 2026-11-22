@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { h, PALETTE, s } from '../core/ui';
+import { h, PALETTE, s, shake } from '../core/ui';
 import { blocker, DC, DR, genArrows, ray } from './arrowkit/arrows';
 import './arrows.css';
 
@@ -136,8 +136,8 @@ export const arrowsPuzzle: PuzzleDef = {
 
     const render = () => {
       for (let i = 0; i < n * n; i++) dots[i].classList.toggle('lit', occ[i] < 0);
-      const hearts = `${'♥'.repeat(lives)}${'♡'.repeat(LIVES - lives)}`;
-      ctx.status(`${P(arrows.length - gone.size, ['arrow left', 'arrows left'], ['flèche restante', 'flèches restantes'])} · ${hearts}`);
+      ctx.lives(lives, LIVES);
+      ctx.status(P(arrows.length - gone.size, ['arrow left', 'arrows left'], ['flèche restante', 'flèches restantes']));
     };
 
     const remove = (id: number, animate: boolean) => {
@@ -184,6 +184,7 @@ export const arrowsPuzzle: PuzzleDef = {
       setTimeout(() => v.g.classList.remove('err'), ms + 400);
       ctx.mistake();
       lives--;
+      shake(wrap);
       render();
       if (lives <= 0) {
         over = true;
@@ -249,6 +250,7 @@ export const arrowsPuzzle: PuzzleDef = {
 
     root.append(wrap);
     render();
+    // No check(): sending an arrow off only ever clears paths, so no position is a dead end (only lives can run out).
     return {
       snapshot: () => ({ gone: [...gone], lives }),
       hint,

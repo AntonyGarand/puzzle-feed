@@ -1,0 +1,42 @@
+[data-puzzle='target'] {
+  --accent: var(--p7);
+}
+
+[data-puzzle='target'] .chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 60px;
+}
+[data-puzzle='target'] .chip.num {
+  min-width: 60px;
+  height: 60px;
+  padding: 0 14px;
+  background: var(--cell);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+}
+[data-puzzle='target'] .chip.num:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+[data-puzzle='target'] .chip.num.sel {
+  background: var(--accent);
+  color: var(--on-tone);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+[data-puzzle='target'] .big {
+  padding: 2px 22px;
+  background: var(--accent);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+}

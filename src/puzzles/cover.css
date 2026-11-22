@@ -26,15 +26,6 @@
   color: var(--on-tone);
   cursor: default;
 }
-[data-puzzle='cover'] .cover-grid .cell.hint::after {
-  content: attr(data-n);
-  position: absolute;
-  top: 2px;
-  left: 5px;
-  font-size: calc(var(--side) * 0.2);
-  line-height: 1;
-  color: var(--muted);
-}
 [data-puzzle='cover'] .trace-fixed-line {
   stroke: var(--ink);
   stroke-width: calc(var(--lw, 8px) * 0.5);
@@ -69,14 +60,7 @@
   min-height: 24px;
 }
 [data-puzzle='cover'] .cover-chip {
-  padding: 1px 9px;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--cell);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 18px;
   letter-spacing: 0.1em;
 }
 [data-puzzle='cover'] .cover-chip.done {

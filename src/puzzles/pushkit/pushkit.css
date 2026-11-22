@@ -223,7 +223,7 @@
   min-width: 2ch;
   padding: 2px 8px;
   border: var(--bw) solid var(--ink);
-  border-radius: var(--r-cell, 6px);
+  border-radius: var(--r-cell);
   background: var(--cell);
   color: var(--fg);
   font-size: 18px;

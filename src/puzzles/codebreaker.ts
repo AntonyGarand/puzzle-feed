@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, PALETTE, shake } from '../core/ui';
+import { btn, h, pad, PALETTE, shake } from '../core/ui';
+import './playkit/code-board.css';
 import './codebreaker.css';
 
 /** Mastermind score of a guess: ● right colour and spot, ○ right colour elsewhere (repeats counted once each). */
@@ -50,8 +51,8 @@ export const codebreaker: PuzzleDef = {
         'Touchez les couleurs de la palette pour remplir la rangée en cours (ou appuyez sur 1, 2, 3…).',
       ),
       L(
-        '✕ removes the last colour (Backspace). Guess submits a full row (Enter).',
-        '✕ retire la dernière couleur (Retour arrière). Essayer soumet une rangée complète (Entrée).',
+        '✕ on the palette removes the last colour (Backspace). Guess submits a full row (Enter).',
+        '✕ dans la palette retire la dernière couleur (Retour arrière). Essayer soumet une rangée complète (Entrée).',
       ),
       L(
         'Each ● is a right colour in the right spot; each ○ a right colour in the wrong spot. They don’t say which peg.',
@@ -88,18 +89,20 @@ export const codebreaker: PuzzleDef = {
     let cur: number[] = [];
 
     const board = h('div', { class: 'code-board', style: `--len:${len}` });
-    const palette = h('div', { class: 'pad' });
-    for (let c = 0; c < colors; c++) {
-      palette.append(
-        h('button', {
-          type: 'button',
-          class: 'key swatch',
+    // Colour swatches (index = colour), then ✕ to delete the last peg.
+    const palette = pad(
+      [
+        ...Array.from({ length: colors }, (_, c) => ({
+          label: '',
+          value: String(c),
+          class: 'swatch',
           style: `--c:${PALETTE[c]}`,
-          'aria-label': L(`colour ${c + 1}`, `couleur ${c + 1}`),
-          onclick: () => add(c),
-        }),
-      );
-    }
+          aria: L(`colour ${c + 1}`, `couleur ${c + 1}`),
+        })),
+        { label: '✕', value: 'del', aria: L('Delete', 'Effacer') },
+      ],
+      (v) => (v === 'del' ? back() : add(Number(v))),
+    );
 
     const peg = (c: number | undefined) =>
       h('span', { class: `peg ${c == null ? 'empty' : ''}`, style: c == null ? '' : `--c:${PALETTE[c]}` });
@@ -157,14 +160,25 @@ export const codebreaker: PuzzleDef = {
         ctx.failed();
       }
     };
-    const del = btn('✕', back, 'ghost');
-    del.setAttribute('aria-label', L('Delete', 'Effacer'));
-    del.title = L('Delete', 'Effacer');
-    ctx.controls(del, btn(L('Guess', 'Essayer'), submit, 'primary'));
-    const sv = ctx.saved as { guesses?: typeof guesses; cur?: number[] } | undefined;
-    if (Array.isArray(sv?.guesses)) {
-      guesses.push(...sv.guesses.slice(0, maxGuesses - 1));
-      cur = sv.cur ?? [];
+    ctx.controls(btn(L('Guess', 'Essayer'), submit, 'primary'));
+    const sv = ctx.saved as { guesses?: unknown; cur?: unknown } | undefined;
+    /** A row of colours this game could hold: `len` pegs (at most, for the row being entered), in range, no repeats unless allowed. */
+    const okRow = (v: unknown, full: boolean): v is number[] =>
+      Array.isArray(v) &&
+      (full ? v.length === len : v.length <= len) &&
+      v.every((c) => Number.isInteger(c) && c >= 0 && c < colors) &&
+      (dupes || new Set(v).size === v.length);
+    if (sv && Array.isArray(sv.guesses)) {
+      for (const x of sv.guesses.slice(0, maxGuesses - 1)) {
+        const g = (x as { g?: unknown } | null)?.g;
+        if (!okRow(g, true)) break;
+        guesses.push({ g: g.slice(), ...scoreOf(code, g) });
+        if (guesses[guesses.length - 1].exact === len) {
+          guesses.pop();
+          break;
+        }
+      }
+      if (okRow(sv.cur, false)) cur = sv.cur.slice();
     }
     // ---------- guide ----------
     /**

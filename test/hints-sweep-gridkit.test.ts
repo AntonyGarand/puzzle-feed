@@ -36,6 +36,7 @@ function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
     mistake() {},
     touch() {},
     status() {},
+    lives: () => {},
     controls: (...els) => root.append(...els),
     saved,
   };

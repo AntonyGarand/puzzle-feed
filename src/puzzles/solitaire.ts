@@ -1,7 +1,7 @@
 import './solitaire.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, h, shake } from '../core/ui';
+import { h, restartBtn, shake, undoBtn } from '../core/ui';
 import { cap, cardEl, elAt, fan, isRed, label, leCard, pileEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
 import {
   bestDest,
@@ -67,8 +67,8 @@ export const solitaire: PuzzleDef = {
         'Les niveaux changent la pioche : 1 carte de Facile à Difficile, 3 cartes en Expert et Maître, et moins de passes en Moyen, Difficile et Maître.',
       ),
       L(
-        'Undo takes back a move (Z or Backspace on a keyboard); Space or D draws. Once every card is face up and the stock is empty, the rest goes home on its own.',
-        'Annuler reprend un coup (Z ou Retour arrière au clavier); Espace ou D pioche. Quand toutes les cartes sont visibles et la pioche vide, le reste se range tout seul.',
+        'Undo takes back a move (Z or Backspace on a keyboard); Restart deals the same game again (R); Space or D draws. Once every card is face up and the stock is empty, the rest goes home on its own.',
+        'Annuler reprend un coup (Z ou Retour arrière au clavier); Repartir redonne la même partie (R); Espace ou D pioche. Quand toutes les cartes sont visibles et la pioche vide, le reste se range tout seul.',
       ),
     ],
     tips: [
@@ -93,6 +93,7 @@ export const solitaire: PuzzleDef = {
       { draw: 3, redeals: 2 },
     ]);
     let s = genK(rng, rules);
+    const init = structuredClone(s);
 
     const hist = new History<KState>(80);
     const sv = ctx.saved as { s?: unknown; hist?: unknown } | undefined;
@@ -103,11 +104,24 @@ export const solitaire: PuzzleDef = {
 
     const table = tableEl(7, TOP + TAB_H);
     let over = false;
+    /**
+     * Nothing can ever be flipped, played home or taken from the talon again: cycling the stock (even
+     * with unlimited redeals) or shuffling runs around won't change that. Undo can still save it.
+     */
+    let doomed = false;
+    const judge = () => {
+      doomed = !hasProgress(s, rules);
+    };
 
-    const status = (extra = '') => {
+    const status = () => {
       const home = s.found.reduce((a, b) => a + b, 0);
-      const pass = rules.redeals < 0 ? '' : ` · ${L('Pass', 'Passe')} ${s.redeals + 1}/${rules.redeals + 1}`;
-      ctx.status(extra || `${L('Home', 'Fondations')} ${home}/52${pass || ` · ${L('Moves', 'Coups')} ${s.moves}`}`);
+      const head = `${L('Home', 'Fondations')} ${home} / 52 · ${P(s.moves, ['move', 'moves'], ['coup', 'coups'])}`;
+      if (doomed) {
+        ctx.status(`${head} · ${L('no useful moves left · undo', 'plus aucun coup utile · annulez')}`);
+        return;
+      }
+      const pass = rules.redeals < 0 ? '' : ` · ${L('Pass', 'Passe')} ${s.redeals + 1} / ${rules.redeals + 1}`;
+      ctx.status(head + pass);
     };
 
     const render = () => {
@@ -157,18 +171,10 @@ export const solitaire: PuzzleDef = {
       }
       if (wonK(s)) {
         over = true;
-        status(L(`Moves ${s.moves} · All home!`, `${P(s.moves, ['coup', 'coups'], ['coup', 'coups'])} · Tout est rangé!`));
         ctx.solved();
         return;
       }
-      // Nothing can ever be flipped, played home or taken from the talon again: cycling the stock
-      // (even with unlimited redeals) or shuffling runs around won't change that.
-      if (!hasProgress(s, rules)) {
-        over = true;
-        status(L('No useful moves left', 'Plus aucun coup utile'));
-        ctx.failed();
-        return;
-      }
+      judge();
       status();
     };
 
@@ -229,11 +235,25 @@ export const solitaire: PuzzleDef = {
       ctx.touch();
       s = prev;
       render();
+      judge();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    /** Deal the same game again (undoable). */
+    const restart = () => {
+      if (over || JSON.stringify(s) === JSON.stringify(init)) return;
+      ctx.touch();
+      hist.push(s);
+      s = structuredClone(init);
+      render();
+      judge();
+      status();
+    };
+    /** Undo the last move, or deal the same game again when there is nothing to undo. */
+    const backOut = () => (hist.size ? undo() : restart());
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(table);
     render();
+    if (sv) judge();
     status();
 
     let lastRule = '';
@@ -489,15 +509,37 @@ export const solitaire: PuzzleDef = {
       return pick.h;
     };
 
+    /** Dead end: nothing can ever go home, turn over or come off the stock again. */
+    const check = (): Hint | null => {
+      if (over || !doomed) return null;
+      deadEnds.add(keyOf(s));
+      return {
+        kind: 'stuck',
+        text: L(
+          'No way to win from here: nothing can go home, turn over or come off the stock any more, whatever you shuffle. Undo.',
+          'Impossible de gagner d’ici : plus rien ne peut monter, se retourner ni sortir de la pioche, peu importe les déplacements. Annulez.',
+        ),
+        at: [topEl(table, 's')!],
+        action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+        play: backOut,
+      };
+    };
+
     return {
       hint,
+      check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
-        if (e.key === 'z' || e.key === 'Backspace') {
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'backspace') {
           undo();
           return true;
         }
-        if (e.key === ' ' || e.key === 'd') {
+        if (k === 'r') {
+          restart();
+          return true;
+        }
+        if (e.key === ' ' || k === 'd') {
           if (!over) {
             ctx.touch();
             doDraw();

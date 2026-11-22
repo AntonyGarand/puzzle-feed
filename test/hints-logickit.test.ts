@@ -32,6 +32,7 @@ function make(id: string, d: Difficulty, seed: number) {
     mistake() {},
     touch() {},
     status() {},
+    lives: () => {},
     controls: (...els) => root.append(...els),
   };
   const inst: PuzzleInstance = def.create(ctx) || {};

@@ -58,6 +58,7 @@ function walkthrough(def: PuzzleDef) {
         failed() {},
         mistake() {},
         touch() {},
+        lives() {},
         status() {},
         controls() {},
       }) || {};

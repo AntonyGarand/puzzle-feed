@@ -1,6 +1,7 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, countClue, h, s, setCountClue } from '../core/ui';
+import { board, clearBtn, countClue, h, ruleBreaks, s, setCountClue } from '../core/ui';
+import { tapOrHold } from './gridkit/press';
 import { nb4, nb8 } from './logickit/kit';
 import { genTents, tentsMatch } from './logickit/tentsgen';
 import './tents.css';
@@ -46,8 +47,8 @@ export const tents: PuzzleDef = {
         'Les nombres en haut et à gauche indiquent combien de tentes vont dans cette colonne ou cette rangée.',
       ),
       L(
-        'Tap a cell once for grass (no tent), twice for a tent, a third time to clear it.',
-        'Touchez une case une fois pour du gazon (pas de tente), deux fois pour une tente, trois fois pour l’effacer.',
+        'Tap a cell once for a tent, twice for grass (no tent), a third time to clear it. Long-press (or right-click) for grass directly. Clear wipes the board.',
+        'Touchez une case une fois pour une tente, deux fois pour du gazon (pas de tente), trois fois pour l’effacer. Appuyez longuement (ou cliquez droit) pour du gazon directement. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -80,7 +81,7 @@ export const tents: PuzzleDef = {
         const i = r * n + c;
         const el = isTree[i]
           ? h('div', { class: 'cell given tree', 'data-i': i }, treeSvg())
-          : h('button', { type: 'button', class: 'cell', 'data-i': i, onclick: () => tap(i) }, tentSvg());
+          : h('button', { type: 'button', class: 'cell', 'data-i': i }, tentSvg());
         cells.push(el);
         grid.append(el);
       }
@@ -108,42 +109,57 @@ export const tents: PuzzleDef = {
       };
       colEls.forEach((el, c) => clue(el, cols[c], p.cols[c]));
       rowEls.forEach((el, r) => clue(el, rows[r], p.rows[r]));
-      ctx.status(L(`${placed.length} / ${p.trees.length} tents`, `${placed.length} / ${p.trees.length} tentes`));
+      ctx.status(`${placed.length} / ${P(p.trees.length, ['tent', 'tents'], ['tente', 'tentes'])}`);
       return ok && !placed.some((t) => nb8(t, n, n).some((j) => st[j] === 2)) && tentsMatch(n, p.trees, placed);
     };
 
     let done = false;
-    const tap = (i: number) => {
-      if (done) return;
+    /** Counts a mistake when a pitched tent breaks a rule (grass never does). */
+    const watch = ruleBreaks(grid, ctx.mistake);
+    const set = (i: number, v: number) => {
+      if (done || isTree[i] || st[i] === v) return;
       ctx.touch();
-      st[i] = (st[i] + 1) % 3;
-      if (render()) {
+      st[i] = v;
+      const won = render();
+      watch(v === 2);
+      if (won) {
         done = true;
         ctx.solved();
       }
     };
+    // Tap cycles empty → tent → grass → empty; long-press (or right-click) toggles grass.
+    const cleanup = tapOrHold(
+      grid,
+      (i) => set(i, st[i] === 0 ? 2 : st[i] === 2 ? 1 : 0),
+      (i) => set(i, st[i] === 1 ? 0 : 1),
+    );
 
     const sv = ctx.saved as { st?: unknown } | undefined;
     if (Array.isArray(sv?.st) && sv.st.length === st.length) sv.st.forEach((v, i) => (st[i] = !isTree[i] && (v === 1 || v === 2) ? v : 0));
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
 
     const all = [...st.keys()];
     const lineOf = (row: boolean, i: number) => (row ? Math.floor(i / n) : i % n);
     const lineName = (row: boolean, k: number) =>
       row ? L(`Row ${k + 1}`, `La rangée ${k + 1}`) : L(`Column ${k + 1}`, `La colonne ${k + 1}`);
     const els = (ix: number[]) => ix.map((i) => cells[i]);
-    const grass = (ix: number[]) => () => ix.forEach((i) => st[i] === 0 && tap(i));
-    const pitch = (ix: number[]) => () =>
-      ix.forEach((i) => {
-        for (let t = 0; t < 2 && st[i] !== 2; t++) tap(i);
-      });
+    const grass = (ix: number[]) => () => ix.forEach((i) => st[i] === 0 && set(i, 1));
+    const pitch = (ix: number[]) => () => ix.forEach((i) => set(i, 2));
 
     const solTent = new Set(p.tents);
-    /** Undo the mark on cell `i` with the same taps a player would use. */
-    const clearCell = (i: number) => () => {
-      for (let t = 0; t < 2 && st[i] !== 0; t++) tap(i);
-    };
+    /** Clear cell `i` through the same path as a player's tap. */
+    const clearCell = (i: number) => () => set(i, 0);
     const fixHint = (i: number, text: string, why: HTMLElement[] = []): Hint => ({
       kind: 'fix',
       text,
@@ -260,8 +276,8 @@ export const tents: PuzzleDef = {
           return {
             text: row
               ? L(
-                  `${one ? 'Row' : 'Rows'} ${list} ${one ? 'is' : 'are'} marked 0: no tents at all, so all grass. Tap a cell once for grass.`,
-                  `${one ? 'La rangée' : 'Les rangées'} ${list} ${one ? 'est marquée' : 'sont marquées'} 0 : aucune tente, donc tout en gazon. Touchez une case une fois pour du gazon.`,
+                  `${one ? 'Row' : 'Rows'} ${list} ${one ? 'is' : 'are'} marked 0: no tents at all, so all grass. Long-press a cell for grass.`,
+                  `${one ? 'La rangée' : 'Les rangées'} ${list} ${one ? 'est marquée' : 'sont marquées'} 0 : aucune tente, donc tout en gazon. Appuyez longuement sur une case pour du gazon.`,
                 )
               : L(
                   `${one ? 'Column' : 'Columns'} ${list} ${one ? 'is' : 'are'} marked 0, so ${one ? 'it is' : 'they are'} all grass too.`,
@@ -294,8 +310,8 @@ export const tents: PuzzleDef = {
           if (c.length !== 1) continue;
           return {
             text: L(
-              'This tree has no tent yet and only one free spot beside it, so its tent goes there. Tap twice for a tent.',
-              'Cet arbre n’a pas encore de tente et une seule place libre à côté : sa tente va là. Touchez deux fois pour une tente.',
+              'This tree has no tent yet and only one free spot beside it, so its tent goes there. Tap once for a tent.',
+              'Cet arbre n’a pas encore de tente et une seule place libre à côté : sa tente va là. Touchez une fois pour une tente.',
             ),
             why: els([t]),
             at: els(c),
@@ -374,6 +390,6 @@ export const tents: PuzzleDef = {
         play: pitch([i]),
       };
     };
-    return { snapshot: () => ({ st }), hint, check };
+    return { snapshot: () => ({ st }), hint, check, destroy: cleanup };
   },
 };

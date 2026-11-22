@@ -1,7 +1,7 @@
 import { L, P } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, btn, h, restartBtn, shake, undoBtn } from '../core/ui';
 import { anim, int, isIntArr } from './movekit/kit';
 import './week.css';
 
@@ -207,8 +207,8 @@ export const week: PuzzleDef = {
         'Touchez une tâche pour la choisir, touchez-la encore (ou Pivoter) pour la tourner, puis touchez la grille ou glissez-la.',
       ),
       L(
-        'Tap or drag a placed task to take it back. Undo and Reset are in the footer.',
-        'Touchez ou glissez une tâche posée pour la reprendre. Annuler et Recommencer sont en bas.',
+        'Tap or drag a placed task to take it back. Undo (Z) and Restart (R) are in the footer; Space rotates.',
+        'Touchez ou glissez une tâche posée pour la reprendre. Annuler (Z) et Repartir (R) sont en bas; Espace fait pivoter.',
       ),
     ],
     tips: [
@@ -330,8 +330,8 @@ export const week: PuzzleDef = {
     const rotBtn = btn(L('Rotate', 'Pivoter'), () => rotate(), 'ghost');
     ctx.controls(
       rotBtn,
-      btn(L('Undo', 'Annuler'), () => undo(), 'ghost'),
-      btn(L('Reset', 'Recommencer'), () => reset(), 'ghost'),
+      undoBtn(() => undo()),
+      restartBtn(() => reset()),
     );
 
     let preview: { k: number; top: number; cells: number[] } | null = null;
@@ -384,15 +384,10 @@ export const week: PuzzleDef = {
       const sc = scoreOf(own, colOf, R, C);
       scoreEl.textContent = String(sc.total);
       bonusEl.textContent = sc.bonus ? L(`bonus +${sc.bonus}`, `boni +${sc.bonus}`) : '';
-      bar.classList.toggle('won', sc.total >= target);
       rotBtn.disabled = over || sel < 0;
       const placed = pos.filter((p) => p >= 0).length;
       const free = N - sc.cells - busy.filter(Boolean).length;
-      ctx.status(
-        over
-          ? L(`Target reached: ${sc.total} points!`, `Cible atteinte : ${sc.total} points!`)
-          : `${L('Tasks', 'Tâches')} ${placed}/${T} · ${L(`${free} h free`, `${free} h libres`)}`,
-      );
+      ctx.status(`${placed} / ${P(T, ['task', 'tasks'], ['tâche', 'tâches'])} · ${P(free, ['h free', 'h free'], ['h libre', 'h libres'])}`);
     };
 
     const save = () => {
@@ -415,7 +410,6 @@ export const week: PuzzleDef = {
       if (sc.total >= target) {
         over = true;
         render();
-        anim(bar, [{ transform: 'scale(1.08)' }, { transform: 'scale(1)' }], 260);
         ctx.solved();
       }
       return true;
@@ -878,11 +872,15 @@ export const week: PuzzleDef = {
       check,
       hint,
       onKey(e) {
-        if (e.key === 'r' || e.key === 'R') {
+        if (e.key === ' ' || e.key === 'e' || e.key === 'E') {
           rotate();
           return true;
         }
-        if (e.key === 'u' || e.key === 'U' || ((e.ctrlKey || e.metaKey) && e.key === 'z')) {
+        if (e.key === 'r' || e.key === 'R') {
+          reset();
+          return true;
+        }
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u' || e.key === 'U') {
           undo();
           return true;
         }

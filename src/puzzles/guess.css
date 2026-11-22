@@ -17,7 +17,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--ink);
+  border: var(--bw) solid var(--ink);
   border-radius: var(--r-cell);
   background: var(--cell);
   font-weight: 700;
@@ -45,6 +45,13 @@
 }
 [data-puzzle='guess'] .pad .key {
   height: 40px;
+}
+[data-puzzle='guess'] .pad .key.back {
+  font-size: 22px;
+}
+[data-puzzle='guess'] .pad .key.wide {
+  flex: 2;
+  font-size: 16px;
 }
 @media (max-height: 760px) {
   [data-puzzle='guess'] .gd {

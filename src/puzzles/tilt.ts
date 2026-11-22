@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, dpad, shake } from '../core/ui';
+import { board, dpad, h, restartBtn, shake, undoBtn } from '../core/ui';
 import { keyDir, onSwipe, type Dir } from './movekit/kit';
 import { BLOCK, fullMask, generate, solve, tilt as tiltBoard, type State } from './tiltkit/engine';
 import './tilt.css';
@@ -151,12 +151,8 @@ export const tilt: PuzzleDef = {
       // Warn when the limit can no longer be met, so Undo still saves the game.
       const sol = history.length ? solveHere() : null;
       const stuck = !!sol && sol.dist > remaining();
-      const moves = P(remaining(), ['move', 'moves'], ['coup', 'coups']);
-      ctx.status(
-        stuck
-          ? `${marblesLeft} · ${moves}${L(': not enough, undo', ' : insuffisant, annulez')}`
-          : `${marblesLeft} · ${P(remaining(), ['move left', 'moves left'], ['coup restant', 'coups restants'])}`,
-      );
+      const movesLeft = P(remaining(), ['move left', 'moves left'], ['coup restant', 'coups restants']);
+      ctx.status(`${marblesLeft} · ${movesLeft}${stuck ? L(' · not enough · undo', ' · insuffisant · annulez') : ''}`);
     };
 
     const move = (dir: Dir) => {
@@ -171,7 +167,6 @@ export const tilt: PuzzleDef = {
       if (st.filled === full) {
         done = true;
         render();
-        ctx.status(`${L('Solved in', 'Réussi en')} ${P(history.length, ['move', 'moves'], ['coup', 'coups'])}`);
         ctx.solved();
         return;
       }
@@ -206,7 +201,7 @@ export const tilt: PuzzleDef = {
         L('Tilt left', 'Incliner vers la gauche'),
       ],
     );
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
+    ctx.controls(undoBtn(undo), restartBtn(reset));
     root.append(grid, arrows);
     render();
 
@@ -310,11 +305,11 @@ export const tilt: PuzzleDef = {
           move(k);
           return true;
         }
-        if (e.key === 'z' || e.key === 'Backspace' || e.key === 'u') {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace' || e.key === 'u') {
           undo();
           return true;
         }
-        if (e.key === 'r') {
+        if (e.key === 'r' || e.key === 'R') {
           reset();
           return true;
         }

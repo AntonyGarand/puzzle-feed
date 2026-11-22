@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import { cellFromPointer, edgeClasses, nb4, tint } from './logickit/kit';
 import { genTiles, rectCells, type Rect } from './logickit/tilesgen';
 import './tiles.css';
@@ -36,8 +36,8 @@ export const tiles: PuzzleDef = {
         'Touchez un rectangle pour l’enlever. Touchez un 1 pour faire un rectangle d’une case.',
       ),
       L(
-        'Rectangles that break the rule are marked. The footer counts the correct ones.',
-        'Les rectangles fautifs sont signalés. Le bas de la carte compte les bons.',
+        'Rectangles that break the rule turn red and count as a mistake. The footer counts the correct ones; Clear wipes the board.',
+        'Les rectangles fautifs deviennent rouges et comptent comme une erreur. Le bas de la carte compte les bons; Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -70,6 +70,8 @@ export const tiles: PuzzleDef = {
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when a drawn rectangle breaks the rule. */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const span = (a: number, b: number): Rect => ({
       r0: Math.min(Math.floor(a / n), Math.floor(b / n)),
@@ -101,12 +103,12 @@ export const tiles: PuzzleDef = {
         const o = owner[i];
         const cls = ['cell', edges[i]];
         if (o >= 0 && !ok[o]) cls.push('err');
-        if (prev && inRect(prev, i)) cls.push('hint');
+        if (prev && inRect(prev, i)) cls.push('pv');
         el.className = cls.join(' ');
         el.setAttribute('style', o >= 0 ? `--rc:${tint(rects[o].k, 45)}` : '');
       });
       const good = ok.filter(Boolean).length;
-      ctx.status(`${good} / ${clueCount} rectangles`);
+      ctx.status(`${good} / ${P(clueCount, ['rectangle', 'rectangles'], ['rectangle', 'rectangles'])}`);
       return owner.every((o) => o >= 0) && ok.every(Boolean);
     };
 
@@ -133,7 +135,9 @@ export const tiles: PuzzleDef = {
           else if (clue[a] === 1) place(span(a, a));
         } else place(span(a, b));
       }
-      if (render() && !done) {
+      const won = render();
+      watch();
+      if (won && !done) {
         done = true;
         ctx.solved();
       }
@@ -183,6 +187,17 @@ export const tiles: PuzzleDef = {
     }
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || !rects.length) return;
+        ctx.touch();
+        rects = [];
+        start = cur = -1;
+        render();
+        watch(false);
+      }),
+    );
     // Guide: shapes that fit only one way, cells only one number can reach.
     let lastKind = '';
     let taught = false;

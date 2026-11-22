@@ -1,7 +1,8 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, PALETTE } from '../core/ui';
+import { board, h, pad, PALETTE, restartBtn, shake, undoBtn } from '../core/ui';
 import './flood.css';
+import './playkit/moves-left.css';
 
 /** Flood from the top-left corner with colour `c`; returns the new grid. */
 function flood(g: number[], n: number, c: number): number[] {
@@ -111,7 +112,6 @@ export const floodPuzzle: PuzzleDef = {
     return L('Flood', 'Inondation');
   },
   category: 'moves',
-  undo: true,
   get rules() {
     return L('Flood the whole board with one colour.', 'Couvrez toute la grille d’une seule couleur.');
   },
@@ -131,8 +131,8 @@ export const floodPuzzle: PuzzleDef = {
         'Le compteur au-dessus de la grille indique combien de coups il vous reste; il devient rouge vers la fin.',
       ),
       L(
-        'Cover the board before the counter reaches 0 to win. The game is lost once more colours are left than moves.',
-        'Couvrez la grille avant que le compteur tombe à 0 pour gagner. La partie est perdue dès qu’il reste plus de couleurs que de coups.',
+        'Cover the board before the counter reaches 0 to win. Once more colours are left than moves, undo (Z) or restart (R).',
+        'Couvrez la grille avant que le compteur tombe à 0 pour gagner. S’il reste plus de couleurs que de coups, annulez (Z) ou repartez (R).',
       ),
     ],
     tips: [
@@ -177,6 +177,9 @@ export const floodPuzzle: PuzzleDef = {
     }
     const limit = greedy + slack;
     let moves = 0;
+    /** Positions before each move or restart, for undo (undo gives the move back). */
+    let hist: { g: number[]; m: number }[] = [];
+    const g0 = g;
 
     const grid = board(n, n, 'flood');
     const cells = g.map((_, i) => {
@@ -184,23 +187,27 @@ export const floodPuzzle: PuzzleDef = {
       grid.append(el);
       return el;
     });
-    const palette = h('div', { class: 'pad' });
-    for (let c = 0; c < k; c++)
-      palette.append(
-        h('button', {
-          type: 'button',
-          class: 'key swatch',
-          style: `--c:${PALETTE[c]}`,
-          'aria-label': L(`colour ${c + 1}`, `couleur ${c + 1}`),
-          onclick: () => choose(c),
-        }),
-      );
+    const palette = pad(
+      Array.from({ length: k }, (_, c) => ({
+        label: '',
+        value: String(c),
+        class: 'swatch',
+        style: `--c:${PALETTE[c]}`,
+        aria: L(`colour ${c + 1}`, `couleur ${c + 1}`),
+      })),
+      (v) => choose(Number(v)),
+    );
 
     // Moves-left counter above the board: big number + a draining bar, red when 2 or fewer remain.
     const leftNum = h('b', { class: 'fl-num' });
     const leftLbl = h('span', { class: 'fl-lbl' });
     const bar = h('i', { class: 'fl-fill' });
-    const head = h('div', { class: 'fl-head' }, h('div', { class: 'fl-left' }, leftNum, leftLbl), h('div', { class: 'fl-bar' }, bar));
+    const head = h(
+      'div',
+      { class: 'fl-head' },
+      h('div', { class: 'fl-left moves-left' }, leftNum, leftLbl),
+      h('div', { class: 'fl-bar' }, bar),
+    );
 
     const render = () => {
       cells.forEach((el, i) => (el.style.background = PALETTE[g[i]]));
@@ -209,24 +216,49 @@ export const floodPuzzle: PuzzleDef = {
       leftLbl.textContent = L(left === 1 ? 'move left' : 'moves left', left < 2 ? 'coup restant' : 'coups restants');
       bar.style.width = `${(100 * left) / limit}%`;
       head.classList.toggle('low', left <= 2);
-      ctx.status(L(`${moves} / ${limit} moves used`, `${moves} / ${limit} coups joués`));
+      // The meter above the board already counts the moves left: the status tracks the area.
+      const size = regionSize(g, n);
+      const tiles = `${size} / ${n * n} ${L('tiles', 'cases')}`;
+      ctx.status(
+        size < n * n && outOfReach(g, n, left)
+          ? L(`${tiles} · too many colours left · undo`, `${tiles} · trop de couleurs restantes · annulez`)
+          : tiles,
+      );
     };
     const choose = (c: number) => {
-      if (c === g[0] || moves >= limit || regionSize(g, n) === n * n) return;
+      if (moves >= limit || regionSize(g, n) === n * n) return;
+      if (c === g[0]) return shake(grid);
       ctx.touch();
+      hist.push({ g, m: moves });
       g = flood(g, n, c);
       moves++;
       render();
       if (regionSize(g, n) === n * n) ctx.solved();
-      else if (moves >= limit || outOfReach(g, n, limit - moves)) {
-        if (moves < limit) ctx.status(L('Too many colours left for your moves', 'Trop de couleurs restantes pour vos coups'));
-        ctx.failed();
-      }
+      else if (moves >= limit) ctx.failed();
     };
-    const sv = ctx.saved as { g?: number[]; moves?: number } | undefined;
-    if (sv?.g?.length === g.length) {
+    const undo = () => {
+      const prev = hist.pop();
+      if (!prev) return;
+      ({ g, m: moves } = prev);
+      render();
+    };
+    /** Back to the starting board with every move back; undoable. */
+    const restart = () => {
+      if (!moves) return;
+      hist.push({ g, m: moves });
+      g = g0;
+      moves = 0;
+      render();
+    };
+    const isBoard = (v: unknown): v is number[] =>
+      Array.isArray(v) && v.length === g.length && v.every((x) => Number.isInteger(x) && x >= 0 && x < k);
+    const sv = ctx.saved as { g?: unknown; moves?: unknown; hist?: unknown } | undefined;
+    const isMoves = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) < limit;
+    if (sv && isBoard(sv.g) && isMoves(sv.moves)) {
       g = sv.g;
-      moves = sv.moves ?? 0;
+      moves = sv.moves;
+      // Older saves had no history: undo then starts from the resumed position.
+      if (Array.isArray(sv.hist)) hist = sv.hist.filter((e): e is { g: number[]; m: number } => isBoard(e?.g) && isMoves(e?.m));
     }
     // ---- Guide ----
     /** Cells of the top-left area. */
@@ -277,7 +309,7 @@ export const floodPuzzle: PuzzleDef = {
       }
       return null;
     };
-    /** Dead end: more moves needed than are left (a proven lower bound). There's no undo, so play on. */
+    /** Dead end: more moves needed than are left (a proven lower bound). Back out with undo. */
     const check = (): Hint | null => {
       const size = regionSize(g, n);
       if (size === n * n || moves >= limit) return null;
@@ -285,23 +317,22 @@ export const floodPuzzle: PuzzleDef = {
       const m = movesNeeded(g, n);
       const want = Math.max(m.colours, m.far);
       if (want <= left) return null;
-      const h0 = hint();
+      const ml = P(left, ['move left', 'moves left'], ['coup restant', 'coups restants']);
       return {
         kind: 'stuck',
         text:
           m.far >= m.colours
             ? L(
-                `You’d need at least ${want} more moves: the outlined tile is ${m.far} colour patches away from your area, and each move crosses only one. Only ${left} ${left === 1 ? 'move is' : 'moves are'} left, so this board is lost.`,
-                `Il vous faudrait au moins ${want} coups de plus : la case encadrée est à ${m.far} zones de couleur de votre zone, et chaque coup n’en franchit qu’une. Il ne reste que ${left} ${left === 1 ? 'coup' : 'coups'} : cette grille est perdue.`,
+                `You’d need at least ${want} more moves: the outlined tile is ${m.far} colour patches away from your area, and each move crosses only one. You have ${ml}, so undo a move.`,
+                `Il vous faudrait au moins ${want} coups de plus : la case encadrée est à ${m.far} zones de couleur de votre zone, et chaque coup n’en franchit qu’une. Il vous reste ${ml} : annulez un coup.`,
               )
             : L(
-                `You’d need at least ${want} more moves: ${m.colours} colours are still outside your area and each takes a move. Only ${left} ${left === 1 ? 'move is' : 'moves are'} left, so this board is lost.`,
-                `Il vous faudrait au moins ${want} coups de plus : ${m.colours} couleurs restent hors de votre zone et chacune coûte un coup. Il ne reste que ${left} ${left === 1 ? 'coup' : 'coups'} : cette grille est perdue.`,
+                `You’d need at least ${want} more moves: ${m.colours} colours are still outside your area and each takes a move. You have ${ml}, so undo a move.`,
+                `Il vous faudrait au moins ${want} coups de plus : ${m.colours} couleurs restent hors de votre zone et chacune coûte un coup. Il vous reste ${ml} : annulez un coup.`,
               ),
         why: m.far >= m.colours ? [cells[m.farCell]] : [],
-        at: h0?.at ?? [],
-        action: L('Play on', 'Continuer'),
-        play: () => h0?.play(),
+        at: [undoEl],
+        play: undo,
       };
     };
     let lastKind = '';
@@ -328,7 +359,7 @@ export const floodPuzzle: PuzzleDef = {
       const grabbed = [...best.reg].filter((i) => !mine.has(i));
       const en = NAMES_EN[best.c],
         fr = NAMES_FR[best.c];
-      const tiles = (m: number) => L(m === 1 ? '1 tile' : `${m} tiles`, m === 1 ? '1 case' : `${m} cases`);
+      const tiles = (m: number) => P(m, ['tile', 'tiles'], ['case', 'cases']);
       const kinds: { kind: string; text: string }[] = [];
       const left = new Set(g.filter((_, i) => !mine.has(i)));
       if (left.size === 1)
@@ -394,13 +425,23 @@ export const floodPuzzle: PuzzleDef = {
       };
     };
 
+    const undoEl = undoBtn(undo);
+    ctx.controls(undoEl, restartBtn(restart));
     root.append(head, grid, palette);
     render();
     return {
-      snapshot: () => ({ g, moves }),
+      snapshot: () => ({ g, moves, hist }),
       check,
       hint,
       onKey(e) {
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') {
+          undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          restart();
+          return true;
+        }
         const v = Number(e.key);
         if (v >= 1 && v <= k) {
           choose(v - 1);

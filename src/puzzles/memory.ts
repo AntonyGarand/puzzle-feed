@@ -1,6 +1,7 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, h, shake } from '../core/ui';
+import './memory.css';
 
 export const memory: PuzzleDef = {
   id: 'memory',
@@ -17,8 +18,8 @@ export const memory: PuzzleDef = {
       L('When the game appears, some tiles light up for a moment.', 'Quand le jeu s’affiche, quelques cases s’allument un instant.'),
       L('Once they go dark, tap every tile that was lit.', 'Une fois éteintes, touchez toutes les cases qui étaient allumées.'),
       L(
-        'A wrong tile is marked and costs one of your three lives (●).',
-        'Une mauvaise case est marquée et vous coûte une de vos trois vies (●).',
+        'A wrong tile is marked and costs one of your three lives (the hearts at the top).',
+        'Une mauvaise case est marquée et vous coûte une de vos trois vies (les cœurs en haut).',
       ),
       L(
         'Lose all three and the tiles you missed are shown. Higher levels mean a bigger grid and more tiles.',
@@ -51,14 +52,16 @@ export const memory: PuzzleDef = {
       grid.append(el);
       return el;
     });
-    const status = () =>
+    const status = () => {
+      ctx.lives(lives, 3);
       ctx.status(
         phase === 'play'
-          ? `${L(`${k - found.size} to find`, `${k - found.size} à trouver`)} · ${'●'.repeat(lives)}${'○'.repeat(3 - lives)}`
+          ? P(k - found.size, ['tile to find', 'tiles to find'], ['case à trouver', 'cases à trouver'])
           : phase === 'show'
             ? L('Remember…', 'Mémorisez…')
             : L('Get ready', 'Préparez-vous'),
       );
+    };
     const reveal = (on: boolean) => targets.forEach((i) => cells[i].classList.toggle('on', on));
 
     const start = () => {
@@ -90,6 +93,7 @@ export const memory: PuzzleDef = {
         ctx.mistake();
         cells[i].classList.add('miss');
         status();
+        if (lives > 0) shake(grid);
         if (lives === 0) {
           phase = 'over';
           targets.forEach((t) => !found.has(t) && cells[t].classList.add('hint'));

@@ -43,10 +43,10 @@
   transition: stroke 0.2s;
 }
 [data-puzzle='pearls'] .pe-svg .pl.b {
-  fill: #111111;
+  fill: var(--coal);
 }
 [data-puzzle='pearls'] .pe-svg .pl.w {
-  fill: #ffffff;
+  fill: var(--paper);
 }
 [data-puzzle='pearls'] .pe-svg .pl.err {
   stroke: var(--bad);
@@ -69,7 +69,4 @@
 }
 [data-puzzle='pearls'] .pe-svg .edge.x .xx {
   display: inline;
-}
-[data-puzzle='pearls'] .pe-board.won .edge.on .ln {
-  stroke: var(--good);
 }

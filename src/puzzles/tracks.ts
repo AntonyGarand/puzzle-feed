@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, countClue, h, s, setCountClue } from '../core/ui';
+import { board, clearBtn, countClue, h, s, setCountClue } from '../core/ui';
 import { solveTracks, tracksDead, type TracksSolve } from './pathkit/tracks-solve';
 import { adjacent, capture, cellAt, stepsToward } from './pathkit/grid';
 import { genTracks } from './pathkit/tracks-gen';
@@ -54,14 +54,14 @@ export const tracks: PuzzleDef = {
   par: (d) => byLevel(d, [35, 60, 90, 140, 210]),
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
-    const P = genTracks(rng, d);
-    const { n, a, b, exitSide } = P;
+    const pz = genTracks(rng, d);
+    const { n, a, b, exitSide } = pz;
     const N = n * n;
-    const given = new Set(P.givens);
+    const given = new Set(pz.givens);
     const trail: number[] = [a];
 
-    const colEls = P.colCounts.map((v) => countClue('clue', v));
-    const rowEls = P.rowCounts.map((v) => countClue('clue', v));
+    const colEls = pz.colCounts.map((v) => countClue('clue', v));
+    const rowEls = pz.rowCounts.map((v) => countClue('clue', v));
     const grid = board(n, n, 'tracks-grid');
     const cells = Array.from({ length: N }, (_, i) => {
       const el = h('div', { class: 'cell', 'data-i': i }, i === a ? 'A' : i === b ? 'B' : '');
@@ -99,8 +99,8 @@ export const tracks: PuzzleDef = {
       const mark = (el: HTMLElement, have: number, want: number) => {
         ok = setCountClue(el, have, want) && ok;
       };
-      rowEls.forEach((el, r) => mark(el, rc[r], P.rowCounts[r]));
-      colEls.forEach((el, c) => mark(el, cc[c], P.colCounts[c]));
+      rowEls.forEach((el, r) => mark(el, rc[r], pz.rowCounts[r]));
+      colEls.forEach((el, c) => mark(el, cc[c], pz.colCounts[c]));
       const ptsList = trail.map(xy);
       ptsList.unshift([0, Math.floor(a / n) + 0.5]);
       const atB = trail[trail.length - 1] === b;
@@ -108,19 +108,16 @@ export const tracks: PuzzleDef = {
       const str = ptsList.map((p) => p.join(',')).join(' ');
       under.setAttribute('points', str);
       over.setAttribute('points', str);
-      const missing = P.givens.filter((g) => !on.has(g)).length;
+      const missing = pz.givens.filter((g) => !on.has(g)).length;
       const len = trail.length;
       ctx.status(
         atB
           ? ok && !missing
             ? L('Done!', 'Terminé!')
             : missing
-              ? L(
-                  `${missing} marked cell${missing > 1 ? 's' : ''} missed`,
-                  missing > 1 ? `${missing} cases marquées oubliées` : '1 case marquée oubliée',
-                )
+              ? P(missing, ['marked cell missed', 'marked cells missed'], ['case marquée oubliée', 'cases marquées oubliées'])
               : L('Counts don’t match', 'Les chiffres ne collent pas')
-          : L(`${len} cells`, `${len} case${len > 1 ? 's' : ''}`),
+          : P(len, ['cell', 'cells'], ['case', 'cases']),
       );
       return atB && ok && !missing;
     };
@@ -178,15 +175,11 @@ export const tracks: PuzzleDef = {
     grid.addEventListener('pointercancel', end);
 
     ctx.controls(
-      btn(
-        L('Clear', 'Effacer'),
-        () => {
-          if (finished) return;
-          trail.length = 1;
-          render();
-        },
-        'ghost',
-      ),
+      clearBtn(() => {
+        if (finished) return;
+        trail.length = 1;
+        render();
+      }),
     );
 
     const sv = ctx.saved as { trail?: unknown } | undefined;
@@ -211,14 +204,14 @@ export const tracks: PuzzleDef = {
     const rowOf = (i: number) => Math.floor(i / n);
     const colOf = (i: number) => i % n;
     let lastReason = '';
-    const R = { n, b, rowCounts: P.rowCounts, colCounts: P.colCounts, givens: P.givens };
+    const R = { n, b, rowCounts: pz.rowCounts, colCounts: pz.colCounts, givens: pz.givens };
     const BUDGET = 2000;
     /** Solver result for the current trail, kept while the trail follows it. */
     let memo: (TracksSolve & { key: string }) | null = null;
     const solveHere = (): TracksSolve => {
       if (memo?.path && trail.every((c, k) => memo!.path![k] === c)) return memo;
       const key = trail.join(',');
-      if (memo?.key !== key) memo = { key, ...solveTracks(R, trail, BUDGET, P.path) };
+      if (memo?.key !== key) memo = { key, ...solveTracks(R, trail, BUDGET, pz.path) };
       return memo;
     };
     const cutTo = (i: number) => {
@@ -230,13 +223,13 @@ export const tracks: PuzzleDef = {
     const checkHint = (): Hint | null => {
       if (finished) return null;
       let k0 = 0;
-      while (k0 < trail.length && trail[k0] === P.path[k0]) k0++;
+      while (k0 < trail.length && trail[k0] === pz.path[k0]) k0++;
       if (k0 === trail.length) return null;
       const res = solveHere();
       if (res.path || res.capped) return null;
       let k = trail.length - 1;
       const t0 = performance.now();
-      while (k > k0 && (performance.now() - t0 > 25 || !solveTracks(R, trail.slice(0, k), BUDGET, P.path).path)) k--;
+      while (k > k0 && (performance.now() - t0 > 25 || !solveTracks(R, trail.slice(0, k), BUDGET, pz.path).path)) k--;
       const dead = tracksDead(R, trail);
       const lineEl = (row: boolean, l: number) => (row ? rowEls[l] : colEls[l]);
       const name = (row: boolean, l: number) => L(`${row ? 'Row' : 'Column'} ${l + 1}`, `${row ? 'La rangée' : 'La colonne'} ${l + 1}`);
@@ -292,7 +285,7 @@ export const tracks: PuzzleDef = {
     };
     const hint = (): Hint | null => {
       if (finished) return null;
-      const sol = solveHere().path ?? P.path;
+      const sol = solveHere().path ?? pz.path;
       let k = 0;
       while (k < trail.length && trail[k] === sol[k]) k++;
       if (k < trail.length) {
@@ -348,7 +341,7 @@ export const tracks: PuzzleDef = {
       // The line we run along fills up: the track has to turn out of it.
       const line = horiz ? rowOf(tail) : colOf(tail);
       const have = horiz ? rc[line] : cc[line];
-      const want = horiz ? P.rowCounts[line] : P.colCounts[line];
+      const want = horiz ? pz.rowCounts[line] : pz.colCounts[line];
       const lineEl = horiz ? rowEls[line] : colEls[line];
       const lineEn = `${horiz ? 'Row' : 'Column'} ${line + 1}`;
       const lineFr = `${horiz ? 'La rangée' : 'La colonne'} ${line + 1}`;
@@ -384,7 +377,7 @@ export const tracks: PuzzleDef = {
       if (tail !== b && !wall) {
         const cross = horiz ? colOf(ahead) : rowOf(ahead);
         const cHave = horiz ? cc[cross] : rc[cross];
-        const cWant = horiz ? P.colCounts[cross] : P.rowCounts[cross];
+        const cWant = horiz ? pz.colCounts[cross] : pz.rowCounts[cross];
         const cEl = horiz ? colEls[cross] : rowEls[cross];
         const cEn = `${horiz ? 'Column' : 'Row'} ${cross + 1}`;
         const cFr = `${horiz ? 'colonne' : 'rangée'} ${cross + 1}`;
@@ -435,8 +428,8 @@ export const tracks: PuzzleDef = {
                 `Le tracé entre par A. ${lineFr} demande ${want} cases : partez ${dirFr} à partir de A.`,
               )
             : L(
-                `${lineEn} still needs ${left} cell${left > 1 ? 's' : ''}: go ${dirEn}, keeping the other counts in check.`,
-                `${lineFr} demande encore ${left} case${left > 1 ? 's' : ''} : allez ${dirFr} en surveillant les autres chiffres.`,
+                `${lineEn} still needs ${P(left, ['cell', 'cells'], ['case', 'cases'])}: go ${dirEn}, keeping the other counts in check.`,
+                `${lineFr} demande encore ${P(left, ['cell', 'cells'], ['case', 'cases'])} : allez ${dirFr} en surveillant les autres chiffres.`,
               ),
         why: k === 1 ? [cells[a], lineEl] : [lineEl],
         at,

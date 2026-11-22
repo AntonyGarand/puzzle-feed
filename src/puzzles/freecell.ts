@@ -1,7 +1,7 @@
 import './freecell.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { btn, shake } from '../core/ui';
+import { restartBtn, shake, undoBtn } from '../core/ui';
 import { cap, cardEl, elAt, fan, isRed, label, leCard, pileEl, pilesEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
 import { autoF, bestDestF, genF, moveF, pickedF, searchF, solveF, wonF, type FMove, type FState } from './cardkit/freecell';
 import { bindTable, History } from './cardkit/table';
@@ -50,8 +50,8 @@ export const freecell: PuzzleDef = {
         'Vous pouvez déplacer une suite ordonnée d’un coup s’il y a assez de place : cellules libres + 1, doublé par colonne vide.',
       ),
       L(
-        'Cards that are no longer needed go home on their own. Undo takes back a move (Z or Backspace on a keyboard).',
-        'Les cartes devenues inutiles se rangent toutes seules. Annuler reprend un coup (Z ou Retour arrière au clavier).',
+        'Cards that are no longer needed go home on their own. Undo takes back a move (Z or Backspace on a keyboard); Restart deals the same game again (R).',
+        'Les cartes devenues inutiles se rangent toutes seules. Annuler reprend un coup (Z ou Retour arrière au clavier); Repartir redonne la même partie (R).',
       ),
     ],
     tips: [
@@ -67,6 +67,7 @@ export const freecell: PuzzleDef = {
     const { root, rng, difficulty: d } = ctx;
     let s = genF(d, rng);
     autoF(s);
+    const init = structuredClone(s);
     const hist = new History<FState>(80);
     const sv = ctx.saved as { s?: unknown; hist?: unknown } | undefined;
     if (sv && validState(sv.s) && sv.s.cells.length === s.cells.length) {
@@ -89,22 +90,17 @@ export const freecell: PuzzleDef = {
       const k = keyOf(s);
       if (plan?.keys.includes(k)) doomed = false;
       else {
-        if (!dead.has(k)) dead.set(k, solveF(s, 1500, true) === 'dead');
+        // No legal move at all is a dead end too (undo can still save it).
+        if (!dead.has(k)) dead.set(k, !hasMove() || solveF(s, 1500, true) === 'dead');
         doomed = dead.get(k)!;
       }
     };
 
     const status = () => {
       const home = s.found.reduce((a, b) => a + b, 0);
-      if (doomed) {
-        ctx.status(
-          `${L('Home', 'Fondations')} ${home}/52 · ${L('No way to win from here · Undo or skip', 'Impossible de gagner d’ici · Annulez ou passez')}`,
-        );
-        return;
-      }
-      ctx.status(
-        `${L('Home', 'Fondations')} ${home}/52 · ${L('Moves', 'Coups')} ${s.moves}${nc < 4 ? ` · ${P(nc, ['cell', 'cells'], ['cellule', 'cellules'])}` : ''}`,
-      );
+      const head = `${L('Home', 'Fondations')} ${home} / 52 · ${P(s.moves, ['move', 'moves'], ['coup', 'coups'])}`;
+      if (doomed) ctx.status(`${head} · ${L('no way to win from here · undo', 'impossible de gagner d’ici · annulez')}`);
+      else ctx.status(`${head}${nc < 4 ? ` · ${P(nc, ['cell', 'cells'], ['cellule', 'cellules'])}` : ''}`);
     };
 
     const render = () => {
@@ -146,14 +142,7 @@ export const freecell: PuzzleDef = {
       render();
       if (wonF(s)) {
         over = true;
-        ctx.status(L(`All home in ${s.moves} moves`, `Tout est rangé en ${P(s.moves, ['coup', 'coups'], ['coup', 'coups'])}`));
         ctx.solved();
-        return;
-      }
-      if (!hasMove()) {
-        over = true;
-        ctx.status(L('No moves left', 'Aucun coup possible'));
-        ctx.failed();
         return;
       }
       judge();
@@ -192,7 +181,9 @@ export const freecell: PuzzleDef = {
         if (!moveF(s, p, i, dest, true)) {
           const n = pickedF(s, p, i)?.length ?? 0;
           if (n > 1 && to[0] === 't')
-            ctx.status(L(`Not enough free space to move ${n} cards`, `Pas assez d’espace libre pour déplacer ${n} cartes`));
+            ctx.status(
+              `${L('Not enough free space to move', 'Pas assez d’espace libre pour déplacer')} ${P(n, ['card', 'cards'], ['carte', 'cartes'])}`,
+            );
           return false;
         }
         go(p, i, dest);
@@ -210,7 +201,19 @@ export const freecell: PuzzleDef = {
       judge();
       status();
     };
-    ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'));
+    /** Deal the same game again (undoable). */
+    const restart = () => {
+      if (over || JSON.stringify(s) === JSON.stringify(init)) return;
+      ctx.touch();
+      hist.push(s);
+      s = structuredClone(init);
+      render();
+      judge();
+      status();
+    };
+    /** Undo the last move, or deal the same game again when there is nothing to undo. */
+    const backOut = () => (hist.size ? undo() : restart());
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     root.append(table);
     render();
     if (sv) judge();
@@ -379,8 +382,8 @@ export const freecell: PuzzleDef = {
               'Impossible de gagner d’ici : toutes les suites de coups s’épuisent avant que les fondations soient complètes. Annulez.',
             ),
         at: pilesEl(table, 'f'),
-        action: L('Undo', 'Annuler'),
-        play: undo,
+        action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+        play: backOut,
       };
     };
 
@@ -389,11 +392,11 @@ export const freecell: PuzzleDef = {
       check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
-        if (e.key === 'z' || e.key === 'Backspace') {
-          undo();
-          return true;
-        }
-        return false;
+        const k = e.key.toLowerCase();
+        if (k === 'z' || k === 'backspace') undo();
+        else if (k === 'r') restart();
+        else return false;
+        return true;
       },
     };
   },

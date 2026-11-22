@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h } from '../core/ui';
+import { board, clearBtn, h } from '../core/ui';
 import { applyOp, canFinish, evaluate, genFactory, type Op } from './playkit/factory-gen';
 import './factory.css';
 
@@ -40,7 +40,7 @@ export const factory: PuzzleDef = {
       ),
       L(
         'Tap a placed tile to send it back; drag it to move it. Clear empties the board.',
-        'Touchez une tuile posée pour la renvoyer au bac; glissez-la pour la déplacer. Vider libère tout.',
+        'Touchez une tuile posée pour la renvoyer au bac; glissez-la pour la déplacer. Effacer libère tout.',
       ),
       L(
         'The small number in a cell is the value leaving it. An output turns green when it matches; ✕ means the number broke.',
@@ -207,8 +207,8 @@ export const factory: PuzzleDef = {
       g.style.left = `${e.clientX - g.offsetWidth / 2}px`;
       g.style.top = `${e.clientY - g.offsetHeight / 2}px`;
       const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest?.('.fx-slot');
-      grid.querySelectorAll('.fx-slot.hint').forEach((el) => el !== over && el.classList.remove('hint'));
-      over?.classList.add('hint');
+      grid.querySelectorAll('.fx-slot.fx-over').forEach((el) => el !== over && el.classList.remove('fx-over'));
+      over?.classList.add('fx-over');
       e.preventDefault();
     };
     const onUp = (e: PointerEvent) => {
@@ -221,7 +221,7 @@ export const factory: PuzzleDef = {
       if (!g.moved) return;
       g.ghost?.remove();
       keys[g.tile].classList.remove('lifted');
-      grid.querySelectorAll('.fx-slot.hint').forEach((el) => el.classList.remove('hint'));
+      grid.querySelectorAll('.fx-slot.fx-over').forEach((el) => el.classList.remove('fx-over'));
       swallow = true;
       setTimeout(() => (swallow = false), 350);
       const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest?.<HTMLElement>('.fx-slot');
@@ -238,16 +238,12 @@ export const factory: PuzzleDef = {
     };
 
     ctx.controls(
-      btn(
-        L('Clear', 'Vider'),
-        () => {
-          if (done) return;
-          place.fill(-1);
-          sel = -1;
-          render();
-        },
-        'ghost',
-      ),
+      clearBtn(() => {
+        if (done) return;
+        place.fill(-1);
+        sel = -1;
+        render();
+      }),
     );
 
     // ---- resume ----

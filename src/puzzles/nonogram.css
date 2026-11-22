@@ -1,3 +1,66 @@
+[data-puzzle='nonogram'] {
+  --accent: var(--p2);
+}
+
+/* Base styles (moved from styles.css). */
+[data-puzzle='nonogram'] .nono {
+  display: grid;
+  grid-template-columns: auto var(--board);
+  grid-template-rows: auto auto;
+  gap: 8px;
+  padding: 10px 10px 10px 8px;
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  --board: calc(var(--fit, 380px) * 0.8);
+}
+[data-puzzle='nonogram'] .nono .cols {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  column-gap: var(--gap);
+  align-items: end;
+}
+[data-puzzle='nonogram'] .nono .rows {
+  display: grid;
+  grid-template-rows: repeat(var(--cols), 1fr);
+  row-gap: var(--gap);
+}
+[data-puzzle='nonogram'] .clue {
+  font-size: clamp(11px, calc(var(--board) / var(--cols) * 0.36), 16px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+[data-puzzle='nonogram'] .clue.col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  padding: 3px 0;
+}
+[data-puzzle='nonogram'] .clue.row {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 5px;
+}
+[data-puzzle='nonogram'] .clue.done {
+  opacity: 0.3;
+}
+[data-puzzle='nonogram'] .nono-grid {
+  touch-action: none;
+  padding: 0;
+}
+[data-puzzle='nonogram'] .nono-grid .cell {
+  cursor: pointer;
+  box-shadow: none;
+  border-radius: 3px;
+}
+[data-puzzle='nonogram'] .nono-grid .cell.on {
+  background: var(--ink);
+}
+
 [data-puzzle='nonogram'] .nono-grid {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -8,22 +71,6 @@
   outline-offset: 1px;
   z-index: 1;
 }
-/* long-press progress: a ring closes in while holding, then the cell turns into ✕ */
-[data-puzzle='nonogram'] .nono-grid .cell.lp::before {
-  content: '';
-  position: absolute;
-  inset: 14%;
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  animation: nono-press 0.35s linear forwards;
-}
-@keyframes nono-press {
-  from {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(0.6);
-    opacity: 1;
-  }
+[data-puzzle='nonogram'] .clue.err {
+  color: var(--bad);
 }

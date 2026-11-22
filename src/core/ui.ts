@@ -222,3 +222,58 @@ export function bulbIcon(cls = 'icon') {
     s('path', { d: 'M10 22h4' }),
   );
 }
+
+/*
+ * Standard footer actions. Every game uses these (never a hand-written label) so the same action has the same
+ * name, look and order everywhere: Undo, then Restart (back to the starting position) or Clear (wipe drawn
+ * marks when there's no move history). Pass them to `ctx.controls()` after any game-specific button.
+ */
+/** Undo/Annuler (ghost). Keyboard: Z or Backspace. */
+export const undoBtn = (onclick: () => void) => btn(L('Undo', 'Annuler'), onclick, 'ghost');
+/**
+ * A ghost button that asks for a second tap before running `onclick` (the label turns into a question
+ * for 3 s). Used for actions that throw progress away, so a stray tap never wipes a board.
+ */
+function confirmBtn(label: string, ask: string, onclick: () => void): HTMLButtonElement {
+  let timer = 0;
+  const reset = () => {
+    clearTimeout(timer);
+    timer = 0;
+    el.textContent = label;
+    el.classList.remove('danger');
+  };
+  const el = btn(
+    label,
+    () => {
+      if (timer) {
+        reset();
+        onclick();
+        return;
+      }
+      el.textContent = ask;
+      el.classList.add('danger');
+      timer = window.setTimeout(reset, 3000);
+    },
+    'ghost',
+  );
+  el.addEventListener('blur', reset);
+  return el;
+}
+/** Restart/Repartir (ghost, tap twice): back to the starting position. Keyboard: R. */
+export const restartBtn = (onclick: () => void) => confirmBtn(L('Restart', 'Repartir'), L('Restart?', 'Repartir ?'), onclick);
+/** Clear/Effacer (ghost, tap twice): wipe every mark the player drew. */
+export const clearBtn = (onclick: () => void) => confirmBtn(L('Clear', 'Effacer'), L('Clear?', 'Effacer ?'), onclick);
+
+/**
+ * Counts a mistake when a player's move breaks a visible rule: call the returned function right after
+ * rendering a move, and it calls `onMistake` when the board shows more `.err` elements than before. Pass
+ * `false` to resync without counting (restore, undo, hint replays that go through other paths).
+ */
+export function ruleBreaks(boardEl: Element, onMistake: () => void): (count?: boolean) => void {
+  let last = boardEl.querySelectorAll('.err').length;
+  return (count = true) => {
+    const n = boardEl.querySelectorAll('.err').length;
+    if (count && n > last) onMistake();
+    last = n;
+  };
+}

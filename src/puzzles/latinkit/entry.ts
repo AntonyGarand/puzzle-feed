@@ -1,7 +1,7 @@
 import './kit.css';
 import { L, P } from '../../core/i18n';
 import type { PuzzleCtx, PuzzleInstance } from '../../core/types';
-import { board, h, pad } from '../../core/ui';
+import { board, clearBtn, h, pad } from '../../core/ui';
 import { directPlace, keyDigit, makeNotes, notesHelpStep } from '../sudokukit/notes';
 
 export interface LatinEntryOpts {
@@ -133,6 +133,23 @@ export function latinEntry(o: LatinEntryOpts): PuzzleInstance {
   }
   if (typeof saved?.sel === 'number' && Number.isInteger(saved.sel) && saved.sel >= -1 && saved.sel < size) sel = saved.sel;
 
+  /** Clear: wipe every entry and note, keeping the givens. */
+  const clear = () => {
+    if (done) return;
+    let any = false;
+    vals.forEach((v, i) => {
+      if (!given[i] && (v > 0 || notes.bits[i])) {
+        vals[i] = 0;
+        notes.clear(i);
+        any = true;
+      }
+    });
+    if (!any) return;
+    ctx.touch();
+    render();
+  };
+  ctx.controls(clearBtn(clear));
+
   const padEl = pad(keys, (v) => (v === 'n' ? notes.padKey() : v === '0' ? erase() : input(Number(v))));
   notes.bindPad(padEl);
   ctx.root.append(grid, padEl);
@@ -184,8 +201,8 @@ export function latinEntrySteps(): string[] {
       'Touchez une case, puis un chiffre du pavé. Touchez le même chiffre, ou ✕, pour l’effacer.',
     ),
     L(
-      'Keyboard: arrow keys move, digits fill, Backspace erases. Cells breaking a rule turn red.',
-      'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les cases fautives passent au rouge.',
+      'Keyboard: arrow keys move, digits fill, Backspace erases. Cells breaking a rule turn red. Clear wipes all your numbers.',
+      'Au clavier : flèches pour bouger, chiffres pour remplir, Retour arrière pour effacer. Les cases fautives passent au rouge. Effacer retire tous vos chiffres.',
     ),
     notesHelpStep(),
   ];
@@ -193,9 +210,10 @@ export function latinEntrySteps(): string[] {
 
 /**
  * Tap / long-press on a button. A tap runs `tap` (through click, so keyboard and tests work);
- * holding ~0.4 s (or right-clicking) runs `long` instead. `long` should be idempotent.
+ * holding ~0.4 s (or right-clicking) runs `long` instead. `long` should be idempotent. While holding, the
+ * button shows the shared long-press ring (`.lp`) when `canHold()` says the hold would do something.
  */
-export function pressable(el: HTMLElement, tap: () => void, long: () => void) {
+export function pressable(el: HTMLElement, tap: () => void, long: () => void, canHold: () => boolean = () => true) {
   let timer = 0,
     fired = false,
     x = 0,
@@ -203,6 +221,7 @@ export function pressable(el: HTMLElement, tap: () => void, long: () => void) {
   const cancel = () => {
     clearTimeout(timer);
     timer = 0;
+    el.classList.remove('lp');
   };
   el.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
@@ -210,8 +229,10 @@ export function pressable(el: HTMLElement, tap: () => void, long: () => void) {
     x = e.clientX;
     y = e.clientY;
     cancel();
+    if (canHold()) el.classList.add('lp');
     timer = window.setTimeout(() => {
       timer = 0;
+      el.classList.remove('lp');
       fired = true;
       long();
       try {

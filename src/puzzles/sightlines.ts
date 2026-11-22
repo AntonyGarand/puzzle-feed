@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import { nb4 } from './gridkit/lightup';
 import { cutCells, genSightlines, rays, reach, sees } from './gridkit/sightlines';
 import './sightlines.css';
@@ -45,8 +45,8 @@ export const sightlines: PuzzleDef = {
         'Touchez une case pour la noircir, encore pour un point (sûrement blanche), puis une autre fois pour l’effacer. Glissez pour répéter votre premier changement; appuyez longuement (ou clic droit) pour un point.',
       ),
       L(
-        'Keyboard: arrows move, Space cycles, X dots, Delete clears. Red marks a broken rule: touching shades, an impossible number or a cut-off area.',
-        'Au clavier : flèches pour bouger, Espace pour changer, X pour un point, Suppr pour effacer. Le rouge signale une règle brisée : noires qui se touchent, nombre impossible ou zone coupée.',
+        'Keyboard: arrows move, Space cycles, X dots, Delete clears. Red marks a broken rule: touching shades, an impossible number or a cut-off area. Clear wipes the board.',
+        'Au clavier : flèches pour bouger, Espace pour changer, X pour un point, Suppr pour effacer. Le rouge signale une règle brisée : noires qui se touchent, nombre impossible ou zone coupée. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -82,6 +82,8 @@ export const sightlines: PuzzleDef = {
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when shading breaks a rule (checked when the stroke ends; dots never count). */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     /** -1 undecided, 0 white (number or dot), 1 shaded. */
     const at = (i: number) => (given[i] || st[i] === 2 ? 0 : st[i] === 1 ? 1 : -1);
@@ -211,6 +213,7 @@ export const sightlines: PuzzleDef = {
     const end = (e: PointerEvent) => {
       if (stroke && e.pointerId !== stroke.id) return;
       cancelPress();
+      if (stroke) watch(stroke.to === 1);
       stroke = null;
     };
     window.addEventListener('pointerup', end);
@@ -222,10 +225,23 @@ export const sightlines: PuzzleDef = {
     if (typeof c0 === 'number' && Number.isInteger(c0) && c0 >= -1 && c0 < st.length) cur = c0;
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
 
     // Guide: human deductions from the numbers, shades and dots on the board, varied step to step.
     const els = (ix: number[]) => ix.map((j) => cells[j]);
-    const fill = (ix: number[], v: number) => () => ix.forEach((j) => set(j, v));
+    const fill = (ix: number[], v: number) => () => {
+      ix.forEach((j) => set(j, v));
+      watch(v === 1);
+    };
     const empty = (i: number) => !given[i] && st[i] === 0;
     let last = '';
     const taught = { shade: false, dot: false };
@@ -566,6 +582,7 @@ export const sightlines: PuzzleDef = {
                 : -1;
         if (next < 0) return false;
         set(cur, next);
+        watch(next === 1);
         return true;
       },
       destroy() {

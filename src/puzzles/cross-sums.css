@@ -7,14 +7,14 @@
   --cs-fg: var(--cell);
 }
 :root[data-theme='dark'] [data-puzzle='cross-sums'] {
-  --cs-block: color-mix(in srgb, var(--bg) 50%, #000);
+  --cs-block: color-mix(in srgb, var(--bg) 50%, var(--shade));
   --cs-clue: color-mix(in srgb, var(--accent) 16%, var(--bg));
   --cs-line: color-mix(in srgb, var(--fg) 22%, transparent);
   --cs-fg: var(--fg);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) [data-puzzle='cross-sums'] {
-    --cs-block: color-mix(in srgb, var(--bg) 50%, #000);
+    --cs-block: color-mix(in srgb, var(--bg) 50%, var(--shade));
     --cs-clue: color-mix(in srgb, var(--accent) 16%, var(--bg));
     --cs-line: color-mix(in srgb, var(--fg) 22%, transparent);
     --cs-fg: var(--fg);

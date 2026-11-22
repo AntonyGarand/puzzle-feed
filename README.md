@@ -1,6 +1,6 @@
 # puzzle feed
 
-An endless, scroll-snapping feed of short puzzles: 67 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
+An endless, scroll-snapping feed of short puzzles: 80 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
 
 **Play:** https://puzzle.garand.dev — installable, and works fully offline once loaded (it's a PWA; a banner offers new versions).
 
@@ -15,18 +15,18 @@ npm run dev           # dev server on http://localhost:5180 (also on your LAN)
 npm run check         # everything CI runs: fmt:check, lint, typecheck, knip, test
 ```
 
-| Command                             | What it does                                                                                                                |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev` / `build` / `preview` | Vite dev server, production build into `dist/`, preview of the build                                                        |
-| `npm run fmt` / `fmt:check`         | Format with [oxfmt](https://oxc.rs)                                                                                         |
-| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs) (warnings fail)                                                                          |
-| `npm run typecheck`                 | Type-check with [tsrs](https://github.com/oxc-project/tsrs), a Rust port of the TypeScript 7 compiler                       |
-| `npm run knip`                      | Unused files, exports and dependencies                                                                                      |
-| `npm test` / `test:watch`           | Vitest: generation speed, resume round-trip, i18n, auto-levelling; then the hint-button suites (`test/hints*`) on their own |
-| `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                                        |
-| `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)                        |
-| `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                                      |
-| `node scripts/og-image.mjs`         | Re-renders `public/og.png`, the link-preview image (needs Chrome installed)                                                 |
+| Command                             | What it does                                                                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev` / `build` / `preview` | Vite dev server, production build into `dist/`, preview of the build                                                                           |
+| `npm run fmt` / `fmt:check`         | Format with [oxfmt](https://oxc.rs)                                                                                                            |
+| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs) (warnings fail)                                                                                             |
+| `npm run typecheck`                 | Type-check with [tsrs](https://github.com/oxc-project/tsrs), a Rust port of the TypeScript 7 compiler                                          |
+| `npm run knip`                      | Unused files, exports and dependencies                                                                                                         |
+| `npm test` / `test:watch`           | Vitest: generation speed, resume round-trip, i18n, auto-levelling, consistency rules; then the hint-button suites (`test/hints*`) on their own |
+| `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                                                           |
+| `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)                                           |
+| `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                                                         |
+| `node scripts/og-image.mjs`         | Re-renders `public/og.png`, the link-preview image (needs Chrome installed)                                                                    |
 
 The same commands are available as mise tasks (`mise run check`, `mise run fix`, …).
 
@@ -41,24 +41,24 @@ src/
   core/              feed, card, store (profile/stats/auto-levelling), saves, i18n, help dialog, ui helpers
   pages/             Games, single-game view, Profile, Settings
   puzzles/<id>.ts    one game per file, auto-registered (see docs/ADDING_GAMES.md)
-  puzzles/*kit/      shared engines: sudokukit, logickit, pathkit, movekit, cardkit, chesskit, wordkit
+  puzzles/*kit/      shared engines (sudokukit, latinkit, logickit, gridkit, pathkit, movekit, pushkit, playkit, cardkit, chesskit, wordkit, …)
 test/                vitest suites (happy-dom)
 scripts/             Playwright audit + screenshot tools (use your installed Chrome)
 ```
 
 ## Games
 
-There are 67 games in seven categories (`src/core/categories.ts`):
+There are 80 games in seven categories (`src/core/categories.ts`). The 22 marked _(opt-in)_ start switched off in the mixed feed; turn them on in Settings, or play them from the Games tab.
 
-- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box, Logic grid, Hidden rule
-- **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze, Mow
-- **Numbers:** Target, Guess, 2048, Factory
-- **Words:** Anagram, Word Guess, Hunt, Tower, Word Cover (English and French word lists)
-- **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse, Worms, Tether, Echo
-- **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2)
+- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box; _(opt-in)_ Busy Week, Hidden Rule, Logic Grid, Minefield Mower, Shape Mines, Tetrominoes
+- **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze; _(opt-in)_ Mow, Zigzag
+- **Numbers:** Target, Merge; _(opt-in)_ Guess, Factory
+- **Words:** Anagram, Word Guess, Hunt, Tower; _(opt-in)_ Word Cover
+- **Moves:** Slide, Unblock, Push, Gems, Arrange, Arrows, Blocks, Flood, Pegs, Collapse; _(opt-in)_ Copy Paste, Counted Push, Echo, Ice Push, Tether, Tilt, Wall Rush, Worms, Wrap Push
+- **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2); _(opt-in)_ Capture Chess, Ladders
 - **Memory & eyes:** Memory, Pairs
 
-Every game is generated from a seed, has five levels (Easy to Master) and a how-to-play tutorial behind its "?" button.
+Every game is generated from a seed, has five levels (Easy to Master), a how-to-play tutorial behind its "?" button and an in-game hint button. All games share the same controls, penalties and rewards (see [docs/ADDING_GAMES.md](docs/ADDING_GAMES.md#consistency-rules-actions-punishments-rewards)).
 
 **Word data:**
 

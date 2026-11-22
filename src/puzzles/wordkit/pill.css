@@ -1,0 +1,10 @@
+/* Word chips shared by the letter-grid word games (found words, words left). */
+:is([data-puzzle='cover'], [data-puzzle='hunt']) .word-pill {
+  padding: 1px 9px;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}

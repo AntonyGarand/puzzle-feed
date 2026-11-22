@@ -7,7 +7,7 @@
   display: flex;
   justify-content: center;
 }
-.beehive {
+[data-puzzle='beehive'] .beehive {
   display: block;
   width: 100%;
   max-height: var(--board);
@@ -15,44 +15,44 @@
   user-select: none;
   overflow: visible;
 }
-.beehive .hex {
+[data-puzzle='beehive'] .beehive .hex {
   cursor: pointer;
 }
-.beehive .hex polygon {
+[data-puzzle='beehive'] .beehive .hex polygon {
   fill: var(--cell);
   stroke: var(--ink);
   stroke-width: 0.09;
   stroke-linejoin: round;
   transition: fill 0.12s;
 }
-.beehive .hex text {
+[data-puzzle='beehive'] .beehive .hex text {
   fill: var(--fg);
   font-weight: 700;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
-.beehive .hex.given polygon {
+[data-puzzle='beehive'] .beehive .hex.given polygon {
   fill: var(--cell-alt);
   stroke-width: 0.14;
 }
-.beehive .hex.placed polygon {
+[data-puzzle='beehive'] .beehive .hex.placed polygon {
   fill: var(--accent-soft);
 }
-.beehive .hex.given.placed polygon {
+[data-puzzle='beehive'] .beehive .hex.given.placed polygon {
   fill: color-mix(in srgb, var(--accent) 55%, var(--cell));
 }
-.beehive .hex.end polygon {
+[data-puzzle='beehive'] .beehive .hex.end polygon {
   fill: var(--accent);
   stroke-width: 0.16;
 }
-.beehive .hex.end text {
+[data-puzzle='beehive'] .beehive .hex.end text {
   fill: var(--on-tone);
 }
-.beehive .hex.next polygon {
+[data-puzzle='beehive'] .beehive .hex.next polygon {
   stroke-dasharray: 0.22 0.14;
   fill: color-mix(in srgb, var(--accent) 12%, var(--cell));
 }
-.beehive .hex:not(.given):not(.placed) text {
+[data-puzzle='beehive'] .beehive .hex:not(.given):not(.placed) text {
   fill: color-mix(in srgb, var(--accent) 70%, var(--fg));
 }

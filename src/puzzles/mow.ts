@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, shake } from '../core/ui';
+import { board, h, shake } from '../core/ui';
 import { nb4, nb8 } from './logickit/kit';
 import { explain, explainCount } from './sweepkit/explain';
 import { wrongFlag } from './sweepkit/check';
@@ -40,8 +40,8 @@ export const mow: PuzzleDef = {
         'Touchez de l’herbe près de la pelouse pour la tondre : la tondeuse s’y rend par les cases tondues. Balayez ou utilisez les flèches pour un pas.',
       ),
       L(
-        'Long-press (or right-click) grass to flag a mine, or turn on Flag mode so taps plant flags. The mower never drives onto a flag.',
-        'Appuyez longuement (ou clic droit) sur l’herbe pour marquer une mine, ou activez le mode Drapeau. La tondeuse ne roule jamais sur un drapeau.',
+        'Long-press (or right-click, or press F) grass to flag a mine. The mower never drives onto a flag.',
+        'Appuyez longuement (ou clic droit, ou touche F) sur l’herbe pour marquer une mine. La tondeuse ne roule jamais sur un drapeau.',
       ),
     ],
     tips: [
@@ -75,7 +75,6 @@ export const mow: PuzzleDef = {
     mown[start] = true;
     let pos = start;
     let lives = maxLives;
-    let flagMode = false;
     let over: 'won' | 'lost' | null = null;
 
     const grid = board(cols, rows, 'sw-board mw-board');
@@ -84,7 +83,6 @@ export const mow: PuzzleDef = {
       grid.append(el);
       return el;
     });
-    const modeBtn = btn(L('Flag mode', 'Mode drapeau'), () => setMode(!flagMode), 'ghost');
 
     const render = () => {
       cells.forEach((el, i) => {
@@ -102,17 +100,9 @@ export const mow: PuzzleDef = {
         el.className = cls;
         if (el.textContent !== txt) el.textContent = txt;
       });
-      modeBtn.className = `btn ${flagMode ? 'primary' : 'ghost'}`;
-      modeBtn.setAttribute('aria-pressed', String(flagMode));
       const known = flag.filter(Boolean).length + boom.filter(Boolean).length;
-      ctx.status(
-        `${'♥'.repeat(Math.max(0, lives))} · ${P(total - known, ['mine left', 'mines left'], ['mine restante', 'mines restantes'])}`,
-      );
-    };
-
-    const setMode = (on: boolean) => {
-      flagMode = on;
-      render();
+      ctx.lives(Math.max(0, lives), maxLives);
+      ctx.status(P(total - known, ['mine left', 'mines left'], ['mine restante', 'mines restantes']));
     };
 
     const toggleFlag = (i: number) => {
@@ -153,11 +143,10 @@ export const mow: PuzzleDef = {
       render();
     };
 
-    /** A tap on tile `i`: drive over the lawn, mow a neighbouring tile, or (flag mode) flag it. */
+    /** A tap on tile `i`: drive over the lawn or mow a neighbouring tile. */
     const go = (i: number) => {
       if (over) return;
       ctx.touch();
-      if (flagMode && !mown[i]) return toggleFlag(i);
       if (i === pos) return;
       if (mown[i]) {
         pos = i;
@@ -190,7 +179,7 @@ export const mow: PuzzleDef = {
       go(i);
     };
 
-    const sv = ctx.saved as { pos?: unknown; mown?: unknown; flag?: unknown; boom?: unknown; mode?: unknown } | undefined;
+    const sv = ctx.saved as { pos?: unknown; mown?: unknown; flag?: unknown; boom?: unknown } | undefined;
     if (sv && typeof sv === 'object') {
       const idx = (v: unknown) => (Array.isArray(v) ? v.filter((k): k is number => Number.isInteger(k) && k >= 0 && k < N) : []);
       for (const k of idx(sv.mown)) if (!mine[k]) mown[k] = true;
@@ -198,10 +187,8 @@ export const mow: PuzzleDef = {
       for (const k of idx(sv.flag)) if (!mown[k] && !boom[k]) flag[k] = true;
       lives = Math.max(1, maxLives - boom.filter(Boolean).length);
       if (typeof sv.pos === 'number' && mown[sv.pos]) pos = sv.pos;
-      flagMode = sv.mode === true;
     }
     root.append(grid);
-    ctx.controls(modeBtn);
     render();
 
     let lastRule = -1;
@@ -212,7 +199,6 @@ export const mow: PuzzleDef = {
       const known = (j: number) => flag[j] || boom[j];
       const act: [string, string] = ['mow', 'Tondez'];
       const mowAll = (ix: number[]) => () => {
-        if (flagMode) setMode(false);
         for (let again = true; again;) {
           again = false;
           for (const j of ix)
@@ -289,7 +275,7 @@ export const mow: PuzzleDef = {
 
     const list = (a: boolean[]) => a.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
     return {
-      snapshot: () => ({ pos, mown: list(mown), flag: list(flag), boom: list(boom), mode: flagMode }),
+      snapshot: () => ({ pos, mown: list(mown), flag: list(flag), boom: list(boom) }),
       hint,
       check,
       onKey(e) {

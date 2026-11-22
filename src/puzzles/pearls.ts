@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { h, s } from '../core/ui';
+import { clearBtn, h, s } from '../core/ui';
 import { broken, deductions, genPearls, isSolved, pearlOk, pearlOptions, type Kind, type Move } from './gridkit/pearls';
 import { loopFault } from './gridkit/loopcheck';
 import { capture, stepsToward } from './pathkit/grid';
@@ -44,8 +44,8 @@ export const pearls: PuzzleDef = {
         'Glissez de case en case pour tracer; commencez sur une ligne pour effacer plutôt.',
       ),
       L(
-        'Tap between two cells to cycle line, ✕ (surely no line) and empty. Press and hold (or right-click) for a ✕ right away.',
-        'Touchez entre deux cases pour alterner ligne, ✕ (aucune ligne) et vide. Maintenez le doigt (ou faites un clic droit) pour un ✕ directement.',
+        'Tap between two cells to cycle line, ✕ (surely no line) and empty. Press and hold (or right-click) for a ✕ right away. Clear wipes the board.',
+        'Touchez entre deux cases pour alterner ligne, ✕ (aucune ligne) et vide. Maintenez le doigt (ou faites un clic droit) pour un ✕ directement. Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -144,7 +144,6 @@ export const pearls: PuzzleDef = {
     const after = () => {
       if (!done && render()) {
         done = true;
-        wrap.classList.add('won');
         ctx.solved();
       }
     };
@@ -283,6 +282,15 @@ export const pearls: PuzzleDef = {
 
     const sv = ctx.saved as { st?: unknown } | undefined;
     if (Array.isArray(sv?.st) && sv.st.length === E) sv.st.forEach((v, e) => (st[e] = v === 1 || v === 2 ? v : 0));
+    ctx.controls(
+      clearBtn(() => {
+        if (done) return;
+        drag = null;
+        stopHold();
+        st.fill(0);
+        render();
+      }),
+    );
     root.append(wrap);
     render();
 

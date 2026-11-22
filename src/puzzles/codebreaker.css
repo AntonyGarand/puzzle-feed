@@ -1,3 +1,7 @@
+[data-puzzle='codebreaker'] {
+  --accent: var(--p5);
+}
+
 /* The board hugs the code: pegs + feedback, not the full board width. */
 [data-puzzle='codebreaker'] .code-board {
   width: auto;

@@ -34,7 +34,6 @@ const MAY_NOT_FINISH: Record<string, string> = {
   flood: 'move limit',
   // Random pieces and no undo: the planner keeps the board open but can't always survive Master.
   blocks: 'random pieces',
-  collapse: 'random taps can lose',
   'hidden-rule': 'random taps can lose',
 };
 
@@ -59,6 +58,7 @@ function make(def: PuzzleDef, d: Difficulty, seed: number) {
     mistake() {},
     touch() {},
     status() {},
+    lives: () => {},
     controls: (...els) => root.append(...els),
   };
   const inst: PuzzleInstance = def.create(ctx) || {};

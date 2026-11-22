@@ -162,7 +162,7 @@ export const shapeMines: PuzzleDef = {
       const flags = flag.filter(Boolean).length;
       ctx.status(
         first < 0
-          ? L(`${total} mines · tap any tile`, `${total} mines à trouver`)
+          ? `${P(total, ['mine', 'mines'], ['mine', 'mines'])} · ${L('tap any tile', 'touchez une case')}`
           : P(total - flags, ['mine left', 'mines left'], ['mine restante', 'mines restantes']),
       );
     };

@@ -1,7 +1,9 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, h, restartBtn, shake, undoBtn } from '../core/ui';
+import { keyDir } from './movekit/kit';
 import { planSlide } from './movekit/slide-hint';
+import './slide.css';
 
 export const slide: PuzzleDef = {
   id: 'slide',
@@ -9,7 +11,6 @@ export const slide: PuzzleDef = {
     return L('Slide', 'Taquin');
   },
   category: 'moves',
-  undo: true,
   get rules() {
     return L('Slide the tiles back into order.', 'Glissez les tuiles pour les remettre en ordre.');
   },
@@ -29,8 +30,8 @@ export const slide: PuzzleDef = {
       ),
       L('Tiles that are already in their home spot are highlighted.', 'Les tuiles déjà à leur place sont mises en couleur.'),
       L(
-        'Keyboard: an arrow key slides the tile next to the gap in that direction.',
-        'Clavier : une flèche fait glisser dans cette direction la tuile voisine du trou.',
+        'Keyboard: an arrow key (or WASD) slides the tile next to the gap in that direction. Z undoes, R restarts.',
+        'Clavier : une flèche (ou WASD) fait glisser dans cette direction la tuile voisine du trou. Z annule, R repart.',
       ),
     ],
     tips: [
@@ -74,6 +75,9 @@ export const slide: PuzzleDef = {
         gap = x;
       }
     } while (solved());
+    const start = tiles.slice();
+    /** Positions before each slide or restart, for undo. */
+    let hist: { t: number[]; m: number }[] = [];
 
     const grid = board(n);
     const cells = tiles.map((_, i) => {
@@ -116,8 +120,9 @@ export const slide: PuzzleDef = {
     /** Slide every tile between `i` and the gap (same row or column) one step. `dragged` px are already done. */
     const tap = (i: number, dragged = 0) => {
       const delta = towards(i);
-      if (!delta) return;
+      if (!delta) return shake(grid);
       ctx.touch();
+      hist.push({ t: tiles.slice(), m: moves });
       const landed: number[] = [];
       while (gap !== i) {
         const nx = gap + delta;
@@ -189,11 +194,35 @@ export const slide: PuzzleDef = {
       },
       true,
     );
-    const sv = ctx.saved as { tiles?: number[]; moves?: number } | undefined;
-    if (sv?.tiles?.length === tiles.length && [...sv.tiles].sort((a, b) => a - b).every((t, i) => t === i)) {
+    /** Put a position back (undo, restart): no glide, the board just redraws. */
+    const setPos = (t: number[], m: number) => {
+      tiles.splice(0, tiles.length, ...t);
+      gap = tiles.indexOf(0);
+      moves = m;
+      cells.forEach((el) => (el.style.translate = ''));
+      render();
+    };
+    const undo = () => {
+      const prev = hist.pop();
+      if (prev) setPos(prev.t, prev.m);
+    };
+    /** Back to the shuffled start; undoable. */
+    const restart = () => {
+      if (!moves) return;
+      hist.push({ t: tiles.slice(), m: moves });
+      setPos(start, 0);
+    };
+
+    const isPerm = (v: unknown): v is number[] =>
+      Array.isArray(v) && v.length === tiles.length && [...v].sort((a, b) => a - b).every((t, i) => t === i);
+    const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
+    const sv = ctx.saved as { tiles?: unknown; moves?: unknown; hist?: unknown } | undefined;
+    if (sv && isPerm(sv.tiles)) {
       tiles.splice(0, tiles.length, ...sv.tiles);
       gap = tiles.indexOf(0);
-      moves = sv.moves ?? 0;
+      moves = isCount(sv.moves) ? sv.moves : 0;
+      if (Array.isArray(sv.hist))
+        hist = sv.hist.filter((e): e is { t: number[]; m: number } => isPerm(e?.t) && isCount(e?.m)).map((e) => ({ t: e.t, m: e.m }));
     }
     /**
      * The guide's route, kept while the player follows it (`keys[k]` is the board before step `k`): big
@@ -273,20 +302,33 @@ export const slide: PuzzleDef = {
       return { text, why: run.map((m) => cells[m.from]), at: [cells[gap]], play: () => tap(far) };
     };
     root.append(grid);
+    ctx.controls(undoBtn(undo), restartBtn(restart));
     render();
     return {
-      snapshot: () => ({ tiles, moves }),
+      snapshot: () => ({ tiles, moves, hist }),
       hint,
       onKey(e) {
-        const gr = Math.floor(gap / n),
-          gc = gap % n;
-        // Arrow = direction the tile moves; so the tile on the opposite side of the gap moves in.
-        const m: Record<string, [number, number]> = { ArrowLeft: [0, 1], ArrowRight: [0, -1], ArrowUp: [1, 0], ArrowDown: [-1, 0] };
-        const v = m[e.key];
-        if (!v) return false;
-        const r = gr + v[0],
-          c = gc + v[1];
+        if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') {
+          undo();
+          return true;
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          restart();
+          return true;
+        }
+        const dir = keyDir(e);
+        if (dir == null) return false;
+        // An arrow moves a tile in that direction: the tile on the opposite side of the gap slides in.
+        const [dr, dc] = [
+          [1, 0],
+          [0, -1],
+          [-1, 0],
+          [0, 1],
+        ][dir];
+        const r = Math.floor(gap / n) + dr,
+          c = (gap % n) + dc;
         if (r >= 0 && r < n && c >= 0 && c < n) tap(r * n + c);
+        else shake(grid);
         return true;
       },
     };

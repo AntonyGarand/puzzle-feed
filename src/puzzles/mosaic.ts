@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
 import { block, genMosaic } from './gridkit/mosaic';
 import './mosaic.css';
 
@@ -37,8 +37,8 @@ export const mosaic: PuzzleDef = {
         'Au clavier : les flèches déplacent, Espace change l’état de la case, X la marque, Suppr l’efface.',
       ),
       L(
-        'A number fades once its square is settled and red means too many (or too few left).',
-        'Un nombre pâlit quand son carré est réglé; en rouge, il y en a trop (ou plus assez).',
+        'A number fades once its square is settled and red means too many (or too few left). Clear wipes the board.',
+        'Un nombre pâlit quand son carré est réglé; en rouge, il y en a trop (ou plus assez). Effacer vide la grille.',
       ),
     ],
     tips: [
@@ -66,14 +66,20 @@ export const mosaic: PuzzleDef = {
     let done = false;
 
     const grid = board(n, n, 'mo-grid');
+    const nums: (HTMLSpanElement | null)[] = [];
     const cells = st.map((_, i) => {
-      const el = h('div', { class: 'cell', 'data-i': i }, clue[i] >= 0 ? h('span', { class: 'mo-n' }, clue[i]) : null);
+      const num = clue[i] >= 0 ? h('span', { class: 'mo-n' }, clue[i]) : null;
+      nums.push(num);
+      const el = h('div', { class: 'cell', 'data-i': i }, num);
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when a filled cell pushes a number over (checked when the stroke ends). */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const render = () => {
-      let ok = true;
+      let ok = true,
+        settled = 0;
       cells.forEach((el, i) => {
         el.classList.toggle('on', st[i] === 1);
         el.classList.toggle('x', st[i] === 2);
@@ -86,9 +92,13 @@ export const mosaic: PuzzleDef = {
           else if (st[j] === 0) open++;
         }
         el.classList.toggle('done', on === clue[i] && !open);
-        el.classList.toggle('over', on > clue[i] || on + open < clue[i]);
+        if (on === clue[i] && !open) settled++;
+        // Too many filled is a broken rule; too few left can come from ✕ marks alone.
+        nums[i]!.classList.toggle('err', on > clue[i]);
+        nums[i]!.classList.toggle('short', on <= clue[i] && on + open < clue[i]);
         ok &&= on === clue[i];
       });
+      ctx.status(`${settled} / ${P(nums.filter(Boolean).length, ['number', 'numbers'], ['nombre', 'nombres'])}`);
       return ok;
     };
 
@@ -159,6 +169,7 @@ export const mosaic: PuzzleDef = {
     const end = (e: PointerEvent) => {
       if (stroke && e.pointerId !== stroke.id) return;
       cancelPress();
+      if (stroke) watch(stroke.to === 1);
       stroke = null;
     };
     window.addEventListener('pointerup', end);
@@ -170,6 +181,16 @@ export const mosaic: PuzzleDef = {
     if (typeof c0 === 'number' && Number.isInteger(c0) && c0 >= -1 && c0 < st.length) cur = c0;
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
 
     // Guide: a square that is settled or needs everything, then two overlapping squares compared.
     let lastKind = '';
@@ -185,7 +206,10 @@ export const mosaic: PuzzleDef = {
         })
         .filter((c) => c !== null && c.open.length > 0) as { i: number; k: number; open: number[]; need: number }[];
       const els = (ix: number[]) => ix.map((j) => cells[j]);
-      const fill = (ix: number[], v: number) => () => ix.forEach((j) => st[j] !== v && set(j, v));
+      const fill = (ix: number[], v: number) => () => {
+        ix.forEach((j) => !done && st[j] !== v && set(j, v));
+        watch(v === 1);
+      };
       const cands: { kind: string; hint: Hint }[] = [];
       for (const c of info) {
         const size = blocks[c.i].length;
@@ -292,6 +316,7 @@ export const mosaic: PuzzleDef = {
         play: () => {
           ctx.touch();
           set(i, 0);
+          watch(false);
         },
       });
       for (let c = 0; c < n * n; c++) {
@@ -374,6 +399,7 @@ export const mosaic: PuzzleDef = {
         if (next < 0) return false;
         ctx.touch();
         set(cur, next);
+        watch(next === 1);
         return true;
       },
       destroy() {

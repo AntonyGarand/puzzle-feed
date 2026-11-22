@@ -192,7 +192,7 @@ export const skyscrapers: PuzzleDef = {
         clueEls.forEach((el, k) => {
           const st = on[k] ? lineState(vals, k) : 0;
           el.classList.toggle('ok', st === 1);
-          el.classList.toggle('bad', st === -1);
+          el.classList.toggle('err', st === -1);
           if (on[k]) {
             const have = seenSoFar(vals, k);
             setTally(el, have, clue[k], st === -1 || have > clue[k], st === -1 || (have > 0 && st !== 1));

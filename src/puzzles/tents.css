@@ -55,3 +55,11 @@
 [data-puzzle='tents'] .lk-tent .door {
   fill: var(--ink);
 }
+[data-puzzle='tents'] .lk-tents {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-puzzle='tents'] .lk-tents .cell.tree.lp::before {
+  display: none;
+}

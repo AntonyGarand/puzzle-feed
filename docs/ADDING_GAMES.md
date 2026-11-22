@@ -16,7 +16,7 @@ Read these first:
 - Call `ctx.touch()` on the first interaction. Call `ctx.mistake()` only for a genuinely wrong move. Call `ctx.solved()` or `ctx.failed()` once. Use `ctx.status(text)` for a short footer line (moves left, counts, …) and `ctx.controls(...buttons)` for extra footer buttons (Undo, mode toggles, …).
 - **All randomness must come from `ctx.rng`.** Resuming re-creates the game from the same seed, so `Math.random` breaks resume.
 - **Implement `snapshot()`** returning JSON-serialisable progress, and restore it defensively from `ctx.saved`. After a resume, the visible board (classes, text, inline styles) must be identical, including the current selection. `test/resume.test.ts` checks this automatically by clicking random buttons.
-- **Undo:** for perfect-information games (no hidden tiles, lives, random spawns or scores), set `undo: true` instead of building an Undo button. The card then shows Undo (and handles Ctrl/Cmd+Z), stepping back through `snapshot()` states by re-creating the game from `ctx.saved`. Top-level `sel` / `cur` count as selection, not moves. `test/undo.test.ts` checks that restoring is exact.
+- **Undo:** for perfect-information games (no hidden tiles, lives, random spawns or scores), set `undo: true` instead of building an Undo button. Build your own with `undoBtn()` only when undo follows game rules the snapshots can't express (Flood and Slide give back the spent move; Flood's dead-end hint points at the button). The card then shows Undo (and handles Ctrl/Cmd+Z), stepping back through `snapshot()` states by re-creating the game from `ctx.saved`. Top-level `sel` / `cur` count as selection, not moves. `test/undo.test.ts` checks that restoring is exact.
 - A new puzzle must never start already solved.
 - Validate by the rules, not by comparing with a stored solution, unless the generator guarantees a unique solution.
 - Difficulty 1 to 5 (Easy, Medium, Hard, Expert, Master) must make a real difference: size, givens, constraints, move limits. `par(d)` is a realistic target solve time in seconds and drives auto-levelling.
@@ -27,11 +27,45 @@ Read these first:
 ## Look & feel (neo-brutalist, shared everywhere)
 
 - Use `board(cols, rows, extraClass)` and `.cell` for grids. Its width is `var(--board)`, so the game fits any screen. Keep total height within about `var(--board)` plus 120 px for pads and palettes.
-- Reuse `.cell.on`, `.sel`, `.given`, `.err`, `.miss`, `.hint`, `.x`, plus `btn()`, `pad()`, `.key.swatch` with `--c:${PALETTE[i]}`, `.dots`, `.big` and `.input`. Don't invent new button or tile styles.
+- Reuse `.cell.on`, `.sel`, `.given`, `.err`, `.miss`, `.hint`, `.x`, plus `btn()`, `undoBtn()` / `restartBtn()` / `clearBtn()`, `pad()`, `.key.swatch` with `--c:${PALETTE[i]}`, `.dots`, `.big` and `.input`. Don't invent new button or tile styles.
 - Tokens: `--ink` (borders and shadows), `--bw` (border width), `--sh` (shadow offset), `--cell` / `--cell-alt` (surfaces), `--fg`, `--muted`, `--accent` (the game's tone), `--accent-soft`, `--on-tone` (text on bright fills), `--good`, `--bad`, `--p1`…`--p8` (palette), `--r`, `--r-cell`.
 - For extra CSS, create `src/puzzles/<id>.css`, import it from the module (`import './<id>.css';`), and scope every rule under `[data-puzzle='<id>']`. Set the game's tone there: `[data-puzzle='<id>'] { --accent: var(--pN); }`.
 - For drag interactions, use pointer events with `touch-action: none` on the drag surface. Don't use HTML5 drag-and-drop. The feed scrolls vertically, so swipes inside a game must not leak into it.
 - Light and dark themes both come from the tokens. Never hard-code black or white; use `--ink`, `--cell` and `--on-tone`.
+- Physical objects that must look the same in both themes (card faces, chess pieces, black/white pearls) use `--paper`, `--paper-alt` and `--coal`. Never use these for UI surfaces.
+- Borders, shadows and radii use the tokens (`var(--bw)`, `var(--sh)`, `var(--r)`, `var(--r-cell)`), not literal pixel values.
+- A broken rule is shown with `.err` (clue tallies use `countClue()` / `setTally()`). Don't reuse `.hint` or `.sel` for other states, such as a drag preview.
+
+## Consistency rules (actions, punishments, rewards)
+
+Every game follows the same rules, so a player who knows one game knows how all of them react.
+
+**Actions**
+
+- Footer buttons come only from `undoBtn()`, `restartBtn()` and `clearBtn()` (all ghost, in `src/core/ui.ts`), plus at most one `btn(…, 'primary')` for a commit action (Check, Guess, Finish). Order: the primary action, then Undo, then Restart or Clear; the card's own Undo (`undo: true`) sits before them. Never write the labels by hand.
+- Every game has a way back to the start. Games with a move history offer **Undo** and **Restart**. Games where the player marks or draws the answer offer **Clear**. Restart and Clear can themselves be undone when the game has Undo.
+- Keys: `Z` / `Backspace` undo, `R` restart, arrows / WASD move (`keyDir` in `movekit/kit.ts`; an arrow moves the thing you control in that direction). Don't bind `R` to anything else.
+- Key rows are built with `pad()`. Never hand-build `.key` buttons.
+- Tap cycles put the main mark first, then the secondary mark (✕ or dot), then empty. Secondary marks also go on long-press. Modes such as notes or rule-out are a `.key.sel` toggle inside the pad, never a footer button that swaps variants.
+
+**Punishments**
+
+- **Illegal move** (the game refuses it: a blocked step, a bad drop, a rule the game enforces): `shake()` the board or the piece. It isn't a mistake. A drop that snaps back shakes too.
+- **Mistake** (`ctx.mistake()`): a committed move that is wrong.
+  - An entry or placement that breaks a visible rule. Use `ruleBreaks(board, ctx.mistake)` and call it after rendering each player move.
+  - An answer the game rejects as wrong, such as a word, a pair, a check, or a move that isn't mate.
+  - A lost life.
+  - These never count: drawing or erasing lines, marks (✕, flags, dots), exploratory moves in move and card games, and attempts in guess-limited games (each guess is information).
+- **Lives**: call `ctx.lives(left, max)` on every render. The card shows the hearts in its header, so don't repeat them in the status. Losing a life also calls `mistake()` and shakes.
+- **Failure** (`ctx.failed()`): only when a hard budget runs out (lives, guesses, a move limit) or the player sets off a mine.
+- **Dead ends**: a dead end in a game with Undo is not a failure. Say so in the status, ending with `· undo` / `· annulez`, and have `check()` return a `stuck` hint. The player can always skip.
+
+**Rewards and status**
+
+- Solving is just `ctx.solved()`. The card pops the board, shows the win card and plays the confetti. Games don't add their own win flash, and they don't rewrite the status on a solve (the footer is replaced anyway).
+- Failing is just `ctx.failed()`. The card shakes the board.
+- Every game keeps a status line while playing. Join facts with `·`. Write progress as `have / total noun` with spaces around the slash. Write counts and budgets with `P()` (`3 moves left`, never `3 moves` built by hand).
+- Endless games call `ctx.solved({ keepPlaying: true })` when they reach the goal and add a primary **Finish** button.
 
 ## Checking your work
 

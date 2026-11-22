@@ -56,7 +56,6 @@ for (let sq = 0; sq < 64; sq++) {
 
 export const from = (m: number) => m >> 6;
 export const to = (m: number) => m & 63;
-export const sqName = (sq: number) => 'abcdefgh'[sq & 7] + (8 - (sq >> 3));
 
 /** Is `sq` attacked by the given side? */
 function attacked(b: Board, sq: number, byWhite: boolean): boolean {

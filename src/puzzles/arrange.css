@@ -41,7 +41,7 @@
 [data-puzzle='arrange'] .arrange-grid .cell.el {
   border-left-width: var(--bw);
 }
-[data-puzzle='arrange'] .arrange-grid .cell.hint {
+[data-puzzle='arrange'] .arrange-grid .cell.drop {
   background: var(--accent-soft);
   outline: 2px dashed var(--ink);
   outline-offset: -3px;
@@ -59,8 +59,9 @@
   touch-action: none;
   user-select: none;
 }
-.arr-piece,
-.arr-ghost {
+/* The drag ghost is appended to the puzzle root, so it can be scoped like the tray pieces. */
+[data-puzzle='arrange'] .arr-piece,
+[data-puzzle='arrange'] .arr-ghost {
   display: grid;
   grid-template-columns: repeat(var(--pc), var(--mini));
   grid-template-rows: repeat(var(--pr), var(--mini));
@@ -68,24 +69,24 @@
   border: 0;
   background: none;
 }
-.arr-piece {
+[data-puzzle='arrange'] .arr-piece {
   cursor: grab;
   touch-action: none;
 }
-.arr-piece.lifted {
+[data-puzzle='arrange'] .arr-piece.lifted {
   visibility: hidden;
 }
-.arr-piece i,
-.arr-ghost i {
+[data-puzzle='arrange'] .arr-piece i,
+[data-puzzle='arrange'] .arr-ghost i {
   display: block;
   background: var(--c);
   border: 2px solid var(--ink);
   margin: -1px;
 }
-.arr-piece:focus-visible {
+[data-puzzle='arrange'] .arr-piece:focus-visible {
   outline-offset: 4px;
 }
-.arr-ghost {
+[data-puzzle='arrange'] .arr-ghost {
   --mini: var(--cs);
   position: fixed;
   z-index: 50;

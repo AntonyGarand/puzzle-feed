@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks, s } from '../core/ui';
 import { genLightUp, nb4, sightLines } from './gridkit/lightup';
 import { tapOrHold } from './gridkit/press';
 import './light-up.css';
@@ -40,12 +40,12 @@ export const lightUp: PuzzleDef = {
         'Un nombre sur un mur indique combien d’ampoules le touchent par un côté (pas en diagonale).',
       ),
       L(
-        'Tap a cell for a bulb, again for a dot (surely no bulb), and once more to clear it. Long-press (or right-click) to place a dot directly.',
-        'Touchez une case pour une ampoule, encore pour un point (aucune ampoule), et une autre fois pour l’effacer. Appuyez longuement (ou cliquez droit) pour mettre un point directement.',
+        'Tap a cell for a bulb, again for a dot (surely no bulb), and once more to clear it. Long-press (or right-click) to place a dot directly. Clear wipes the board.',
+        'Touchez une case pour une ampoule, encore pour un point (aucune ampoule), et une autre fois pour l’effacer. Appuyez longuement (ou cliquez droit) pour mettre un point directement. Effacer vide la grille.',
       ),
       L(
-        'Bulbs that see each other turn red. A number fades when it has exactly enough bulbs (a 0 once its sides are dotted).',
-        'Les ampoules qui se voient deviennent rouges. Un nombre pâlit quand il a juste assez d’ampoules (un 0, quand ses côtés ont un point).',
+        'Bulbs that see each other turn red, and a bulb that does counts as a mistake. A number fades when it has exactly enough bulbs (a 0 once its sides are dotted).',
+        'Les ampoules qui se voient deviennent rouges, et une ampoule fautive compte comme une erreur. Un nombre pâlit quand il a juste assez d’ampoules (un 0, quand ses côtés ont un point).',
       ),
     ],
     tips: [
@@ -77,6 +77,8 @@ export const lightUp: PuzzleDef = {
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when a bulb breaks a rule (dots never do). */
+    const watch = ruleBreaks(grid, ctx.mistake);
 
     const render = () => {
       let dark = 0,
@@ -104,14 +106,8 @@ export const lightUp: PuzzleDef = {
         el.classList.toggle('mark', st[i] === 2);
         el.classList.toggle('err', clash);
       });
-      ctx.status(
-        dark
-          ? L(
-              `${P(bulbs, ['bulb', 'bulbs'], ['ampoule', 'ampoules'])} · ${dark} dark`,
-              `${P(bulbs, ['bulb', 'bulbs'], ['ampoule', 'ampoules'])} · ${dark} dans le noir`,
-            )
-          : P(bulbs, ['bulb', 'bulbs'], ['ampoule', 'ampoules']),
-      );
+      const placed = P(bulbs, ['bulb', 'bulbs'], ['ampoule', 'ampoules']);
+      ctx.status(dark ? `${placed} · ${P(dark, ['dark cell', 'dark cells'], ['case sombre', 'cases sombres'])}` : placed);
       return ok && !dark;
     };
 
@@ -120,7 +116,9 @@ export const lightUp: PuzzleDef = {
       if (done || black[i]) return;
       ctx.touch();
       st[i] = v;
-      if (render()) {
+      const won = render();
+      watch(v === 1);
+      if (won) {
         done = true;
         ctx.solved();
       }
@@ -135,6 +133,16 @@ export const lightUp: PuzzleDef = {
     if (Array.isArray(sv?.st) && sv.st.length === st.length) sv.st.forEach((v, i) => (st[i] = !black[i] && (v === 1 || v === 2) ? v : 0));
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || st.every((v) => !v)) return;
+        ctx.touch();
+        st.fill(0);
+        render();
+        watch(false);
+      }),
+    );
     // Guide: numbered walls first, then dark cells with a single possible source.
     let lastKind = '';
     let taught = false;

@@ -1,6 +1,7 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h } from '../core/ui';
+import { board, clearBtn, h, ruleBreaks } from '../core/ui';
+import './queens.css';
 
 function allSolutions(n: number): number[][] {
   const out: number[][] = [];
@@ -38,8 +39,8 @@ export const queens: PuzzleDef = {
     ),
     steps: [
       L(
-        'Tap a square to put that row’s queen there. Tap another square in the row to move it, or the same one to remove it.',
-        'Touchez une case pour y mettre la dame de la rangée. Touchez une autre case de la rangée pour la déplacer, ou la même pour l’enlever.',
+        'Tap a square to put that row’s queen there. Tap another square in the row to move it, or the same one to remove it. Clear takes your queens back.',
+        'Touchez une case pour y mettre la dame de la rangée. Touchez une autre case de la rangée pour la déplacer, ou la même pour l’enlever. Effacer retire vos dames.',
       ),
       L('Two queens may not share a column or a diagonal.', 'Deux dames ne peuvent pas partager une colonne ni une diagonale.'),
       L(
@@ -77,6 +78,9 @@ export const queens: PuzzleDef = {
       grid.append(el);
       return el;
     });
+    /** Counts a mistake when a queen lands under attack. */
+    const watch = ruleBreaks(grid, ctx.mistake);
+    let done = false;
 
     const attacks = (r1: number, c1: number, r2: number, c2: number) => c1 === c2 || r1 === r2 || Math.abs(c1 - c2) === Math.abs(r1 - r2);
     const render = () => {
@@ -98,28 +102,44 @@ export const queens: PuzzleDef = {
         el.classList.toggle('err', has && bad.has(r));
       });
       const placed = q.filter((x) => x != null).length;
-      ctx.status(L(`${placed} / ${n} queens`, `${placed} / ${n} dames`));
+      ctx.status(`${placed} / ${P(n, ['queen', 'queens'], ['dame', 'dames'])}`);
       return bad.size === 0 && placed === n;
     };
     const tap = (r: number, c: number) => {
-      if (r === lockedRow) return;
+      if (done || r === lockedRow) return;
       ctx.touch();
-      const before = q.some((x, rr) => x != null && rr !== r && attacks(rr, x, r, c));
       q[r] = q[r] === c ? null : c;
-      if (q[r] === c && before) ctx.mistake();
-      if (render()) ctx.solved();
+      const won = render();
+      watch(q[r] === c);
+      if (won) {
+        done = true;
+        ctx.solved();
+      }
     };
-    const sv = ctx.saved as { q?: (number | null)[] } | undefined;
-    if (sv?.q?.length === n) sv.q.forEach((c, r) => r !== lockedRow && (q[r] = c));
+    const sv = ctx.saved as { q?: unknown } | undefined;
+    if (Array.isArray(sv?.q) && sv.q.length === n)
+      sv.q.forEach((c, r) => {
+        if (r !== lockedRow) q[r] = typeof c === 'number' && Number.isInteger(c) && c >= 0 && c < n ? c : null;
+      });
     root.append(grid);
     render();
+    watch(false);
+    ctx.controls(
+      clearBtn(() => {
+        if (done || q.every((x, r) => r === lockedRow || x == null)) return;
+        ctx.touch();
+        q.forEach((_, r) => r !== lockedRow && (q[r] = null));
+        render();
+        watch(false);
+      }),
+    );
 
     /** Placed queens attacking square (r, c). */
     const attackers = (r: number, c: number) => q.flatMap((x, rr) => (x != null && rr !== r && attacks(rr, x, r, c) ? [rr * n + x] : []));
     let last = -1;
     /** The next deduction for the guide: a row or column with a single safe square. */
     const hint = (): Hint | null => {
-      if (q.every((x) => x != null)) return null;
+      if (done || q.every((x) => x != null)) return null;
       const free = [...Array(n).keys()].filter((r) => q[r] == null);
       const safe = (r: number, c: number) => !attackers(r, c).length;
       const why = (sq: [number, number][]) => [...new Set(sq.flatMap(([r, c]) => attackers(r, c)))].map((i) => cells[i]);
@@ -186,6 +206,7 @@ export const queens: PuzzleDef = {
     };
     /** A queen to take back: one that attacks another, else one no solution can keep. */
     const check = (): Hint | null => {
+      if (done) return null;
       const fix = (r: number, text: string, why: number[]): Hint => ({
         kind: 'fix',
         text,

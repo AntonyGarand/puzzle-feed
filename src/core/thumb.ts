@@ -28,6 +28,7 @@ function mount(box: HTMLElement, def: PuzzleDef) {
         failed: noop,
         mistake: noop,
         touch: noop,
+        lives: noop,
         status: noop,
         controls: noop,
       }) || {};

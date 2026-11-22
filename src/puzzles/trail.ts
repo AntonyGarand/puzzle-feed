@@ -1,6 +1,6 @@
-import { L } from '../core/i18n';
+import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, s, shake } from '../core/ui';
+import { board, clearBtn, h, s, shake } from '../core/ui';
 import { keyDir } from './movekit/kit';
 import { adjacent, capture, cellAt, nbrs, pts, stepsToward } from './pathkit/grid';
 import { finishTrail, genTrail, wallKey } from './playkit/trail-gen';
@@ -57,10 +57,10 @@ export const trail: PuzzleDef = {
   par: (d) => byLevel(d, [30, 50, 70, 110, 170]),
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
-    const P = genTrail(rng, d);
-    const { n, marks, last } = P;
+    const pz = genTrail(rng, d);
+    const { n, marks, last } = pz;
     const N = n * n;
-    const walls = new Set(P.walls);
+    const walls = new Set(pz.walls);
     const start = marks.indexOf(1);
     const end = marks.indexOf(last);
     const path: number[] = [start];
@@ -122,7 +122,7 @@ export const trail: PuzzleDef = {
       ctx.status(
         head === end
           ? missed
-            ? L(`${missed} cell${missed > 1 ? 's' : ''} missed`, missed > 1 ? `${missed} cases oubliées` : '1 case oubliée')
+            ? `${P(missed, ['cell missed', 'cells missed'], ['case oubliée', 'cases oubliées'])} · ${L('tap an earlier cell to back up', 'touchez une case plus tôt pour reculer')}`
             : L('Done!', 'Terminé!')
           : [head - n, head + 1, head + n, head - 1].some((j) => j >= 0 && j < N && canEnter(head, j))
             ? L(`${len} / ${N} cells · next ${reached + 1}`, `${len} / ${N} cases · prochain ${reached + 1}`)
@@ -178,15 +178,11 @@ export const trail: PuzzleDef = {
     grid.addEventListener('pointercancel', stop);
 
     ctx.controls(
-      btn(
-        L('Clear', 'Effacer'),
-        () => {
-          if (finished) return;
-          path.length = 1;
-          render();
-        },
-        'ghost',
-      ),
+      clearBtn(() => {
+        if (finished) return;
+        path.length = 1;
+        render();
+      }),
     );
 
     const sv = ctx.saved as { path?: unknown } | undefined;
@@ -227,11 +223,11 @@ export const trail: PuzzleDef = {
     /** Solver results per path, kept across calls (check() then hint(), and cutting back). */
     const solved = new Map<string, number[] | null | undefined>();
     const finishFrom = (pre: number[], budget = 30000) => {
-      if (pre.every((x, k) => P.path[k] === x)) return P.path;
+      if (pre.every((x, k) => pz.path[k] === x)) return pz.path;
       const key = pre.join(',');
       if (!solved.has(key)) {
         if (solved.size > 200) solved.clear();
-        solved.set(key, finishTrail(P, pre, budget));
+        solved.set(key, finishTrail(pz, pre, budget));
       }
       return solved.get(key);
     };
@@ -274,7 +270,7 @@ export const trail: PuzzleDef = {
     const check = (): Hint | null => {
       if (finished || path.length < 2 || solve() !== null) return null;
       let k = 0;
-      while (k + 1 < path.length && P.path[k + 1] === path[k + 1]) k++;
+      while (k + 1 < path.length && pz.path[k + 1] === path[k + 1]) k++;
       // Longest start that still works (a few tries; the generated solution's start always does).
       for (let j = path.length - 2, tries = 0; j > k && tries < 6; j--, tries++) {
         const r = finishFrom(path.slice(0, j + 1), 8000);
@@ -285,8 +281,10 @@ export const trail: PuzzleDef = {
         if (r === undefined) break;
       }
       const x = reason();
+      const head = path[path.length - 1];
+      const boxed = head === end || ![head - n, head + 1, head + n, head - 1].some((j) => j >= 0 && j < N && canEnter(head, j));
       return {
-        kind: 'fix',
+        kind: boxed ? 'stuck' : 'fix',
         text: L(
           `This path can’t cover every cell any more. ${x.en} Cut it back here.`,
           `Ce chemin ne peut plus couvrir toutes les cases. ${x.fr} Coupez-le ici.`,
@@ -322,7 +320,7 @@ export const trail: PuzzleDef = {
       if (sol === null) {
         // Off track: cut the path back to the last cell that agrees with the solution.
         let k = 0;
-        while (k + 1 < path.length && P.path[k + 1] === path[k + 1]) k++;
+        while (k + 1 < path.length && pz.path[k + 1] === path[k + 1]) k++;
         return {
           text: L(
             'This path can’t cover every cell any more. Tap an earlier cell to cut it back there and try another way.',

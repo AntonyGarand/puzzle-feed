@@ -1,0 +1,76 @@
+/* Code board shared by Code Breaker and Guess: rows of pegs with feedback. */
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-board {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(var(--board), 340px);
+  padding: 8px;
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: var(--r-cell);
+  border: 2px solid transparent;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row.cur {
+  background: var(--accent-soft);
+  border-color: var(--ink);
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row.future {
+  opacity: 0.5;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row.reveal {
+  border: 2px dashed var(--ink);
+  margin-top: 6px;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .pegs {
+  display: flex;
+  gap: 8px;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .peg {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--c);
+  border: 2px solid var(--ink);
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .peg.empty {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.5;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row.cur .peg.empty {
+  opacity: 1;
+  background: var(--cell);
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .fb {
+  display: grid;
+  grid-template-columns: repeat(3, 9px);
+  gap: 3px;
+  min-width: 33px;
+  font-size: 12px;
+  font-weight: 700;
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .fb i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+}
+:is([data-puzzle='codebreaker'], [data-puzzle='guess']) .fb .exact {
+  background: var(--ink);
+}
+@media (max-height: 760px) {
+  :is([data-puzzle='codebreaker'], [data-puzzle='guess']) .peg {
+    width: 19px;
+    height: 19px;
+  }
+  :is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row {
+    padding: 2px 8px;
+  }
+}
