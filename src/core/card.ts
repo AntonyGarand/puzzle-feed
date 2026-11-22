@@ -7,7 +7,7 @@ import { clearSave, dailySaveKey, putSave, type Save, type Slot } from './saves'
 import { encodeCode, shareSection } from './share';
 import { openSheet } from './sheet';
 import { prefs, record, recordDaily, setLevel, setWeight, getProfile, type RecordOutcome, type Weight } from './store';
-import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef, type PuzzleInstance } from './types';
+import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type PuzzleDef, type PuzzleInstance } from './types';
 import { btn, cogIcon, fmtTime, h } from './ui';
 
 export interface CardOptions {
@@ -66,6 +66,8 @@ export class Card {
   private runningSince = 0;
   private mistakes = 0;
   private gen = 0;
+  /** `gen` of the puzzle already reported as left (scrolled past), so it's reported once. */
+  private leftGen = -1;
   private seed = 0;
   /** Opened from a share code (until the player starts another puzzle on this card). */
   shared = false;
@@ -484,12 +486,10 @@ export class Card {
       this.def.par(this.level) * 1000,
     );
     telemetry.track('puzzle.result', {
-      'puzzle.id': this.def.id,
-      'puzzle.difficulty': this.level,
+      ...this.trackAttrs(),
       'puzzle.outcome': o,
       'puzzle.duration_ms': ms,
       'puzzle.mistakes': this.mistakes,
-      'puzzle.mode': daily ? 'daily' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
       'puzzle.auto_level': !this.opts.lab && !this.shared && !prefs(this.def.id).manual,
       'puzzle.personal_best': !!res.best,
       'puzzle.first_clear': o === 'solved' && res.prevBest == null,
@@ -497,6 +497,30 @@ export class Card {
     });
     if (daily) recordDaily(daily.date, daily.level, daily.index, o, ms, this.mistakes);
     return res;
+  }
+
+  private trackAttrs() {
+    return {
+      'puzzle.id': this.def.id,
+      'puzzle.difficulty': this.level,
+      'puzzle.difficulty_name': LEVEL_IDS[this.level],
+      'puzzle.mode': this.opts.daily ? 'daily' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
+    };
+  }
+
+  /**
+   * The feed scrolled away from this puzzle before it ended. Reported once per puzzle as `puzzle.leave`
+   * (the card stays playable, so it isn't a `puzzle.result`). Cards only flicked past (pristine) don't count.
+   */
+  left() {
+    if (!this.mounted || this.done || this.reached || this.pristine || this.leftGen === this.gen) return;
+    this.leftGen = this.gen;
+    telemetry.track('puzzle.leave', {
+      ...this.trackAttrs(),
+      'puzzle.started': this.interacted,
+      'puzzle.duration_ms': Math.round(this.time()),
+      'puzzle.mistakes': this.mistakes,
+    });
   }
 
   private finish(o: 'solved' | 'failed' | 'skipped') {

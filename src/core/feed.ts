@@ -147,6 +147,7 @@ export class Feed {
 
   private setActive(card: Card) {
     this.active?.setActive(false);
+    this.active?.left();
     this.active = card;
     card.setActive(!document.hidden && this.visible());
     this.fill();

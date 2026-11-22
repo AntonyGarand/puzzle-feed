@@ -21,6 +21,8 @@ export const LEVEL_NAMES: Record<Difficulty, string> = {
     return L('Master', 'Maître');
   },
 };
+/** Stable English level ids for telemetry (LEVEL_NAMES is localized). */
+export const LEVEL_IDS: Record<Difficulty, string> = { 1: 'easy', 2: 'medium', 3: 'hard', 4: 'expert', 5: 'master' };
 
 /**
  * How-to-play content shown behind the card's "?" button. Write it with L(en, fr).
