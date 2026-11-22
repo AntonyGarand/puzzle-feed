@@ -6,7 +6,7 @@ import { chromium } from 'playwright-core';
 const out = 'public/og.png';
 const font = readFileSync('node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2').toString('base64');
 
-// Light theme tokens from src/styles.css.
+// Light theme tokens from src/styles/tokens.css.
 const C = {
   bg: '#fff6e5',
   ink: '#111111',

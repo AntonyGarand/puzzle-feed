@@ -1,7 +1,7 @@
 // Shared helpers for the logic-grid games (stars, tents, tiles, mines, bridges).
 import './kit.css';
 
-/** Region tint `i` (0–7) at `pct`% over the cell; the theme picks the tone and scales the strength (see --tN in styles.css). */
+/** Region tint `i` (0–7) at `pct`% over the cell; the theme picks the tone and scales the strength (see --tN in styles/tokens.css). */
 export const tint = (i: number, pct = 40) =>
   `color-mix(in srgb, var(--t${(((i % 8) + 8) % 8) + 1}) min(100%, calc(${pct}% * var(--tint-gain))), var(--cell))`;
 

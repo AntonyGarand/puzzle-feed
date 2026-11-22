@@ -1,0 +1,113 @@
+/* Page basics, colour symbols and the neo-brutalist block. */
+
+/* ---------- base ---------- */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    500 15px/1.4 'Space Grotesk Variable',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+a {
+  color: inherit;
+}
+[hidden] {
+  display: none !important;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 32px 0 12px;
+}
+.muted {
+  color: var(--muted);
+}
+
+/* ---------- colour symbols (core/symbols.ts) ---------- */
+/* One shape per palette colour, on when the "Colour symbols" setting is. The parent carries the colour
+   and must be positioned. */
+.cmark,
+.cmark-svg {
+  display: none;
+}
+:root[data-symbols] .cmark[data-k] {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 48%;
+  height: 48%;
+  max-width: 24px;
+  max-height: 24px;
+  background: var(--on-tone);
+  opacity: 0.8;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+}
+:where(:root[data-symbols] :has(> .cmark[data-k])) {
+  position: relative;
+}
+:root[data-symbols] .cmark-svg {
+  display: inline;
+  fill: var(--on-tone);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.small {
+  font-size: 13px;
+}
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* The core neo-brutalist block */
+.btn,
+.key,
+.select,
+.seg,
+.stat,
+.chip.num,
+.code-board,
+.maze-wrap,
+.grid.flood,
+.nono,
+.input {
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+}

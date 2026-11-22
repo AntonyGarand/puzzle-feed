@@ -3,7 +3,7 @@ import './core/migrate-storage';
 import { telemetry } from './core/analytics';
 import { L, localeTag } from './core/i18n';
 import '@fontsource-variable/space-grotesk';
-import './styles.css';
+import './styles/index.css';
 import { Feed } from './app/feed';
 import { dayStreak, getProfile, onChange } from './core/store';
 import { LEVELS, type Difficulty } from './core/types';

@@ -1,0 +1,90 @@
+/* Daily challenges. */
+
+/* ---------- daily challenges ---------- */
+.daily-levels {
+  margin-bottom: 14px;
+}
+.daily-levels a {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.daily-levels a.on {
+  background: var(--hi);
+  color: var(--on-tone);
+  border-color: var(--ink);
+}
+.daily-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.daily-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+}
+.daily-item.is-solved {
+  background: color-mix(in srgb, var(--p3) 22%, var(--cell));
+}
+.daily-n {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-tone);
+}
+.daily-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.daily-name strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.daily-name .good {
+  color: color-mix(in srgb, var(--p3) 55%, var(--ink));
+  font-weight: 700;
+}
+.daily-name .bad {
+  color: var(--bad-ink);
+  font-weight: 700;
+}
+.daily-summary {
+  margin-top: 14px;
+}
+.day.today {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.thumb-failed::after {
+  content: '?';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+}
+.auto-hint {
+  margin: -4px 0 8px;
+}

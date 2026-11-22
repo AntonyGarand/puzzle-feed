@@ -155,7 +155,7 @@ export function cogIcon(cls = 'icon') {
 }
 
 /**
- * Give an existing clue element a small live tally pill tucked against its number (styles: `.cc-host` in styles.css).
+ * Give an existing clue element a small live tally pill tucked against its number (styles: `.cc-host` in styles/controls.css).
  * Drive it with {@link setTally}. Idempotent.
  */
 export function addTally<E extends HTMLElement>(el: E): E {
