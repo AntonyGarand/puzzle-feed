@@ -156,7 +156,7 @@ export const eclipse: PuzzleDef = {
   },
   category: 'logic',
   get rules() {
-    return L('Half suns, half moons; no three alike; no twin lines.', 'Moitié soleils, moitié lunes; jamais trois pareils.');
+    return L('Half suns, half moons; no three alike; no twin lines.', 'Moitié soleils, moitié lunes; ni trois pareils, ni doublon.');
   },
   help: () => ({
     goal: L(
