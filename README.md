@@ -53,7 +53,7 @@ There are 59 games in seven categories (`src/core/categories.ts`):
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze
 - **Numbers:** Target, Guess, 2048
 - **Words:** Anagram, Word Guess, Hunt, Tower (English and French word lists)
-- **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse
+- **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse, Worms
 - **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2)
 - **Memory & eyes:** Memory, Pairs
 
