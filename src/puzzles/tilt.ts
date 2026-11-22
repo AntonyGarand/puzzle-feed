@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, pad, shake } from '../core/ui';
+import { board, btn, h, dpad, shake } from '../core/ui';
 import { keyDir, onSwipe, type Dir } from './movekit/kit';
 import { BLOCK, fullMask, generate, solve, tilt as tiltBoard, type State } from './tiltkit/engine';
 import './tilt.css';
@@ -197,16 +197,15 @@ export const tilt: PuzzleDef = {
     };
 
     onSwipe(grid, move);
-    const arrows = pad(
+    const arrows = dpad(
+      (dir) => move(dir as Dir),
       [
-        { label: '←', value: '3', aria: L('Tilt left', 'Incliner vers la gauche') },
-        { label: '↑', value: '0', aria: L('Tilt up', 'Incliner vers le haut') },
-        { label: '↓', value: '2', aria: L('Tilt down', 'Incliner vers le bas') },
-        { label: '→', value: '1', aria: L('Tilt right', 'Incliner vers la droite') },
+        L('Tilt up', 'Incliner vers le haut'),
+        L('Tilt right', 'Incliner vers la droite'),
+        L('Tilt down', 'Incliner vers le bas'),
+        L('Tilt left', 'Incliner vers la gauche'),
       ],
-      (v) => move(Number(v) as Dir),
     );
-    arrows.classList.add('tilt-pad');
     ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
     root.append(grid, arrows);
     render();

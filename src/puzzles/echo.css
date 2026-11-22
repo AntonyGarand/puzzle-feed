@@ -183,10 +183,3 @@
   dominant-baseline: central;
   transform: translate(calc(var(--unit) * 0.26), calc(var(--unit) * -0.26));
 }
-[data-puzzle='echo'] .echo-pad {
-  width: min(var(--board), 340px);
-}
-[data-puzzle='echo'] .echo-pad .echo-wait {
-  flex: 1.8;
-  font-size: 14px;
-}

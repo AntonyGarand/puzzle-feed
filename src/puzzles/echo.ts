@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, pad, s, shake } from '../core/ui';
+import { board, btn, h, dpad, s, shake } from '../core/ui';
 import { ACTS, at, enterable, generate, isOpen, nbr, search, track, trimWaits, walk, type GenOpts } from './echokit/gen';
 import { anim, keyDir, onSwipe, POP } from './movekit/kit';
 import './echo.css';
@@ -520,17 +520,7 @@ export const echo: PuzzleDef = {
       };
     };
 
-    const keys = pad(
-      [
-        { label: '←', value: '3', aria: L('Left', 'Gauche') },
-        { label: '↑', value: '0', aria: L('Up', 'Haut') },
-        { label: '↓', value: '2', aria: L('Down', 'Bas') },
-        { label: '→', value: '1', aria: L('Right', 'Droite') },
-        { label: L('Wait', 'Attendre'), value: '4', class: 'echo-wait' },
-      ],
-      (v) => act(Number(v)),
-    );
-    keys.classList.add('echo-pad');
+    const keys = dpad(act, undefined, { label: L('Wait', 'Attendre'), onclick: () => act(4) });
     ctx.controls(endBtn, btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Reset', 'Repartir'), reset, 'ghost'));
     root.append(bar, grid, keys);
     render();

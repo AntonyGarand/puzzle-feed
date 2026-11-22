@@ -1,6 +1,6 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, pad, s, shake } from '../core/ui';
+import { board, btn, h, dpad, s, shake } from '../core/ui';
 import { anim, keyDir, type Dir } from './movekit/kit';
 import { deadCrates, planPush, type PushPlan } from './movekit/push-hint';
 import { generateRoom, liveCells, stepper, stuckCrates } from './movekit/pushgen';
@@ -474,16 +474,7 @@ export const push: PuzzleDef = {
       if (down?.id === e.pointerId) down = null;
     });
 
-    const arrows = pad(
-      [
-        { label: '←', value: '3' },
-        { label: '↑', value: '0' },
-        { label: '↓', value: '2' },
-        { label: '→', value: '1' },
-      ],
-      (v) => move(Number(v) as Dir),
-    );
-    arrows.classList.add('push-pad');
+    const arrows = dpad((dir) => move(dir as Dir));
     ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
     root.append(grid, arrows);
     render();

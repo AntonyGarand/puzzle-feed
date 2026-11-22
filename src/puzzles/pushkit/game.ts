@@ -1,6 +1,6 @@
 import { L, P } from '../../core/i18n';
 import type { Hint, PuzzleCtx, PuzzleInstance } from '../../core/types';
-import { board, btn, h, pad, s, shake } from '../../core/ui';
+import { board, btn, h, dpad, s, shake } from '../../core/ui';
 import { anim, type Dir, keyDir } from '../movekit/kit';
 import { type Board, caught, front, frozen, isGoal, type Moved, nbr, type Rules, solve, type St, stateKey, step } from './engine';
 import type { Level } from './gen';
@@ -540,16 +540,7 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
     if (down?.id === e.pointerId) down = null;
   });
 
-  const arrows = pad(
-    [
-      { label: '←', value: '3', aria: L('Left', 'Gauche') },
-      { label: '↑', value: '0', aria: L('Up', 'Haut') },
-      { label: '↓', value: '2', aria: L('Down', 'Bas') },
-      { label: '→', value: '1', aria: L('Right', 'Droite') },
-    ],
-    (v) => move(Number(v) as Dir),
-  );
-  arrows.classList.add('pk-pad');
+  const arrows = dpad((dir) => move(dir as Dir));
   ctx.controls(btn(L('Undo', 'Annuler'), undo, 'ghost'), btn(L('Restart', 'Repartir'), reset, 'ghost'));
   if (wallBar) root.append(wallBar);
   root.append(grid, arrows);

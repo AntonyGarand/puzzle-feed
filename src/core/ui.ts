@@ -65,12 +65,13 @@ export function btn(label: string, onclick: (e: MouseEvent) => void, variant: ''
   return h('button', { class: `btn ${variant}`.trim(), type: 'button', onclick }, label);
 }
 
-/** Shared key pad (row of equal keys under a board). */
+/** Shared key pad: square keys under a board, two even rows past 7 keys. */
 export function pad(
-  keys: { label: string; value: string; class?: string; style?: string; aria?: string }[],
+  keys: { label: string | Node; value: string; class?: string; style?: string; aria?: string }[],
   onkey: (v: string) => void,
 ): HTMLDivElement {
-  const el = h('div', { class: 'pad' });
+  // Long pads split into two even rows instead of shrinking every key.
+  const el = h('div', keys.length > 7 ? { class: 'pad rows', style: `--pc:${Math.ceil(keys.length / 2)}` } : { class: 'pad' });
   for (const k of keys) {
     el.append(
       h(
@@ -81,6 +82,47 @@ export function pad(
     );
   }
   return el;
+}
+
+/**
+ * Arrow pad laid out like a keyboard's arrow cluster (inverted T: ↑ above ← ↓ →), so each arrow sits on
+ * the side it points to. Directions are 0 up, 1 right, 2 down, 3 left. `extra` takes the spare top-right slot.
+ */
+export function dpad(
+  onDir: (d: number) => void,
+  aria: [up: string, right: string, down: string, left: string] = [
+    L('Up', 'Haut'),
+    L('Right', 'Droite'),
+    L('Down', 'Bas'),
+    L('Left', 'Gauche'),
+  ],
+  extra?: { label: string; aria?: string; class?: string; onclick: () => void },
+): HTMLDivElement {
+  const el = h('div', { class: 'dpad' });
+  aria.forEach((label, d) =>
+    el.append(h('button', { class: `key d${d}`, type: 'button', 'aria-label': label, onclick: () => onDir(d) }, arrowIcon(d * 90))),
+  );
+  if (extra)
+    el.append(
+      h(
+        'button',
+        { class: `key dx ${extra.class ?? ''}`.trim(), type: 'button', 'aria-label': extra.aria, onclick: extra.onclick },
+        extra.label,
+      ),
+    );
+  return el;
+}
+
+/**
+ * Arrow drawn as one stroked SVG rotated `deg` clockwise from up, so every direction (diagonals included)
+ * has the same weight; font arrows render ↑↓, ←→ and ↗ at visibly different thicknesses.
+ */
+export function arrowIcon(deg: number) {
+  return s(
+    'svg',
+    { viewBox: '0 0 24 24', class: 'arrow-icon', 'aria-hidden': 'true', style: `transform:rotate(${deg}deg)` },
+    s('path', { d: 'M12 19V5M6 11l6-6 6 6' }),
+  );
 }
 
 export function shake(el: Element) {

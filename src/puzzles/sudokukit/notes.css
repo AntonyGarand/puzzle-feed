@@ -29,8 +29,9 @@
 /* number pad as a keypad block mirroring the note spots, ✎ over ✕ in a column on the right */
 .pad.npad {
   display: grid;
-  grid-template-columns: repeat(var(--nc), 1fr) minmax(56px, 0.75fr);
-  grid-auto-rows: 46px;
+  grid-template-columns: repeat(calc(var(--nc) + 1), var(--ks));
+  grid-auto-rows: var(--ks);
+  justify-content: center;
   gap: 8px 8px;
   padding-right: 3px;
 }

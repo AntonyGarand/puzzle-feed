@@ -19,12 +19,13 @@
 /* 3×3 direction pad, move counter in the middle */
 [data-puzzle='gems'] .gems-pad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 50px);
+  grid-auto-rows: 50px;
   gap: 6px;
-  width: min(var(--board), 210px);
+  width: auto;
 }
 [data-puzzle='gems'] .gems-pad .key {
-  height: 40px;
+  font-size: 22px;
 }
 [data-puzzle='gems'] .gems-mid {
   display: flex;
