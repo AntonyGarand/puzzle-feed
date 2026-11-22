@@ -48,15 +48,41 @@ function carve(n: number, rng: Rng, newest: number): number[] {
   return open;
 }
 
-/** Knock through a fraction of dead ends, creating loops (several routes to compare). */
+/** Steps between two cells through the current passages (Infinity if unconnected). */
+function distance(open: number[], n: number, from: number, to: number): number {
+  const dist = new Array<number>(n * n).fill(-1);
+  dist[from] = 0;
+  const q = [from];
+  for (let h = 0; h < q.length; h++) {
+    const i = q[h];
+    if (i === to) return dist[i];
+    for (const x of neighbours(n, i)) {
+      if (open[i] & x.bit && dist[x.j] < 0) {
+        dist[x.j] = dist[i] + 1;
+        q.push(x.j);
+      }
+    }
+  }
+  return Infinity;
+}
+
+/**
+ * Knock through a fraction of dead ends, creating loops (several routes to compare). A wall is only removed
+ * when the cells on either side are far apart, so every loop is a real detour: short loops just make two
+ * parallel corridors to the same place (a lone wall stub floating in the middle of an open strip).
+ */
 function braid(open: number[], n: number, rng: Rng, fraction: number) {
+  const minLoop = Math.max(8, n);
   const deadEnds = rng.shuffle(open.map((_, i) => i).filter((i) => i !== 0 && i !== n * n - 1 && exits(open, i) === 1));
   for (const i of deadEnds.slice(0, Math.round(deadEnds.length * fraction))) {
     if (exits(open, i) !== 1) continue;
-    const closed = neighbours(n, i).filter((x) => !(open[i] & x.bit));
-    if (!closed.length) continue;
-    // Prefer joining another dead end so the new loop doesn't create a trivial shortcut everywhere.
-    const pick = closed.find((x) => exits(open, x.j) === 1) ?? rng.pick(closed);
+    const candidates = neighbours(n, i)
+      .filter((x) => !(open[i] & x.bit))
+      .map((x) => ({ ...x, dist: distance(open, n, i, x.j) }))
+      .filter((x) => x.dist >= minLoop);
+    if (!candidates.length) continue;
+    // Prefer joining another dead end (it removes two dead ends at once), then the longest loop.
+    const pick = candidates.sort((a, b) => +(exits(open, b.j) === 1) - +(exits(open, a.j) === 1) || b.dist - a.dist)[0];
     open[i] |= pick.bit;
     open[pick.j] |= pick.opp;
   }

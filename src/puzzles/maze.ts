@@ -229,9 +229,9 @@ export const maze: PuzzleDef = {
     mq.addEventListener('change', draw);
     const themeObs = new MutationObserver(draw);
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    // v2 = growing-tree generator; paths saved on the old mazes don't apply.
+    // v3 = loops only where they make a real detour; paths saved on older mazes don't apply.
     const sv = ctx.saved as { v?: number; path?: number[] } | undefined;
-    if (sv?.v === 2 && sv.path?.length && sv.path[0] === 0 && sv.path.every((v) => v >= 0 && v < n * n))
+    if (sv?.v === 3 && sv.path?.length && sv.path[0] === 0 && sv.path.every((v) => v >= 0 && v < n * n))
       path.splice(0, path.length, ...sv.path);
     root.append(wrap);
     requestAnimationFrame(draw);
@@ -370,7 +370,7 @@ export const maze: PuzzleDef = {
 
     return {
       hint,
-      snapshot: () => ({ v: 2, path }),
+      snapshot: () => ({ v: 3, path }),
       onKey(e) {
         const map: Record<string, number> = { ArrowUp: 0, w: 0, ArrowRight: 1, d: 1, ArrowDown: 2, s: 2, ArrowLeft: 3, a: 3 };
         const k = map[e.key];
