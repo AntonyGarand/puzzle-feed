@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">puzzle feed</string>
-    <string name="title_activity_main">puzzle feed</string>
+    <string name="app_name">Puzzle Feed</string>
+    <string name="title_activity_main">Puzzle Feed</string>
     <string name="package_name">dev.garand.puzzle.foss</string>
     <string name="custom_url_scheme">dev.garand.puzzle.foss</string>
 </resources>
