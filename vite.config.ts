@@ -80,7 +80,8 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
           // Copies of index.html for GitHub Pages (pagesFallback); navigateFallback covers them.
-          globIgnores: ['404.html', ...SHELL_ROUTES.map((r) => `${r}.html`)],
+          // og.png is only fetched by link-preview crawlers, never by the app.
+          globIgnores: ['404.html', 'og.png', ...SHELL_ROUTES.map((r) => `${r}.html`)],
           // The dictionaries are lazy chunks of a few hundred KB; precache them too so word games work offline.
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           // Path routing (src/core/nav.ts): every navigation is the app shell.
