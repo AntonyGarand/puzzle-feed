@@ -6,7 +6,10 @@ const base = process.argv[2] ?? 'http://localhost:5180/';
 /** Pick a level (1–5 or 'auto') through the card's cog sheet. */
 async function pickLevel(page, lv, card = page.locator('.card').first()) {
   await card.locator('[data-action="settings"]').click();
-  await page.locator(`dialog.sheet [data-setting="level"] [data-value="${lv}"]`).click();
+  // Auto is its own On/Off switch; a level pick turns it off.
+  const sel = lv === 'auto' ? '[data-setting="auto"] [data-value="1"]' : `[data-setting="level"] [data-value="${lv}"]`;
+  await page.locator(`dialog.sheet ${sel}`).click();
+  if (lv === 'auto') await page.keyboard.press('Escape'); // the switch doesn't close the sheet
   await page.waitForTimeout(150);
 }
 
