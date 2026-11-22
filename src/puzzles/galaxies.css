@@ -1,0 +1,68 @@
+[data-puzzle='galaxies'] {
+  --accent: var(--p3);
+}
+/* Gapless plate, like the other region games. */
+[data-puzzle='galaxies'] .grid.gx-plate {
+  position: relative;
+  gap: 0;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell);
+  overflow: hidden;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  background: var(--cell);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+[data-puzzle='galaxies'] .gx-plate .cell {
+  --thin: color-mix(in srgb, var(--ink) 22%, transparent);
+  border: 0;
+  border-right: 1px solid var(--thin);
+  border-bottom: 1px solid var(--thin);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--rc, var(--cell));
+  cursor: pointer;
+}
+[data-puzzle='galaxies'] .gx-plate button.cell:active {
+  transform: none;
+}
+[data-puzzle='galaxies'] .gx-plate .cell.bt {
+  border-top: 2.5px solid var(--ink);
+}
+[data-puzzle='galaxies'] .gx-plate .cell.bl {
+  border-left: 2.5px solid var(--ink);
+}
+[data-puzzle='galaxies'] .gx-plate .cell.br {
+  border-right: 2.5px solid var(--ink);
+}
+[data-puzzle='galaxies'] .gx-plate .cell.bb {
+  border-bottom: 2.5px solid var(--ink);
+}
+[data-puzzle='galaxies'] .gx-plate .cell.given {
+  cursor: pointer;
+}
+/* Dots sit on top of the cells (centres, edges or corners) and let taps through. */
+[data-puzzle='galaxies'] .gx-dots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+[data-puzzle='galaxies'] .gx-dot {
+  fill: var(--cell);
+  stroke: var(--ink);
+  stroke-width: 0.13;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 0.12s,
+    fill 0.12s;
+}
+[data-puzzle='galaxies'] .gx-dot.sel {
+  fill: var(--ink);
+  transform: scale(1.3);
+}
