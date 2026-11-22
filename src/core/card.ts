@@ -68,6 +68,14 @@ export class Card {
   private runningSince = 0;
   private mistakes = 0;
   private gen = 0;
+  /** Bumped for every game instance (a new puzzle or an undo): callbacks from older ones are ignored. */
+  private igen = 0;
+  private root: HTMLElement | null = null;
+  /** Undo steps for games with `def.undo`: snapshots, oldest first; the last one is the current state. */
+  private history: { state: unknown; key: string }[] = [];
+  private undoBtn = btn(L('Undo', 'Annuler'), () => this.undo(), 'ghost');
+  private trackTimer = 0;
+  private listen: AbortController | null = null;
   /** `gen` of the puzzle already reported as left (scrolled past), so it's reported once. */
   private leftGen = -1;
   private seed = 0;
@@ -359,9 +367,6 @@ export class Card {
     // A daily card always replays its own puzzle.
     if (this.opts.daily) launch = { level: this.opts.daily.level, seed: this.opts.seed, resume: launch?.resume };
     this.gen++;
-    const gen = this.gen;
-    this.inst.destroy?.();
-    this.inst = {};
     // Word games generate from the locale's word list: a save from the other language can't be resumed.
     const resume = launch?.resume && (!this.def.localized || (launch.resume.locale ?? 'en') === wordLocale()) ? launch.resume : undefined;
     this.level = resume?.level ?? launch?.level ?? (this.opts.lab && this.mounted ? this.level : prefs(this.def.id).level);
@@ -375,24 +380,40 @@ export class Card {
     this.elapsed = resume?.elapsed ?? 0;
     this.runningSince = this.active ? performance.now() : 0;
     this.el.classList.remove('is-solved', 'is-failed', 'is-skipped');
-    this.stage.replaceChildren();
     this.stage.inert = false;
-    this.statusEl.textContent = '';
-    this.controlsEl.replaceChildren();
-    this.foot.replaceChildren(this.statusEl, h('div', { class: 'actions' }, this.controlsEl));
+    this.foot.replaceChildren(this.statusEl, h('div', { class: 'actions' }, this.def.undo ? this.undoBtn : null, this.controlsEl));
     this.syncLevelSel();
     this.syncMistakes();
     this.tick();
 
-    const live = () => gen === this.gen && !this.done;
+    this.history = [];
+    this.listen?.abort();
+    this.listen = new AbortController();
+    // Drags can end outside the board; the move is in the state shortly after the pointer lifts.
+    if (this.def.undo) window.addEventListener('pointerup', () => this.active && this.queueTrack(), { signal: this.listen.signal });
+    this.createInstance(resume?.state);
+    this.opts.onMount?.(this);
+  }
+
+  /** Build the game in a fresh root, restoring `saved` (a resume or an undo). Keeps time and mistakes. */
+  private createInstance(saved: unknown) {
+    const igen = ++this.igen;
+    this.inst.destroy?.();
+    this.inst = {};
+    if (this.root) this.resize.unobserve(this.root);
+    this.stage.replaceChildren();
+    this.statusEl.textContent = '';
+    this.controlsEl.replaceChildren();
+    const live = () => igen === this.igen && !this.done;
     const root = h('div', { class: 'puzzle' });
+    this.root = root;
     this.stage.append(root);
     this.inst =
       this.def.create({
         difficulty: this.level,
         rng: new Rng(this.seed),
         root,
-        saved: resume?.state,
+        saved,
         solved: (opts) => live() && (opts?.keepPlaying ? this.reach() : this.finish('solved')),
         failed: () => live() && this.finish('failed'),
         mistake: () => {
@@ -407,20 +428,69 @@ export class Card {
           if (live()) this.interacted = true;
         },
         status: (t) => {
-          if (gen === this.gen) this.statusEl.textContent = t;
+          if (igen === this.igen) this.statusEl.textContent = t;
         },
         controls: (...els) => {
-          if (gen === this.gen) this.controlsEl.append(...els);
+          if (igen === this.igen) this.controlsEl.append(...els);
         },
       }) || {};
     // Any pointer interaction inside the stage counts as starting; progress is saved shortly after.
     root.addEventListener('pointerdown', () => (this.interacted = true), { capture: true });
     root.addEventListener('pointerup', () => this.queueSave());
     root.addEventListener('keyup', () => this.queueSave());
+    root.addEventListener('click', () => this.queueTrack());
     this.resize.observe(root);
     this.fit();
     if (this.active) this.inst.activate?.();
-    this.opts.onMount?.(this);
+    this.track();
+  }
+
+  /** Current state as an undo step; `key` ignores the selection and cursor. */
+  private capture(): { state: unknown; key: string } | null {
+    try {
+      const raw = this.inst.snapshot?.();
+      if (raw === undefined) return null;
+      const state: unknown = JSON.parse(JSON.stringify(raw));
+      const key = JSON.stringify(isRecord(state) ? { ...state, sel: undefined, cur: undefined } : state);
+      return { state, key };
+    } catch {
+      return null;
+    }
+  }
+
+  private queueTrack() {
+    if (!this.def.undo) return;
+    clearTimeout(this.trackTimer);
+    this.trackTimer = window.setTimeout(() => this.track(), 0);
+  }
+
+  /** Add the current state to the undo history if a move changed it. */
+  private track() {
+    clearTimeout(this.trackTimer);
+    if (!this.def.undo || this.done) return;
+    const c = this.capture();
+    if (!c) return;
+    if (this.history.at(-1)?.key !== c.key) this.history.push(c);
+    if (this.history.length > 300) this.history.shift();
+    this.undoBtn.disabled = this.history.length < 2;
+  }
+
+  /** Step back one move: re-create the game from the previous state, keeping selection and cursor. */
+  undo() {
+    if (!this.def.undo || this.done) return;
+    this.track(); // a move that settled after an animation may not be recorded yet
+    if (this.history.length < 2) return;
+    const cur = this.history.pop()!.state;
+    const prev = this.history.at(-1)!.state;
+    let state = prev;
+    if (isRecord(prev) && isRecord(cur)) {
+      const merged: Record<string, unknown> = { ...prev };
+      for (const k of ['sel', 'cur']) if (k in cur) merged[k] = cur[k];
+      state = merged;
+    }
+    this.interacted = true;
+    this.createInstance(structuredClone(state));
+    this.queueSave();
   }
 
   /** Re-sync the level label without regenerating (e.g. auto→manual elsewhere). */
@@ -431,6 +501,7 @@ export class Card {
   private queueSave() {
     clearTimeout(this.saveTimer);
     this.saveTimer = window.setTimeout(() => this.persist(), 400);
+    this.queueTrack();
   }
 
   /** Save in-progress state so it can be resumed from Labs. */
@@ -487,6 +558,11 @@ export class Card {
 
   onKey(e: KeyboardEvent): boolean {
     if (this.done) return false;
+    if (isUndoKey(e)) {
+      if (!this.def.undo) return false; // modifier keys never reach the games
+      this.undo();
+      return true;
+    }
     const handled = this.inst.onKey?.(e) ?? false;
     if (handled) {
       this.interacted = true;
@@ -643,11 +719,19 @@ export class Card {
 
   destroy() {
     this.persist();
+    this.listen?.abort();
+    clearTimeout(this.trackTimer);
     this.resize.disconnect();
     this.inst.destroy?.();
     this.gen++;
+    this.igen++;
   }
 }
+
+/** Ctrl+Z / Cmd+Z: the card's Undo (games with `def.undo`). */
+export const isUndoKey = (e: KeyboardEvent) => (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z';
+
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /**
  * Confetti for a solve worth celebrating, not every one: a first clear, a new best, a level up

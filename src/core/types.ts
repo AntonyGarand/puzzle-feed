@@ -105,6 +105,14 @@ export interface PuzzleDef {
   localized?: boolean;
   /** Starts switched off in the mixed feed (the player can turn it on); still playable from its own page. */
   offByDefault?: boolean;
+  /**
+   * Show the card's Undo button (and Ctrl/Cmd+Z): it steps back through `snapshot()` states by
+   * re-creating the game from an earlier one, so restoring from `ctx.saved` must be exact. Only for
+   * games where taking a move back reveals nothing (no hidden info, lives, random spawns or scores),
+   * and that don't already have their own Undo. Top-level `sel`/`cur` (selection, cursor) are not
+   * undo steps: moving them alone adds no entry, and undo keeps the current ones.
+   */
+  undo?: boolean;
   /** Target solve time in seconds at a given difficulty; used for auto-levelling. */
   par: (d: Difficulty) => number;
   create(ctx: PuzzleCtx): PuzzleInstance | void;

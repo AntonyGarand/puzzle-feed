@@ -20,6 +20,7 @@ export const pipes: PuzzleDef = {
     return L('Pipes', 'Tuyaux');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Rotate tiles until everything joins the source.', 'Tournez les tuiles pour tout relier à la source.');
   },

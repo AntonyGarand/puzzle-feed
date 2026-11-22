@@ -12,6 +12,7 @@ export const unequal: PuzzleDef = {
     return L('Unequal', 'Inégalités');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Each number once per row and column; obey the signs.', 'Chiffres uniques par rangée et colonne; suivez les signes.');
   },

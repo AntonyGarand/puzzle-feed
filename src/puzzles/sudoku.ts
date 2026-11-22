@@ -105,6 +105,7 @@ export const sudoku: PuzzleDef = {
     return L('Sudoku', 'Sudoku');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Each number once per row, column and box.', 'Chaque chiffre une fois par rangée, colonne et bloc.');
   },

@@ -1,6 +1,6 @@
 import { sheetOpen } from './sheet';
 import { L } from './i18n';
-import { Card } from './card';
+import { Card, isUndoKey } from './card';
 import { getSave } from './saves';
 import { isReload, sessionGet, sessionSet } from './session';
 import { onChange, prefs } from './store';
@@ -247,7 +247,7 @@ export class Feed {
     if (!this.active || !this.visible() || sheetOpen()) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.ctrlKey || e.metaKey || e.altKey) && !isUndoKey(e)) return;
     if (this.active.onKey(e)) {
       e.preventDefault();
       return;

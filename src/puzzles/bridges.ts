@@ -12,6 +12,7 @@ export const bridges: PuzzleDef = {
     return L('Bridges', 'Ponts');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Link islands with up to 2 straight bridges; join them all.', 'Reliez toutes les îles avec 1 ou 2 ponts droits.');
   },

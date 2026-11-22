@@ -12,6 +12,7 @@ export const jigsawSudoku: PuzzleDef = {
     return L('Jigsaw Sudoku', 'Sudoku irrégulier');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Each number once per row, column and outlined shape.', 'Chaque chiffre une fois par rangée, colonne et forme.');
   },

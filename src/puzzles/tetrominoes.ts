@@ -31,6 +31,7 @@ export const tetrominoes: PuzzleDef = {
     return L('Tetrominoes', 'Tétrominos');
   },
   category: 'logic',
+  undo: true,
   offByDefault: true,
   get rules() {
     return L('Cut into tetrominoes; same shapes never share a side.', 'Découpez en tétrominos; formes pareilles jamais côte à côte.');

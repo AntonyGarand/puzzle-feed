@@ -11,6 +11,7 @@ export const stars: PuzzleDef = {
     return L('Stars', 'Étoiles');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('One star per row, column and region. Stars never touch.', 'Une étoile par rangée, colonne et région. Jamais collées.');
   },

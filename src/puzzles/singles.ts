@@ -138,6 +138,7 @@ export const singles: PuzzleDef = {
     return L('Singles', 'Uniques');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Shade repeats away; shades never touch; stay linked.', 'Noircissez les doublons; noires isolées; blanches reliées.');
   },

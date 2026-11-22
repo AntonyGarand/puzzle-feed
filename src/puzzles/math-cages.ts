@@ -130,6 +130,7 @@ export const mathCages: PuzzleDef = {
     return L('Math Cages', 'Cages de calcul');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Numbers once per line; each cage hits its target.', 'Chiffres uniques par ligne; chaque cage atteint sa cible.');
   },

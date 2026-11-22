@@ -92,6 +92,7 @@ export const crossSums: PuzzleDef = {
     return L('Cross Sums', 'Sommes croisées');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Digits 1–9 add up to each clue; no repeats in a run.', 'Chiffres 1 à 9 : chaque segment fait sa somme, sans doublon.');
   },

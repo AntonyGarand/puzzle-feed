@@ -8,6 +8,7 @@ export const lights: PuzzleDef = {
     return L('Lights', 'Lumières');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('A tap flips a tile and its neighbours. Lights out!', 'Une touche inverse la case et ses voisines. Éteignez tout!');
   },

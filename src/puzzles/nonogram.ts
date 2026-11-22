@@ -59,6 +59,7 @@ export const nonogram: PuzzleDef = {
     return L('Nonogram', 'Nonogramme');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Clues are runs of filled tiles. Drag to paint.', 'Les indices donnent les blocs pleins. Glissez pour peindre.');
   },

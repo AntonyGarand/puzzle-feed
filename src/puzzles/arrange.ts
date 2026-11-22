@@ -27,6 +27,7 @@ export const arrange: PuzzleDef = {
     return L('Arrange', 'Assembler');
   },
   category: 'moves',
+  undo: true,
   get rules() {
     return L('Drag every piece onto the board to fill it exactly.', 'Glissez les pièces pour remplir toute la grille.');
   },

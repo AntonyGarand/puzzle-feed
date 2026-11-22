@@ -12,6 +12,7 @@ export const trail: PuzzleDef = {
     return L('Trail', 'Sentier');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('One path through every cell, numbers in order.', 'Un chemin par toutes les cases, numéros dans l’ordre.');
   },

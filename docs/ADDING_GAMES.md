@@ -16,6 +16,7 @@ Read these first:
 - Call `ctx.touch()` on the first interaction. Call `ctx.mistake()` only for a genuinely wrong move. Call `ctx.solved()` or `ctx.failed()` once. Use `ctx.status(text)` for a short footer line (moves left, counts, …) and `ctx.controls(...buttons)` for extra footer buttons (Undo, mode toggles, …).
 - **All randomness must come from `ctx.rng`.** Resuming re-creates the game from the same seed, so `Math.random` breaks resume.
 - **Implement `snapshot()`** returning JSON-serialisable progress, and restore it defensively from `ctx.saved`. After a resume, the visible board (classes, text, inline styles) must be identical, including the current selection. `test/resume.test.ts` checks this automatically by clicking random buttons.
+- **Undo:** for perfect-information games (no hidden tiles, lives, random spawns or scores), set `undo: true` instead of building an Undo button. The card then shows Undo (and handles Ctrl/Cmd+Z), stepping back through `snapshot()` states by re-creating the game from `ctx.saved`. Top-level `sel` / `cur` count as selection, not moves. `test/undo.test.ts` checks that restoring is exact.
 - A new puzzle must never start already solved.
 - Validate by the rules, not by comparing with a stored solution, unless the generator guarantees a unique solution.
 - Difficulty 1 to 5 (Easy, Medium, Hard, Expert, Master) must make a real difference: size, givens, constraints, move limits. `par(d)` is a realistic target solve time in seconds and drives auto-levelling.

@@ -13,6 +13,7 @@ export const tiles: PuzzleDef = {
     return L('Tiles', 'Rectangles');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Split into rectangles, each holding one number = its area.', 'Découpez en rectangles contenant un nombre égal à leur aire.');
   },

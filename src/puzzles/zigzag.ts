@@ -13,6 +13,7 @@ export const zigzag: PuzzleDef = {
     return L('Zigzag', 'Zigzags');
   },
   category: 'paths',
+  undo: true,
   offByDefault: true,
   get rules() {
     return L('Fill the grid with wiggly lines as long as their numbers.', 'Couvrez tout de lignes sinueuses longues comme leur nombre.');
