@@ -9,7 +9,7 @@ import { openSheet } from './sheet';
 import { prefs, record, recordDaily, setLevel, setWeight, getProfile, stats, type RecordOutcome, type Weight } from './store';
 import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type PuzzleDef, type PuzzleInstance } from './types';
 import { btn, cogIcon, fmtTime, h } from './ui';
-import { levelHex, winCard } from './win';
+import { levelHex, lostCard, winCard } from './win';
 import { xpLevel } from './xp';
 
 export interface CardOptions {
@@ -585,8 +585,10 @@ export class Card {
     }
     const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
     const advanceMs = res.best || res.prevBest == null || res.levelChange ? 3200 : 2400;
+    const levelUp = res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] };
+    let panel: HTMLElement | null = null;
     if (o === 'solved') {
-      const win = winCard({
+      panel = winCard({
         name: this.def.name,
         level: LEVEL_NAMES[this.level],
         daily: !!this.opts.daily,
@@ -595,24 +597,35 @@ export class Card {
         parMs: this.def.par(this.level) * 1000,
         solved: stats(this.def.id).solved,
         res: known ? res : null,
-        levelUp: res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] },
+        levelUp,
         advanceMs: advance ? advanceMs : undefined,
       });
+    } else if (o === 'failed') {
+      const st = stats(this.def.id);
+      panel = lostCard({
+        name: this.def.name,
+        level: LEVEL_NAMES[this.level],
+        daily: !!this.opts.daily,
+        ms,
+        mistakes: this.mistakes,
+        best: st.best[this.level],
+        played: st.solved + st.failed,
+        solved: st.solved,
+        levelUp,
+      });
+    } else if (levelUp) {
+      parts.push(
+        h('span', { class: 'lvl-change' }, ` · ${levelUp.up ? L('Level up', 'Niveau supérieur') : L('Easing off', 'On ralentit')} → ${levelUp.to}`),
+      );
+    }
+    if (panel) {
+      const p = panel;
       // Tap the panel to peek at the finished board (tap again to bring it back); this stops auto-advance.
-      win.addEventListener('click', () => {
-        win.classList.toggle('peek');
+      p.addEventListener('click', () => {
+        p.classList.toggle('peek');
         clearTimeout(this.advanceTimer);
       });
-      this.stage.append(win);
-    } else if (res.levelChange) {
-      const up = res.levelChange.to > res.levelChange.from;
-      parts.push(
-        h(
-          'span',
-          { class: 'lvl-change' },
-          ` · ${up ? L('Level up', 'Niveau supérieur') : L('Easing off', 'On ralentit')} → ${LEVEL_NAMES[res.levelChange.to]}`,
-        ),
-      );
+      this.stage.append(p);
     }
 
     const daily = !!this.opts.daily;
