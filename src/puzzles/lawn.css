@@ -1,0 +1,166 @@
+[data-puzzle='lawn'] {
+  --accent: var(--p3);
+  /* lawn tones: fresh green grass, pale lime once cut, dark blades */
+  --grass: var(--p3);
+  --mown: var(--p8);
+  --blade: color-mix(in srgb, var(--p3) 40%, #14532d);
+}
+
+[data-puzzle='lawn'] .lawn-grid {
+  position: relative;
+  gap: 0;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: hidden;
+  touch-action: none;
+}
+[data-puzzle='lawn'] .lawn-grid .cell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ink) 28%, transparent);
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+/* the board clips its cells, so keep the focus ring inside */
+[data-puzzle='lawn'] .lawn-grid .cell:focus-visible {
+  outline-offset: -4px;
+}
+[data-puzzle='lawn'] .lawn-grid button.cell:active {
+  transform: none;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ink) 28%, transparent);
+}
+/* grass heights: the taller, the greener */
+[data-puzzle='lawn'] .cell.h0 {
+  background: color-mix(in srgb, var(--mown) 26%, var(--cell));
+  cursor: default;
+}
+/* mown stripes alternate by column, like a freshly cut lawn */
+[data-puzzle='lawn'] .cell.h0.odd {
+  background: color-mix(in srgb, var(--mown) 40%, var(--cell));
+}
+[data-puzzle='lawn'] .cell.h1 {
+  background: color-mix(in srgb, var(--grass) 45%, var(--cell));
+}
+[data-puzzle='lawn'] .cell.h2 {
+  background: color-mix(in srgb, var(--grass) 72%, var(--cell));
+}
+[data-puzzle='lawn'] .cell.h3 {
+  background: color-mix(in srgb, var(--grass) 88%, var(--blade));
+}
+
+[data-puzzle='lawn'] .grass {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+[data-puzzle='lawn'] .blades {
+  fill: var(--blade);
+  transform-box: view-box;
+  transform-origin: 50% 100%;
+  transition: transform 0.2s;
+}
+[data-puzzle='lawn'] .h0 .blades {
+  transform: scaleY(0.1);
+  opacity: 0.35;
+}
+[data-puzzle='lawn'] .h1 .blades {
+  transform: scaleY(0.38);
+}
+[data-puzzle='lawn'] .h2 .blades {
+  transform: scaleY(0.66);
+}
+[data-puzzle='lawn'] .h3 .blades {
+  transform: scaleY(0.95);
+}
+
+/* passes left: a small badge in the corner */
+[data-puzzle='lawn'] .cell .n {
+  position: absolute;
+  top: 6%;
+  left: 6%;
+  min-width: 1.5em;
+  padding: 0 0.2em;
+  box-sizing: border-box;
+  border: max(1.5px, calc(var(--cbw) * 0.7)) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+  color: var(--fg);
+  font-size: calc(var(--board) / var(--cols) * 0.22);
+  line-height: 1.35;
+  text-align: center;
+}
+[data-puzzle='lawn'] .cell .n:empty {
+  display: none;
+}
+
+/* start: a dashed ring on the patch the mower set off from */
+[data-puzzle='lawn'] .cell.st::before {
+  content: '';
+  position: absolute;
+  inset: 16%;
+  border: max(1.5px, calc(var(--cbw) * 0.8)) dashed color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 50%;
+}
+
+/* rock: a grey boulder on cut grass */
+[data-puzzle='lawn'] .cell.rock {
+  background: color-mix(in srgb, var(--mown) 26%, var(--cell));
+  cursor: default;
+}
+[data-puzzle='lawn'] .cell.rock::after {
+  content: '';
+  width: 70%;
+  height: 58%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 46% 54% 40% 44%;
+  background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--cell) 55%, var(--muted)) 0 22%, transparent 24%), var(--muted);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* the mower glides over the cells */
+[data-puzzle='lawn'] .mower {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--cols));
+  height: calc(100% / var(--rows));
+  pointer-events: none;
+  z-index: 3;
+  transition: transform 0.12s ease-out;
+}
+[data-puzzle='lawn'] .mower svg {
+  width: 100%;
+  height: 100%;
+  /* sits towards the bottom right so the corner badge stays readable */
+  padding: 24% 6% 6% 24%;
+  box-sizing: border-box;
+  transform-origin: 59% 59%;
+  overflow: visible;
+  transition: transform 0.12s;
+}
+[data-puzzle='lawn'] .mower .deck {
+  fill: var(--p1);
+  stroke: var(--ink);
+  stroke-width: 0.55;
+}
+[data-puzzle='lawn'] .mower .hub {
+  fill: var(--cell);
+  stroke: var(--ink);
+  stroke-width: 0.45;
+}
+[data-puzzle='lawn'] .mower .wheel {
+  fill: var(--ink);
+}
+[data-puzzle='lawn'] .mower .handle {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.6;
+  stroke-linecap: round;
+}

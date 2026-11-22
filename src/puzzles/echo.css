@@ -1,0 +1,192 @@
+[data-puzzle='echo'] {
+  --accent: var(--p6);
+  /* you, and your echoes (a see-through copy of you) */
+  --echo-me: var(--p7);
+}
+[data-puzzle='echo'] .echo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: var(--board);
+  font-size: 14px;
+  font-weight: 700;
+}
+[data-puzzle='echo'] .echo-runs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-puzzle='echo'] .echo-phase {
+  font-variant-numeric: tabular-nums;
+}
+[data-puzzle='echo'] .echo-grid {
+  position: relative;
+  touch-action: none;
+  --lift: max(2px, var(--csh));
+  --unit: calc(var(--board) / var(--cols));
+}
+/* wall: a raised stone block */
+[data-puzzle='echo'] .cell.wall {
+  background: color-mix(in srgb, var(--muted) 62%, var(--cell));
+  box-shadow:
+    inset 0 calc(var(--unit) * 0.07) 0 color-mix(in srgb, var(--cell) 45%, transparent),
+    var(--lift) var(--lift) 0 var(--ink);
+}
+/* floor sits lower: flat tiles with soft seams */
+[data-puzzle='echo'] .echo-grid button.cell {
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--cell-alt));
+}
+[data-puzzle='echo'] .echo-grid button.cell:active {
+  transform: none;
+}
+/* start: a dashed ring where every run begins */
+[data-puzzle='echo'] .cell.st::before {
+  content: '';
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) dashed color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 50%;
+}
+/* exit: a chequered flag tile */
+[data-puzzle='echo'] .echo-grid button.cell.ex {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--good) 35%, var(--cell));
+}
+[data-puzzle='echo'] .cell.ex::before {
+  content: '';
+  position: absolute;
+  width: 58%;
+  height: 58%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 3px;
+  background: repeating-conic-gradient(var(--ink) 0 25%, var(--cell) 0 50%) 0 0 / 50% 50%;
+}
+/* plate: a coloured pad set into the floor; pressed while someone stands on it */
+[data-puzzle='echo'] .echo-grid button.cell.pl {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--c) 22%, var(--cell-alt));
+}
+[data-puzzle='echo'] .cell.pl::before {
+  content: '';
+  position: absolute;
+  width: 68%;
+  height: 68%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 4px;
+  background: var(--c);
+  box-shadow: calc(var(--lift) * 0.8) calc(var(--lift) * 0.8) 0 var(--ink);
+}
+[data-puzzle='echo'] .cell.pl.held::before {
+  box-shadow: inset 0 calc(var(--unit) * 0.06) 0 color-mix(in srgb, var(--ink) 35%, transparent);
+  transform: translate(calc(var(--lift) * 0.8), calc(var(--lift) * 0.8));
+}
+/* door: closed = a raised barred block in its colour; open = a faint dashed frame */
+[data-puzzle='echo'] .echo-grid button.cell.dr {
+  border-color: var(--ink);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 18%, color-mix(in srgb, var(--ink) 55%, transparent) 18% 26%, transparent 26% 34%),
+    var(--c);
+  box-shadow: var(--lift) var(--lift) 0 var(--ink);
+}
+[data-puzzle='echo'] .echo-grid button.cell.dr.open {
+  border-style: dashed;
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 18%, var(--cell-alt));
+  box-shadow: none;
+}
+/* you: a solid ball */
+[data-puzzle='echo'] .echo-grid .cell.me {
+  z-index: 3;
+}
+[data-puzzle='echo'] .cell.me::after {
+  content: '';
+  position: relative;
+  width: 60%;
+  height: 60%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 50%;
+  background: var(--echo-me);
+  box-shadow: calc(var(--lift) * 0.8) calc(var(--lift) * 0.8) 0 var(--ink);
+}
+/* echo: a see-through ghost of you */
+[data-puzzle='echo'] .gst {
+  display: none;
+  position: absolute;
+  width: 66%;
+  height: 66%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) dashed var(--ink);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--echo-me) 45%, transparent);
+  pointer-events: none;
+}
+[data-puzzle='echo'] .cell.gh .gst {
+  display: block;
+}
+[data-puzzle='echo'] .cell.gh.me .gst {
+  width: 86%;
+  height: 86%;
+}
+/* echo paths: faint where it has been, dashed where it goes next; numbers are waits */
+[data-puzzle='echo'] .echo-paths {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+[data-puzzle='echo'] .echo-paths polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='echo'] .echo-paths .past {
+  stroke: color-mix(in srgb, var(--echo-me) 35%, transparent);
+  stroke-width: calc(var(--unit) * 0.08);
+}
+[data-puzzle='echo'] .echo-paths .next {
+  stroke: var(--echo-me);
+  stroke-width: calc(var(--unit) * 0.09);
+  stroke-dasharray: calc(var(--unit) * 0.12) calc(var(--unit) * 0.14);
+}
+[data-puzzle='echo'] .echo-paths .mine {
+  stroke: color-mix(in srgb, var(--echo-me) 55%, transparent);
+  stroke-width: calc(var(--unit) * 0.1);
+}
+[data-puzzle='echo'] .echo-paths .stop {
+  r: calc(var(--unit) * 0.1);
+  fill: var(--echo-me);
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+}
+[data-puzzle='echo'] .echo-paths .wait circle {
+  r: calc(var(--unit) * 0.17);
+  fill: var(--cell);
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  transform: translate(calc(var(--unit) * 0.26), calc(var(--unit) * -0.26));
+}
+[data-puzzle='echo'] .echo-paths .wait text {
+  fill: var(--fg);
+  font-size: calc(var(--unit) * 0.22);
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transform: translate(calc(var(--unit) * 0.26), calc(var(--unit) * -0.26));
+}
+[data-puzzle='echo'] .echo-pad {
+  width: min(var(--board), 340px);
+}
+[data-puzzle='echo'] .echo-pad .echo-wait {
+  flex: 1.8;
+  font-size: 14px;
+}

@@ -1,6 +1,6 @@
 # puzzle feed
 
-An endless, scroll-snapping feed of short puzzles: 59 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
+An endless, scroll-snapping feed of short puzzles: 67 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
 
 **Play:** https://puzzle.garand.dev — installable, and works fully offline once loaded (it's a PWA; a banner offers new versions).
 
@@ -47,13 +47,13 @@ scripts/             Playwright audit + screenshot tools (use your installed Chr
 
 ## Games
 
-There are 59 games in seven categories (`src/core/categories.ts`):
+There are 67 games in seven categories (`src/core/categories.ts`):
 
-- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box
-- **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze
-- **Numbers:** Target, Guess, 2048
-- **Words:** Anagram, Word Guess, Hunt, Tower (English and French word lists)
-- **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse
+- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box, Logic grid, Hidden rule
+- **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze, Mow
+- **Numbers:** Target, Guess, 2048, Factory
+- **Words:** Anagram, Word Guess, Hunt, Tower, Word Cover (English and French word lists)
+- **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse, Worms, Tether, Echo
 - **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2)
 - **Memory & eyes:** Memory, Pairs
 

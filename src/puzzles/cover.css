@@ -1,0 +1,87 @@
+[data-puzzle='cover'] {
+  --accent: var(--p5);
+}
+[data-puzzle='cover'] .puzzle {
+  gap: 12px;
+}
+/* Square cells whatever the shape: the longer side spans the board. */
+[data-puzzle='cover'] .cover-grid {
+  --side: calc((var(--board) - 24px) / max(var(--cols), var(--rows)));
+  width: calc(var(--side) * var(--cols));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+[data-puzzle='cover'] .cover-grid .cell {
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: calc(var(--side) * 0.46);
+}
+[data-puzzle='cover'] .cover-grid .cell.sel {
+  background: var(--ink);
+  color: var(--bg);
+}
+[data-puzzle='cover'] .cover-grid .cell.cover-done {
+  background: var(--c);
+  color: var(--on-tone);
+  cursor: default;
+}
+[data-puzzle='cover'] .cover-grid .cell.hint::after {
+  content: attr(data-n);
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: calc(var(--side) * 0.2);
+  line-height: 1;
+  color: var(--muted);
+}
+[data-puzzle='cover'] .trace-fixed-line {
+  stroke: var(--ink);
+  stroke-width: calc(var(--lw, 8px) * 0.5);
+  opacity: 0.35;
+}
+
+[data-puzzle='cover'] .cover-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: calc(var(--board) - 24px);
+}
+[data-puzzle='cover'] .cover-word {
+  height: 30px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  line-height: 30px;
+}
+[data-puzzle='cover'] .cover-word.typing {
+  color: var(--fg);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+[data-puzzle='cover'] .cover-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  min-height: 24px;
+}
+[data-puzzle='cover'] .cover-chip {
+  padding: 1px 9px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.1em;
+}
+[data-puzzle='cover'] .cover-chip.done {
+  background: var(--c);
+  color: var(--on-tone);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

@@ -91,43 +91,6 @@
   line-height: 18px;
 }
 
-/* path overlay: the selected letters linked in order */
-[data-puzzle='hunt'] .hunt-wrap {
-  position: relative;
-}
-[data-puzzle='hunt'] .hunt-path {
-  opacity: 0.6;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-[data-puzzle='hunt'] .hunt-line-under,
-[data-puzzle='hunt'] .hunt-line {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-[data-puzzle='hunt'] .hunt-line-under {
-  stroke: var(--ink);
-  stroke-width: calc(var(--lw, 8px) + 5px);
-  opacity: 0.85;
-}
-[data-puzzle='hunt'] .hunt-line {
-  stroke: var(--accent);
-  stroke-width: var(--lw, 8px);
-}
-[data-puzzle='hunt'] .hunt-start {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 4;
-}
-[data-puzzle='hunt'] .hunt-end {
-  fill: var(--ink);
-}
-
 /* stars on the progress bar */
 [data-puzzle='hunt'] .hunt-bar {
   overflow: visible;

@@ -1,0 +1,93 @@
+[data-puzzle='factory'] {
+  --accent: var(--p6);
+}
+[data-puzzle='factory'] .grid.factory,
+[data-puzzle='factory'] .fx-tray {
+  touch-action: none;
+}
+[data-puzzle='factory'] .fx-in {
+  background: var(--accent-soft);
+}
+[data-puzzle='factory'] .fx-belt {
+  background: var(--cell-alt);
+  border-color: color-mix(in srgb, var(--ink) 35%, var(--cell-alt));
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 400;
+}
+[data-puzzle='factory'] .fx-join {
+  color: var(--fg);
+  font-weight: 700;
+}
+[data-puzzle='factory'] .fx-dead {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-puzzle='factory'] .fx-slot {
+  border-style: dashed;
+  box-shadow: none;
+  cursor: pointer;
+}
+[data-puzzle='factory'] .fx-slot.on {
+  border-style: solid;
+  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  cursor: grab;
+}
+[data-puzzle='factory'] .fx-slot.hint {
+  background: var(--accent-soft);
+}
+[data-puzzle='factory'] .fx-b {
+  padding-bottom: 0.45em;
+}
+[data-puzzle='factory'] .fx-op {
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+[data-puzzle='factory'] .fx-out.ok {
+  background: var(--good);
+  color: var(--on-tone);
+}
+[data-puzzle='factory'] .fx-v {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  left: 0;
+  text-align: center;
+  font-size: max(10px, 0.42em);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--muted);
+}
+[data-puzzle='factory'] .on .fx-v,
+[data-puzzle='factory'] .ok .fx-v {
+  color: var(--on-tone);
+  opacity: 0.75;
+}
+[data-puzzle='factory'] .fx-v.bad {
+  color: var(--bad);
+  opacity: 1;
+}
+[data-puzzle='factory'] .fx-tray .key {
+  cursor: grab;
+  touch-action: none;
+  white-space: nowrap;
+}
+[data-puzzle='factory'] .fx-tray .key.used,
+[data-puzzle='factory'] .fx-tray .key.lifted {
+  opacity: 0.25;
+  box-shadow: none;
+  border-style: dashed;
+  cursor: default;
+}
+[data-puzzle='factory'] .fx-ghost {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: var(--accent);
+  color: var(--on-tone);
+  opacity: 0.92;
+}

@@ -1,0 +1,37 @@
+/* Path overlay shared by the letter-grid word games (hunt, cover): the traced letters linked in order. */
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-wrap {
+  position: relative;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) :is(.trace-line-under, .trace-line, .trace-fixed-line) {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-live {
+  opacity: 0.6;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-line-under {
+  stroke: var(--ink);
+  stroke-width: calc(var(--lw, 8px) + 5px);
+  opacity: 0.85;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-line {
+  stroke: var(--accent);
+  stroke-width: var(--lw, 8px);
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-start {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 4;
+}
+:is([data-puzzle='hunt'], [data-puzzle='cover']) .trace-end {
+  fill: var(--ink);
+}
