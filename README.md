@@ -51,7 +51,7 @@ There are 59 games in seven categories (`src/core/categories.ts`):
 
 - **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze
-- **Numbers:** Target, Guess, 2048
+- **Numbers:** Target, Guess, 2048, Factory
 - **Words:** Anagram, Word Guess, Hunt, Tower (English and French word lists)
 - **Moves:** Slide, Unblock, Push, Gems, Arrange, Blocks, Flood, Pegs, Collapse
 - **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2)
