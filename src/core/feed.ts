@@ -38,7 +38,7 @@ export class Feed {
       'div',
       { class: 'empty' },
       h('p', null, L('All puzzles are turned off.', 'Tous les jeux sont désactivés.')),
-      h('a', { class: 'btn', href: '#/settings' }, L('Pick some puzzles', 'Choisir des jeux')),
+      h('a', { class: 'btn', href: '/settings' }, L('Pick some puzzles', 'Choisir des jeux')),
     );
 
     const ratios = this.ratios;

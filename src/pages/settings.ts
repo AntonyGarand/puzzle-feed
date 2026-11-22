@@ -83,7 +83,7 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
           'How often each game shows up in the feed, and its level, are set on its tile in ',
           'La fréquence de chaque jeu dans le fil et son niveau se règlent sur sa tuile dans l’onglet ',
         ),
-        h('a', { href: '#/games' }, L('Games', 'Jeux')),
+        h('a', { href: '/games' }, L('Games', 'Jeux')),
         L(
           '. Auto raises the level when you solve quickly and cleanly, and eases off after misses. Picking a level yourself locks it.',
           '. Le mode Auto monte le niveau quand vous résolvez vite et sans faute, et le baisse après des échecs. Choisir un niveau vous-même le fixe.',

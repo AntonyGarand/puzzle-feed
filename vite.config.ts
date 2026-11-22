@@ -1,5 +1,7 @@
 import { execSync } from 'node:child_process';
-import { defineConfig } from 'vite';
+import { copyFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 /** Short commit + build date, shown in Settings so you can tell which version is running. */
@@ -15,6 +17,26 @@ function buildVersion() {
   return `${sha} · ${new Date().toISOString().slice(0, 10)}`;
 }
 
+/** Top-level routes served as real files, so a fresh visit gets a 200 instead of the 404 fallback. */
+const SHELL_ROUTES = ['games', 'daily', 'stats', 'settings'];
+
+/**
+ * GitHub Pages has no rewrites: copy the app shell to 404.html (served for any unknown path, e.g.
+ * /game/sudoku or /s/<code>) and to <route>.html (Pages serves /games from games.html).
+ */
+function pagesFallback(): Plugin {
+  let outDir = 'dist';
+  return {
+    name: 'pages-spa-fallback',
+    apply: 'build',
+    configResolved: (c) => void (outDir = c.build.outDir),
+    closeBundle() {
+      const index = join(outDir, 'index.html');
+      for (const name of ['404', ...SHELL_ROUTES]) copyFileSync(index, join(outDir, `${name}.html`));
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   // `npm run build:android` (mode "android", see .env.android) bundles dist/ into the F-Droid APK:
   // no source maps or service worker there.
@@ -26,6 +48,7 @@ export default defineConfig(({ mode }) => {
     build: { target: 'es2022', sourcemap: !android },
     define: { __APP_VERSION__: JSON.stringify(buildVersion()) },
     plugins: [
+      pagesFallback(),
       // Installable app that works fully offline: every built file (JS, CSS, fonts, both dictionaries,
       // icons) is precached by a Workbox service worker. A new version downloads in the background and
       // src/core/update.ts shows a "new version" banner; reloading activates it.
@@ -56,9 +79,11 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+          // Copies of index.html for GitHub Pages (pagesFallback); navigateFallback covers them.
+          globIgnores: ['404.html', ...SHELL_ROUTES.map((r) => `${r}.html`)],
           // The dictionaries are lazy chunks of a few hundred KB; precache them too so word games work offline.
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          // Hash routing: every navigation is the app shell.
+          // Path routing (src/core/nav.ts): every navigation is the app shell.
           navigateFallback: '/index.html',
           cleanupOutdatedCaches: true,
         },

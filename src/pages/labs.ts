@@ -2,6 +2,7 @@ import { helpButton } from '../core/help';
 import { L, locale, P } from '../core/i18n';
 import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
+import { navigate } from '../core/nav';
 import { encodeCode, resolveCode } from '../core/share';
 import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
@@ -82,7 +83,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           L('discard', 'abandonner'),
         ),
       );
-    const startNew = () => (location.hash = `#/game/${d.id}/new/${prefs(d.id).level}`);
+    const startNew = () => navigate(`/game/${d.id}/new/${prefs(d.id).level}`);
 
     const art = h(
       'article',
@@ -97,7 +98,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
       h(
         'div',
         { class: 'lab-new' },
-        save ? h('a', { class: 'btn primary', href: `#/game/${d.id}` }, L('Resume', 'Reprendre')) : null,
+        save ? h('a', { class: 'btn primary', href: `/game/${d.id}` }, L('Resume', 'Reprendre')) : null,
         levelSel,
         h(
           'button',
@@ -159,7 +160,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           codeInput.focus();
           return;
         }
-        location.hash = `#/s/${encodeCode(res.code)}`;
+        navigate(`/s/${encodeCode(res.code)}`);
       },
     },
     h('h3', null, L('Play a shared puzzle', 'Jouer une partie partagée')),

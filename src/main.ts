@@ -18,6 +18,7 @@ import { resolveCode } from './core/share';
 import { PUZZLES } from './puzzles';
 import { setupUpdates } from './core/update';
 import { closeSheet } from './core/sheet';
+import { navigate, onNavigate, upgradeHashRoute } from './core/nav';
 import { isReload, sessionGet, sessionSet } from './core/session';
 
 const app = document.getElementById('app')!;
@@ -42,20 +43,20 @@ const ICONS = {
 const tab = (key: keyof typeof ICONS, href: string, label: string) =>
   h('a', { href, class: 'tab', 'data-tab': key }, ICONS[key](), h('span', null, label));
 const tabs = {
-  feed: tab('feed', '#/', L('Feed', 'Fil')),
-  daily: tab('daily', '#/daily', L('Daily', 'Défis')),
-  labs: tab('labs', '#/games', L('Games', 'Jeux')),
-  stats: tab('stats', '#/stats', L('Profile', 'Profil')),
-  settings: tab('settings', '#/settings', L('Settings', 'Réglages')),
+  feed: tab('feed', '/', L('Feed', 'Fil')),
+  daily: tab('daily', '/daily', L('Daily', 'Défis')),
+  labs: tab('labs', '/games', L('Games', 'Jeux')),
+  stats: tab('stats', '/stats', L('Profile', 'Profil')),
+  settings: tab('settings', '/settings', L('Settings', 'Réglages')),
 };
 
 document.documentElement.lang = localeTag();
 const streak = h('span', { class: 'streak', title: L('Day streak', 'Jours consécutifs') });
-const practice = h('a', { class: 'practice', href: '#/', title: L('Back to the mixed feed', 'Retour au fil mélangé'), hidden: true });
+const practice = h('a', { class: 'practice', href: '/', title: L('Back to the mixed feed', 'Retour au fil mélangé'), hidden: true });
 const header = h(
   'header',
   { class: 'top' },
-  h('a', { class: 'brand', href: '#/' }, h('span', { class: 'logo' }, h('i'), h('i'), h('i'), h('i')), 'puzzle feed'),
+  h('a', { class: 'brand', href: '/' }, h('span', { class: 'logo' }, h('i'), h('i'), h('i'), h('i')), 'puzzle feed'),
   h('div', { class: 'top-extra' }, streak, practice),
   h('nav', { class: 'tabs', 'aria-label': L('Main', 'Principal') }, ...Object.values(tabs)),
 );
@@ -88,24 +89,24 @@ const safeDecode = (str: string) => {
 };
 
 function route() {
-  const [r, arg, sub, lvl] = (location.hash.replace(/^#\/?/, '') || 'feed').split('/');
-  // #/s/<code>: a shared puzzle (game, level, seed). A bad code lands on the Games tab with the error.
+  const [r = 'feed', arg, sub, lvl] = location.pathname.split('/').filter(Boolean);
+  // /s/<code>: a shared puzzle (game, level, seed). A bad code lands on the Games tab with the error.
   let codeError: { input: string; error: string } | undefined;
   const input = r === 's' ? safeDecode(arg ?? '') : '';
   const shared = r === 's' ? resolveCode(input, PUZZLES) : undefined;
   if (shared && 'error' in shared) {
     codeError = { input, error: shared.error };
-    history.replaceState(null, '', '#/games');
+    history.replaceState(null, '', '/games');
   }
   const sharedOk = shared && 'def' in shared ? shared : undefined;
   const def = sharedOk?.def ?? PUZZLES.find((p) => p.id === arg);
-  // #/games (alias #/labs) lists games; #/game/<id> (alias #/lab/<id>) opens one.
+  // /games (alias /labs) lists games; /game/<id> (alias /lab/<id>) opens one.
   let view: View = r === 'stats' || r === 'settings' || r === 'daily' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
   if (((r === 'lab' || r === 'game') && def) || sharedOk) view = 'lab';
   // Leaving the lab drops a shared puzzle's word list before the feed deals any cards.
   if (view !== 'lab') lab.setShown(false);
 
-  // #/daily/<level> shows that level's list; #/daily/<level>/<n> plays its n-th puzzle.
+  // /daily/<level> shows that level's list; /daily/<level>/<n> plays its n-th puzzle.
   const dailyLevel = r === 'daily' && LEVELS.includes(Number(arg) as Difficulty) ? (Number(arg) as Difficulty) : undefined;
   const daily = dailyLevel && sub ? openDaily(dailyLevel, Number(sub) - 1) : false;
   if (daily) view = 'lab';
@@ -116,7 +117,7 @@ function route() {
   practice.hidden = !(view === 'feed' && only);
   if (only && def) practice.replaceChildren(h('span', { class: 'swatchlet', 'data-puzzle': def.id }), `${def.name} ✕`);
 
-  // Lab: #/lab/<id> resumes (or starts) · #/lab/<id>/new/<level> starts fresh
+  // Lab: /game/<id> resumes (or starts) · /game/<id>/new/<level> starts fresh
   if (daily) {
     // opened by openDaily()
   } else if (sharedOk) {
@@ -131,7 +132,7 @@ function route() {
       lab.open(def, level);
       labOpen = def.id;
     }
-    if (level) history.replaceState(null, '', `#/game/${def.id}`); // reload/back resumes instead of re-rolling
+    if (level) history.replaceState(null, '', `/game/${def.id}`); // reload/back resumes instead of re-rolling
   } else if (labOpen && view !== 'lab') {
     lab.setShown(false);
   }
@@ -150,7 +151,7 @@ function route() {
   if (view === 'settings') renderSettings(page, PUZZLES);
   if (!page.hidden) page.scrollTop = 0;
   updateStreak();
-  sessionSet('route', location.hash);
+  sessionSet('route', location.pathname);
 }
 
 /** Open puzzle `index` of today's `level` list in the lab view. False when there's no such puzzle. */
@@ -160,7 +161,7 @@ function openDaily(level: Difficulty, index: number): boolean {
   const entry = list[index];
   const def = entry && PUZZLES.find((p) => p.id === entry.id);
   if (!def) {
-    history.replaceState(null, '', `#/daily/${level}`);
+    history.replaceState(null, '', `/daily/${level}`);
     return false;
   }
   const key = `d:${date}:${level}:${index}`;
@@ -171,7 +172,7 @@ function openDaily(level: Difficulty, index: number): boolean {
       const next = Array.from({ length: n - 1 }, (_, k) => (index + 1 + k) % n).find(
         (i) => list[i].o !== 'solved' && PUZZLES.some((p) => p.id === list[i].id),
       );
-      location.hash = next == null ? `#/daily/${level}` : `#/daily/${level}/${next + 1}`;
+      navigate(next == null ? `/daily/${level}` : `/daily/${level}/${next + 1}`);
     });
     labOpen = key;
   }
@@ -183,13 +184,18 @@ onChange((kind) => {
   updateStreak();
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-window.addEventListener('hashchange', route);
+onNavigate(route);
 // Android app: the system back button asks here first (MainActivity.java). An open sheet closes;
 // otherwise the WebView goes back through the visited pages, and leaves the app from the first one.
 (window as unknown as { __onBack: () => boolean }).__onBack = closeSheet;
 applyTheme();
-// A reload that dropped the #/route (e.g. the app reloading its start page) goes back to it.
-const lastRoute = isReload && !location.hash ? sessionGet<string>('route') : undefined;
-if (lastRoute) history.replaceState(null, '', lastRoute);
+upgradeHashRoute();
+// A reload that dropped the route (e.g. the app reloading its start page) goes back to it.
+// Sessions from before path routing stored "#/…"; upgradeHashRoute() turns those into paths too.
+const lastRoute = isReload && location.pathname === '/' ? sessionGet<string>('route') : undefined;
+if (lastRoute && lastRoute !== '/') {
+  history.replaceState(null, '', lastRoute);
+  upgradeHashRoute();
+}
 route();
 setupUpdates();

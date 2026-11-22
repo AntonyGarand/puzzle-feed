@@ -12,7 +12,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BundleUpdaterPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // Back button: close an open sheet, else go back a page (the app routes by #hash, so every
+        // Back button: close an open sheet, else go back a page (the app routes by path, so every
         // tab and game is a history entry), else leave the app like any other.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override

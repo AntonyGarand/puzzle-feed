@@ -4,7 +4,7 @@ import { h } from './ui';
 
 /**
  * Share codes: `<game id>-<level>-<seed in base 36>`, plus `-<locale>` for word games (their puzzles come
- * from the locale's word list). E.g. `sudoku-3-1k2x9q`, `anagram-2-z81kd0-fr`. Links are `#/s/<code>`.
+ * from the locale's word list). E.g. `sudoku-3-1k2x9q`, `anagram-2-z81kd0-fr`. Links are `/s/<code>` (older ones `#/s/<code>`).
  */
 export interface ShareCode {
   id: string;
@@ -23,7 +23,7 @@ const RE = /^([a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*)-([1-5])-([0-9a-z]{1,7})(?:-(en
 /** Parse a code or a pasted share link. Returns null when it isn't a valid code (the game id isn't checked). */
 export function decodeCode(input: string): ShareCode | null {
   let s = input.trim();
-  const link = s.match(/#\/s\/([^/?#\s]+)/);
+  const link = s.match(/(?:^|[/#])\/?s\/([^/?#\s]+)/);
   if (link) s = decodeURIComponent(link[1]);
   const m = RE.exec(s.toLowerCase());
   if (!m) return null;
@@ -34,7 +34,7 @@ export function decodeCode(input: string): ShareCode | null {
   return { id: m[1], level, seed, ...(m[4] ? { locale: m[4] as Locale } : {}) };
 }
 
-const shareLink = (code: string) => `${location.origin}${location.pathname}#/s/${code}`;
+const shareLink = (code: string) => `${location.origin}/s/${code}`;
 
 async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
   try {

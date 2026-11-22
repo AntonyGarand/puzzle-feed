@@ -25,8 +25,8 @@ const ok = (name, pass, info = '') => {
 /** The card currently snapped into view. */
 const card = () => page.locator('.card').nth(0);
 async function open(id, level) {
-  await page.goto(`${base}#/`); // force a fresh single-puzzle feed even when the hash is unchanged
-  await page.goto(`${base}#/play/${id}`);
+  await page.goto(base); // force a fresh single-puzzle feed between games
+  await page.goto(`${base}play/${id}`);
   await page.waitForSelector('.card .puzzle');
   if (level) {
     await pickLevel(page, level, card());
@@ -228,7 +228,7 @@ await card().locator('.cell').nth(7).click();
 const before = await card()
   .locator('.cell')
   .evaluateAll((els) => els.map((e) => e.classList.contains('on')).join(''));
-await page.goto(`${base}#/labs`);
+await page.goto(`${base}labs`);
 await page.waitForSelector('.lab-tile');
 // The unfinished game appears in "Continue" (first) and again in its category.
 const lightsTile = page.locator('.lab-tile[data-puzzle="lights"]').first();
@@ -244,7 +244,7 @@ ok('resume restores the same board', before === after);
 ok('resume keeps the move count', /2 moves/.test(await page.locator('.lab .status').innerText()));
 
 // ---- Labs: start a new one at a chosen level; reload resumes it rather than re-rolling
-await page.goto(`${base}#/labs`);
+await page.goto(`${base}labs`);
 await page.waitForSelector('.lab-tile');
 const sudokuTile = page.locator('.lab-tile[data-puzzle="sudoku"]').last();
 await sudokuTile.locator('select').selectOption('4');
@@ -252,7 +252,7 @@ await sudokuTile.getByRole('button', { name: /Play|New/ }).click();
 await page.waitForSelector('.lab .card .cell');
 ok(
   'labs starts a new puzzle at the picked level',
-  (await page.locator('.lab .card .cell').count()) === 81 && page.url().endsWith('#/game/sudoku'),
+  (await page.locator('.lab .card .cell').count()) === 81 && page.url().endsWith('/game/sudoku'),
 );
 const firstEmpty = page.locator('.lab .card .cell:not(.given)').first();
 await firstEmpty.click();
@@ -280,7 +280,7 @@ await page.locator('dialog.sheet [data-setting="level"] [data-value="3"]').click
 ok('cog sheet changes the level', (await card().locator('.cell').count()) > before2);
 
 // ---- Stats & persistence
-await page.goto(`${base}#/stats`);
+await page.goto(`${base}stats`);
 await page.waitForTimeout(200);
 const solved = await page.locator('.stat-v').first().innerText();
 ok('stats count solves', Number(solved) >= 8, `solved=${solved}`);
