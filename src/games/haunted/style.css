@@ -114,51 +114,95 @@
   background: var(--cell-alt);
 }
 
-/* a lit sight line: direct part, then reflected part */
-[data-puzzle='haunted'] .cell.ray {
-  background: color-mix(in srgb, var(--hn-vamp) 30%, var(--cell));
+/* a pencilled x: a note in an empty cell */
+[data-puzzle='haunted'] .hn-grid .hn-x {
+  display: none;
+  width: 100%;
+  height: 100%;
 }
-[data-puzzle='haunted'] .cell.ray2 {
-  background: color-mix(in srgb, var(--hn-ghost) 34%, var(--cell));
+[data-puzzle='haunted'] .cell.mx .hn-x {
+  display: block;
 }
-[data-puzzle='haunted'] .cell.ray.ray2 {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--hn-vamp) 30%, var(--cell)) 50%,
-    color-mix(in srgb, var(--hn-ghost) 34%, var(--cell)) 50%
-  );
+[data-puzzle='haunted'] .hn-x path {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+[data-puzzle='haunted'] .cell.sel .hn-x path {
+  stroke: var(--on-tone);
+}
+
+/* a lit sight line, traced through the cell centres: direct part, then reflected part */
+[data-puzzle='haunted'] .hn-grid {
+  position: relative;
+}
+[data-puzzle='haunted'] .hn-ray {
+  position: absolute;
+  left: calc(var(--gap) / -2);
+  top: calc(var(--gap) / -2);
+  width: calc(100% - var(--csh) + var(--gap));
+  height: calc(100% - var(--csh) + var(--gap));
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+[data-puzzle='haunted'] .hn-ray polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='haunted'] .hn-ray .under {
+  stroke: var(--ink);
+  stroke-width: 0.16;
+}
+[data-puzzle='haunted'] .hn-ray .over {
+  stroke-width: 0.08;
+}
+[data-puzzle='haunted'] .hn-ray .before {
+  stroke: var(--hn-vamp);
+}
+[data-puzzle='haunted'] .hn-ray .after {
+  stroke: var(--hn-ghost);
 }
 [data-puzzle='haunted'] .cell.sel {
   background: var(--accent);
 }
 
-/* pad: glyph + left / total */
+/* pad: glyph, with how many are left to place as a badge in the key's corner */
 [data-puzzle='haunted'] .hn-key {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
 }
 [data-puzzle='haunted'] .hn-key .hn-m {
-  width: 28px;
-  height: 28px;
+  width: 70%;
+  height: 70%;
   flex: none;
 }
 [data-puzzle='haunted'] .hn-n {
-  font-variant-numeric: tabular-nums;
-}
-[data-puzzle='haunted'] .hn-n small {
-  font-size: 0.7em;
-  color: var(--muted);
-}
-[data-puzzle='haunted'] .hn-key.done .hn-n {
-  /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
-  color: var(--faint);
-}
-[data-puzzle='haunted'] .hn-key.err:not([data-hold]) {
-  background: var(--bad);
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--accent);
   color: var(--on-tone);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
-[data-puzzle='haunted'] .hn-key.err:not([data-hold]) .hn-n small {
-  color: inherit;
+/* all placed: the badge goes away */
+[data-puzzle='haunted'] .hn-key.done .hn-n {
+  display: none;
+}
+[data-puzzle='haunted'] .hn-key.err:not([data-hold]) .hn-n {
+  background: var(--bad);
 }
