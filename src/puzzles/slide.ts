@@ -1,7 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h } from '../core/ui';
-import { solveSlide } from './movekit/slide-hint';
+import { planSlide } from './movekit/slide-hint';
 
 export const slide: PuzzleDef = {
   id: 'slide',
@@ -195,10 +195,34 @@ export const slide: PuzzleDef = {
       gap = tiles.indexOf(0);
       moves = sv.moves ?? 0;
     }
-    /** Guide: follow a shortest solution, one tap at a time (a run of tiles in line slides together). */
+    /**
+     * The guide's route, kept while the player follows it (`keys[k]` is the board before step `k`): big
+     * boards get a quick but not always shortest route, so re-planning after every slide could wander.
+     */
+    let plan: { path: number[]; keys: string[] } | null = null;
+    const route = () => {
+      const k = plan ? plan.keys.indexOf(tiles.join(',')) : -1;
+      if (plan && k >= 0) return plan.path.slice(k);
+      const path = planSlide(tiles, n);
+      if (!path) return (plan = null);
+      const sim = tiles.slice();
+      const keys: string[] = [];
+      for (const x of path) {
+        keys.push(sim.join(','));
+        const g = sim.indexOf(0);
+        sim[g] = sim[x];
+        sim[x] = 0;
+      }
+      plan = { path, keys };
+      return path;
+    };
+    /**
+     * Guide: follow a shortest solution (a quick one on big boards), one tap at a time (a run of tiles in
+     * line slides together). No check(): every position can still be solved, so there is no mistake to fix.
+     */
     const hint = (): Hint | null => {
       if (solved()) return null;
-      const path = solveSlide(tiles, n);
+      const path = route();
       if (!path?.length) return null;
       // Simulate the solution to see where tiles land.
       const sim = tiles.slice();

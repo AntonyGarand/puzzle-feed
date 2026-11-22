@@ -134,7 +134,12 @@ export function stateKey(s: St) {
 const scratch = [0, 0, 0, 0, 0, 0];
 
 /** Fewest-moves solution (list of directions) from s, or null if none within `cap` states. */
-export function solve(B: Board, R: Rules, s: St, cap = 60000): number[] | null {
+/**
+ * Fewest-moves solution from `s`, or null. `info.capped` tells a search that gave up (too many
+ * states) from a proof that no solution exists.
+ */
+export function solve(B: Board, R: Rules, s: St, cap = 60000, info?: { capped: boolean }): number[] | null {
+  if (info) info.capped = false;
   const nb = nbr(B.w, B.h, R.wrap);
   const tset = new Set(B.targets);
   if (isGoal(tset, s)) return [];
@@ -158,7 +163,10 @@ export function solve(B: Board, R: Rules, s: St, cap = 60000): number[] | null {
         for (let x = states.length - 1; x > 0; x = parent[x]) out.unshift(dirs[x]);
         return out;
       }
-      if (states.length > cap) return null;
+      if (states.length > cap) {
+        if (info) info.capped = true;
+        return null;
+      }
     }
   }
   return null;

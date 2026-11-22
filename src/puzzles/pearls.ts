@@ -2,6 +2,7 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { h, s } from '../core/ui';
 import { broken, deductions, genPearls, isSolved, pearlOk, pearlOptions, type Kind, type Move } from './gridkit/pearls';
+import { loopFault } from './gridkit/loopcheck';
 import { capture, stepsToward } from './pathkit/grid';
 import './pearls.css';
 
@@ -113,11 +114,13 @@ export const pearls: PuzzleDef = {
     const wrap = h('div', { class: 'pe-board' }, svg);
 
     const on = (e: number) => st[e] === 1;
+    /** Set an SVG class only when it changes (render runs after every mark). */
+    const setCls = (el: Element, c: string) => el.getAttribute('class') !== c && el.setAttribute('class', c);
     const render = () => {
-      edgeEls.forEach((el, e) => el.setAttribute('class', `edge${st[e] === 1 ? ' on' : st[e] === 2 ? ' x' : ''}`));
+      edgeEls.forEach((el, e) => setCls(el, `edge${st[e] === 1 ? ' on' : st[e] === 2 ? ' x' : ''}`));
       dotEls.forEach((el, v) => {
         const deg = ve[v].filter(on).length;
-        el.setAttribute('class', `dot${deg > 2 ? ' err' : deg ? ' on' : ''}`);
+        setCls(el, `dot${deg > 2 ? ' err' : deg ? ' on' : ''}`);
       });
       let good = 0,
         total = 0;
@@ -132,7 +135,7 @@ export const pearls: PuzzleDef = {
           !ok &&
           (ve[v].filter(on).length > 2 ||
             !pearlOptions(P0, v, k).some((o) => o.on.every((e) => st[e] !== 2) && o.off.every((e) => st[e] !== 1)));
-        el.setAttribute('class', `pl ${k === 1 ? 'b' : 'w'}${ok ? ' done' : bad ? ' err' : ''}`);
+        setCls(el, `pl ${k === 1 ? 'b' : 'w'}${ok ? ' done' : bad ? ' err' : ''}`);
       });
       ctx.status(`${good} / ${P(total, ['pearl', 'pearls'], ['perle', 'perles'])}`);
       return isSolved(P0, pearl, on);
@@ -370,30 +373,6 @@ export const pearls: PuzzleDef = {
     const note = (k: string) => recent.splice(0, recent.length, k, ...recent.slice(0, 1));
     const hint = (): Hint | null => {
       if (done) return null;
-      // A wrong mark sends every deduction astray: fix it first.
-      const wrong = st.map((v, e) => ((v === 1 && !sol[e]) || (v === 2 && sol[e]) ? e : -1)).filter((e) => e >= 0);
-      if (P0.unique && wrong.length) {
-        const e = wrong[0];
-        note('wrong');
-        return {
-          text:
-            st[e] === 1
-              ? L(
-                  'This line doesn’t fit the only loop that works with these pearls. Remove it (drag over it, or tap it twice).',
-                  'Cette ligne ne cadre pas avec la seule boucle possible pour ces perles. Enlevez-la (glissez dessus ou touchez-la deux fois).',
-                )
-              : L(
-                  'The loop does pass here, so this ✕ is wrong. Clear it.',
-                  'La boucle passe bel et bien ici : ce ✕ est une erreur. Enlevez-le.',
-                ),
-          at: eEls([e]),
-          play: () => {
-            st[e] = 0;
-            after();
-            if (!done) render();
-          },
-        };
-      }
       const moves = deductions(P0, pearl, st).sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
       const pick = moves.find((mv) => !recent.includes(mv.kind)) ?? moves.find((mv) => mv.kind !== recent[0]) ?? moves[0];
       if (pick) {
@@ -458,6 +437,95 @@ export const pearls: PuzzleDef = {
         play: apply([e], []),
       };
     };
-    return { snapshot: () => ({ st }), hint, destroy: stopHold };
+    /** A mark that breaks a visible rule (branch, dead end, impossible pearl, early loop), else one off the unique loop. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const wrong = (e: number) => (st[e] === 1 && !sol[e]) || (st[e] === 2 && sol[e]);
+      const fix = (e: number, msg: string, why: Element[]): Hint => ({
+        kind: 'fix',
+        text: msg,
+        why,
+        at: [edgeEls[e]],
+        action: st[e] === 1 ? L('Remove the line', 'Enlever la ligne') : L('Clear the ✕', 'Effacer le ✕'),
+        play: () => {
+          if (!st[e]) return;
+          st[e] = 0;
+          after();
+          if (!done) render();
+        },
+      });
+      const f = loopFault(P0.g, st, sol);
+      if (f?.kind === 'branch')
+        return fix(
+          f.e,
+          L(
+            `${f.es.length} lines meet in this cell, but the loop never branches. This one has to go.`,
+            `${f.es.length} lignes se rejoignent dans cette case, mais la boucle ne se divise jamais. Celle-ci doit partir.`,
+          ),
+          [cellEl(f.v)],
+        );
+      // A pearl no way through can satisfy any more: one of the marks around it is wrong.
+      for (let v = 0; v < pearl.length; v++) {
+        const k = pearl[v];
+        if (!k) continue;
+        const opts = pearlOptions(P0, v, k);
+        if (opts.some((o) => o.on.every((e) => st[e] !== 2) && o.off.every((e) => st[e] !== 1))) continue;
+        const e = [...new Set(opts.flatMap((o) => [...o.on, ...o.off]))].find(wrong);
+        if (e === undefined) continue;
+        return fix(
+          e,
+          k === 1
+            ? L(
+                'This black pearl can no longer turn with two straight cells on both sides. This mark is in the way.',
+                'Cette perle noire ne peut plus tourner avec deux cases droites de chaque côté. Cette marque bloque.',
+              )
+            : L(
+                'This white pearl can no longer go straight through with a turn right next to it. This mark is in the way.',
+                'Cette perle blanche ne peut plus être traversée tout droit avec un virage juste à côté. Cette marque bloque.',
+              ),
+          [cellEl(v)],
+        );
+      }
+      if (f?.kind === 'end')
+        return fix(
+          f.e,
+          st[f.e] === 1
+            ? L(
+                'This line ends in a cell where every other way out is crossed out, and the loop never dead-ends. Remove it.',
+                'Cette ligne finit dans une case dont les autres sorties sont barrées, et la boucle n’a pas de cul-de-sac. Enlevez-la.',
+              )
+            : L(
+                'The line reaching this cell has nowhere to go: every other way out is crossed out. This ✕ is the mistake.',
+                'La ligne qui arrive dans cette case n’a nulle part où aller : les autres sorties sont barrées. Ce ✕ est l’erreur.',
+              ),
+          [cellEl(f.v)],
+        );
+      if (f?.kind === 'closed')
+        return fix(
+          f.e,
+          L(
+            'These lines close a loop of their own, but there is only one loop and it passes through every pearl. This line doesn’t belong.',
+            'Ces lignes ferment leur propre boucle, mais il n’y a qu’une boucle et elle passe par toutes les perles. Cette ligne est de trop.',
+          ),
+          f.es.map((e) => edgeEls[e]),
+        );
+      if (!P0.unique) return null;
+      const e = st.findIndex((_, x) => wrong(x));
+      if (e < 0) return null;
+      return fix(
+        e,
+        st[e] === 1
+          ? L(
+              'This line breaks no rule yet, but it leads to a dead end: it doesn’t fit the only loop that works with these pearls. Remove it.',
+              'Cette ligne ne brise encore aucune règle, mais elle mène à une impasse : elle ne cadre pas avec la seule boucle possible pour ces perles. Enlevez-la.',
+            )
+          : L(
+              'This ✕ breaks no rule yet, but it leads to a dead end: the loop does pass here. Clear it.',
+              'Ce ✕ ne brise encore aucune règle, mais il mène à une impasse : la boucle passe bel et bien ici. Effacez-le.',
+            ),
+        [],
+      );
+    };
+    return { snapshot: () => ({ st }), hint, check, destroy: stopHold };
   },
 };

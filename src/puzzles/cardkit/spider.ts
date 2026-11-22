@@ -24,7 +24,7 @@ function dealS(cards: Card[], ncols: number, dealt: number): SState {
 const seqOk = (a: Card, b: Card) => suit(a) === suit(b) && rank(a) === rank(b) + 1;
 
 /** Index (within u) where the movable same-suit run at the top starts. */
-function runStartS(u: Card[]): number {
+export function runStartS(u: Card[]): number {
   let k = u.length - 1;
   while (k > 0 && seqOk(u[k - 1], u[k])) k--;
   return Math.max(0, k);
@@ -166,6 +166,52 @@ export function progressS(s0: SState, cap = 400): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Shortest series of moves (breadth first, so following it one move at a time never loops) that ends
+ * by turning a card over or completing a run: the moves progressS explores. Each move is
+ * [from column, card index, to column]. Null when there is none within `cap` positions.
+ */
+export function progressPlanS(s0: SState, cap = 800): [number, number, number][] | null {
+  type Node = { s: SState; up: Node | null; m: [number, number, number] | null };
+  const lineOf = (n: Node, last: [number, number, number]) => {
+    const out = [last];
+    for (let x: Node | null = n; x?.m; x = x.up) out.push(x.m);
+    return out.reverse();
+  };
+  const seen = new Set<string>([keyS(s0)]);
+  const queue: Node[] = [{ s: s0, up: null, m: null }];
+  for (let q = 0; q < queue.length && q < cap; q++) {
+    const node = queue[q];
+    const s = node.s;
+    for (let a = 0; a < s.cols.length; a++) {
+      const { d, u } = s.cols[a];
+      for (let k = runStartS(u); k < u.length; k++) {
+        for (let b = 0; b < s.cols.length; b++) {
+          const v = s.cols[b].u;
+          if (b === a || !fitsS(s.cols[b], u[k])) continue;
+          const m: [number, number, number] = [a, d.length + k, b];
+          if (k === 0 && d.length) return lineOf(node, m); // turns a card
+          if (v.length && seqOk(v[v.length - 1], u[k]) && rank(u[u.length - 1]) === 1 && v.length - runStartS(v) + u.length - k >= 13)
+            return lineOf(node, m); // completes a run
+          if (k === 0 && !v.length) continue; // whole column to an empty one: no change
+          // Copy only the face-up cards of the two columns the move touches (nothing turns over or
+          // gets completed here, or we'd have stopped above).
+          const cols = s.cols.slice();
+          cols[a] = { d: cols[a].d, u: cols[a].u.slice() };
+          cols[b] = { d: cols[b].d, u: cols[b].u.slice() };
+          const n: SState = { cols, stock: s.stock, done: s.done, moves: s.moves };
+          moveS(n, 't' + a, d.length + k, 't' + b);
+          const key = keyS(n);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          queue.push({ s: n, up: node, m });
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /** Moves as [from column, card index, to column]; null deals a row. */

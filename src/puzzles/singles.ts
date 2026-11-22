@@ -441,9 +441,93 @@ export const singles: PuzzleDef = {
       };
     };
 
+    /**
+     * What's wrong: a broken rule (touching shades, two circled twins, a shade cutting the white
+     * cells apart), else a shade or circle that disagrees with the unique solution. Plain cells are
+     * never mistakes. play() resets the cell to plain (the Backspace path).
+     */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const off = (i: number) => (st[i] === 1) !== shade[i];
+      const fix = (text: string, at: number[], why: number[] = []): Hint | null => {
+        const mine = at.filter((i) => !locked[i] && st[i] !== 0);
+        const i = mine.find(off) ?? mine[0];
+        if (i == null) return null;
+        return {
+          kind: 'fix',
+          text,
+          why: els(why),
+          at: els(at),
+          action: st[i] === 1 ? L('Unshade it', 'Retirer le noir') : L('Remove the circle', 'Retirer le cercle'),
+          play: () => set(i, 0),
+        };
+      };
+      for (let i = 0; i < n * n; i++) {
+        if (st[i] !== 1) continue;
+        for (const j of nb(n, i)) {
+          if (j < i || st[j] !== 1) continue;
+          const found = fix(
+            L(
+              'These two shaded cells touch side by side: shaded cells never do.',
+              'Ces deux cases noires se touchent par un côté : c’est interdit.',
+            ),
+            [i, j],
+          );
+          if (found) return found;
+        }
+      }
+      for (let i = 0; i < n * n; i++) {
+        if (st[i] !== 2) continue;
+        for (const j of tw[i]) {
+          if (j < i || st[j] !== 2) continue;
+          const found = fix(
+            L(
+              `Both ${nums[i]}s are circled in the same line, but one of them has to be shaded: a number can’t repeat.`,
+              `Les deux ${nums[i]} sont encerclés sur la même ligne, mais l’un d’eux doit être noirci : un chiffre ne peut pas se répéter.`,
+            ),
+            [i, j],
+          );
+          if (found) return found;
+        }
+      }
+      if (components(n, (i) => st[i] !== 1).sizes.length > 1) {
+        // The shade whose removal joins the white cells back (a wrong one first).
+        const shaded = st.flatMap((v, i) => (v === 1 && !locked[i] ? [i] : []));
+        const before = components(n, (i) => st[i] !== 1).sizes.length;
+        const cutter = [...shaded.filter(off), ...shaded.filter((i) => !off(i))].find(
+          (i) => components(n, (j) => j === i || st[j] !== 1).sizes.length < before,
+        );
+        if (cutter != null) {
+          const found = fix(
+            L(
+              'This shaded cell cuts some white cells off from the rest. White cells must stay in one piece.',
+              'Cette case noire coupe des cases blanches du reste. Les blanches doivent rester d’un seul morceau.',
+            ),
+            [cutter],
+          );
+          if (found) return found;
+        }
+      }
+      const i = st.findIndex((v, j) => !locked[j] && v !== 0 && (v === 1) !== shade[j]);
+      if (i < 0) return null;
+      return fix(
+        st[i] === 1
+          ? L(
+              `Shading this ${nums[i]} breaks no rule yet, but it leads to a dead end: it has to stay.`,
+              `Noircir ce ${nums[i]} ne brise encore aucune règle, mais mène à une impasse : il doit rester.`,
+            )
+          : L(
+              `Circling this ${nums[i]} breaks no rule yet, but it leads to a dead end: it has to be shaded.`,
+              `Encercler ce ${nums[i]} ne brise encore aucune règle, mais mène à une impasse : il doit être noirci.`,
+            ),
+        [i],
+      );
+    };
+
     const DIRS: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
     return {
       hint,
+      check,
       snapshot: () => ({ st, cur }),
       onKey(e) {
         if (done) return false;

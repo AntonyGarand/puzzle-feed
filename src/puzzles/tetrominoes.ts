@@ -246,22 +246,70 @@ export const tetrominoes: PuzzleDef = {
       }
       finish();
     };
+    /** A piece that isn't in the (unique) solution: a broken rule first, else a dead end. */
+    const audit = (): Hint | null => {
+      if (done) return null;
+      const wrongs = pieces.filter((p) => !solKey.has(p.join(',')));
+      if (!wrongs.length) return null;
+      const owner = ownerMap();
+      const fix = (wrong: number[], text: string, why: number[] = []): Hint => ({
+        kind: 'fix',
+        text: text + L(' Tap it to remove it.', ' Touchez-la pour l’enlever.'),
+        why: why.map((i) => cells[i]),
+        at: wrong.map((i) => cells[i]),
+        action: L('Remove the piece', 'Enlever la pièce'),
+        play: () => {
+          downAt = wrong[0];
+          pending = [wrong[0]];
+          finish();
+        },
+      });
+      for (const p of wrongs) {
+        const o = shapeOf(p, cols);
+        const pics = p.filter((i) => clue[i] >= 0);
+        if (pics.length > 1)
+          return fix(
+            p,
+            L(
+              'This piece covers two pictures: each piece holds at most one.',
+              'Cette pièce couvre deux dessins : chaque pièce en contient au plus un.',
+            ),
+            pics,
+          );
+        if (pics.length === 1 && clue[pics[0]] !== o)
+          return fix(
+            p,
+            L(
+              `This piece is ${anS(o)}, but the picture it covers is ${anS(clue[pics[0]])}.`,
+              `Cette pièce est un ${shapeName(o)}, mais le dessin qu’elle couvre est un ${shapeName(clue[pics[0]])}.`,
+            ),
+            pics,
+          );
+        const twin = p
+          .flatMap((i) => nb4(i, cols, rows))
+          .find((j) => owner[j] >= 0 && !p.includes(j) && kindOf(pieces[owner[j]]) === TETROS[o].kind);
+        if (twin != null)
+          return fix(
+            p,
+            L(
+              `This ${shapeName(o)} touches another ${shapeName(o)}: two pieces of the same shape never share a side.`,
+              `Ce ${shapeName(o)} touche un autre ${shapeName(o)} : deux pièces de même forme ne partagent jamais un côté.`,
+            ),
+            pieces[owner[twin]],
+          );
+      }
+      return fix(
+        wrongs[0],
+        L(
+          'This piece breaks no rule yet, but it leads to a dead end: the rest of the grid can’t be filled around it.',
+          'Cette pièce ne brise encore aucune règle, mais elle mène à une impasse : le reste de la grille ne peut pas être rempli autour.',
+        ),
+      );
+    };
     const hint = (): Hint | null => {
       if (done) return null;
-      const wrong = pieces.find((p) => !solKey.has(p.join(',')));
-      if (wrong)
-        return {
-          text: L(
-            'This piece leads to a dead end: the rest of the grid can’t be filled around it. Tap it to remove it.',
-            'Cette pièce mène à une impasse : le reste de la grille ne peut pas être rempli autour. Touchez-la pour l’enlever.',
-          ),
-          at: wrong.map((i) => cells[i]),
-          play: () => {
-            downAt = wrong[0];
-            pending = [wrong[0]];
-            finish();
-          },
-        };
+      const wrong = audit();
+      if (wrong) return wrong;
       // Board of the (correct) pieces placed so far, to test where new pieces fit.
       const b = new TetroBoard(cols, rows);
       for (const p of pieces) b.put(p, shapeOf(p, cols));
@@ -336,6 +384,6 @@ export const tetrominoes: PuzzleDef = {
       });
     };
 
-    return { snapshot: () => ({ pieces }), hint };
+    return { snapshot: () => ({ pieces }), hint, check: audit };
   },
 };

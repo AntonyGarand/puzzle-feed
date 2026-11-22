@@ -2,7 +2,17 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, PALETTE, shake } from '../core/ui';
 import { anim } from './movekit/kit';
-import { genCollapse, groupAt, hasMove, removeCells, stranded, type Cols } from './playkit/collapse-gen';
+import {
+  collapseSolver,
+  genCollapse,
+  groupAt,
+  groupList,
+  hasMove,
+  removeCells,
+  stranded,
+  type CollapseVerdict,
+  type Cols,
+} from './playkit/collapse-gen';
 import './collapse.css';
 
 /** Palette slots used for the blocks (well apart from each other in both themes). */
@@ -223,21 +233,67 @@ export const collapse: PuzzleDef = {
       }
       return null;
     };
+    /** Solver with memory across calls; the verdict is kept until the board changes. */
+    const solver = collapseSolver(target);
+    let memo: { key: string; v: CollapseVerdict } | null = null;
+    const verdict = () => {
+      // An unsure verdict is worth retrying once more dead ends are known (after an undo, say).
+      const key = `${moves.join(',')}:${solver.learned()}`;
+      if (memo?.key !== key) {
+        const onPlan = moves.every((m, t) => gen.solution[t] && disp(gen.solution[t]) === m);
+        memo = { key, v: solver.solve(cols, 2500, onPlan ? gen.solution.slice(moves.length) : []) };
+      }
+      return memo.v;
+    };
+    /** Dead end: the board can no longer get down to the goal. `play()` undoes the last move. */
+    const check = (): Hint | null => {
+      if (over || !moves.length || verdict().status !== 'dead') return null;
+      const count = new Map<number, number>();
+      for (const col of cols) for (const c of col) count.set(c, (count.get(c) ?? 0) + 1);
+      const lone = [...count].filter(([, v]) => v === 1).map(([c]) => c);
+      const why: Element[] = [];
+      cols.forEach((col, x) => col.forEach((c, y) => lone.includes(c) && why.push(cells[disp([x, y])])));
+      const goalEn = target ? `${target} blocks or fewer` : 'an empty board',
+        goalFr = target ? `${target} blocs ou moins` : 'une grille vide';
+      return {
+        kind: 'stuck',
+        text:
+          lone.length > target
+            ? L(
+                `${lone.length === 1 ? `Only one ${NAMES_EN[lone[0]]} block is left: it can never join a group` : `${lone.length} colours have a single block left: none of them can ever join a group`}, so you can’t reach ${goalEn}. Undo.`,
+                `${lone.length === 1 ? `Il ne reste qu’un bloc ${NAMES_FR[lone[0]].replace(/s$/, '')} : il ne pourra jamais former de groupe` : `${lone.length} couleurs n’ont plus qu’un seul bloc : aucun ne pourra former de groupe`}, et ${goalFr} est hors d’atteinte. Annulez.`,
+              )
+            : L(
+                `No order of moves gets this board down to ${goalEn} any more: some blocks will always be left apart from their colour. Undo.`,
+                `Plus aucun ordre de coups ne mène à ${goalFr} : des blocs resteront toujours séparés de leur couleur. Annulez.`,
+              ),
+        why,
+        at: [cells[moves[moves.length - 1]]],
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      };
+    };
     let lastKind = '';
     const hint = (): Hint | null => {
       if (over) return null;
-      const onPlan = moves.every((m, t) => gen.solution[t] && disp(gen.solution[t]) === m);
-      let pick: [number, number] | undefined = onPlan ? gen.solution[moves.length] : undefined;
+      const v = verdict();
+      if (v.status === 'capped' && moves.length)
+        // Too tangled to check quickly: step back toward a position with a known way to clear it.
+        return {
+          text: L(
+            `There’s no way to clear this board that can be checked from here${target ? ` down to ${target} blocks` : ''}. Undo: earlier positions have a sure way through.`,
+            `Aucune façon de vider cette grille${target ? ` jusqu’à ${target} blocs` : ''} ne peut être vérifiée d’ici. Annulez : les positions précédentes ont un chemin sûr.`,
+          ),
+          at: [cells[moves[moves.length - 1]]],
+          action: L('Undo', 'Annuler'),
+          play: undo,
+        };
+      let pick: [number, number] | undefined = v.status === 'win' && v.next ? v.next : undefined;
       if (!pick || groupAt(cols, pick[0], pick[1]).length < 2) {
-        // Off the plan: take the biggest group.
-        let best = 1;
-        pick = undefined;
-        cols.forEach((col, x) =>
-          col.forEach((_, y) => {
-            const s = groupAt(cols, x, y).length;
-            if (s > best) [best, pick] = [s, [x, y]];
-          }),
-        );
+        // No proven plan (the search gave up, or the goal is already met): the biggest group that
+        // isn't known to lead into a dead end.
+        const all = groupList(cols).reverse();
+        pick = (all.find((g) => !solver.known(removeCells(cols, g)) && stranded(removeCells(cols, g)) <= target) ?? all[0])?.[0];
       }
       if (!pick) return null;
       const grp = groupAt(cols, pick[0], pick[1]);
@@ -330,6 +386,7 @@ export const collapse: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ moves }),
+      check,
       hint,
       onKey(e) {
         if (e.key !== 'z' && e.key !== 'Z' && e.key !== 'Backspace') return false;

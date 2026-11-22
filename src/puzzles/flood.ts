@@ -52,6 +52,55 @@ export function outOfReach(g: number[], n: number, left: number): boolean {
   return colours.size > left;
 }
 
+/**
+ * A lower bound on the moves still needed: every colour outside the corner area costs a move, and
+ * each move only swallows the patches touching the area, so the farthest patch (counted in patches
+ * to cross) needs that many moves too.
+ */
+export function movesNeeded(g: number[], n: number): { colours: number; far: number; farCell: number } {
+  const N = n * n;
+  const nb = (i: number) => {
+    const r = Math.floor(i / n),
+      c = i % n;
+    return [r > 0 ? i - n : -1, r < n - 1 ? i + n : -1, c > 0 ? i - 1 : -1, c < n - 1 ? i + 1 : -1].filter((j) => j >= 0);
+  };
+  // Same-colour patches, then a breadth-first search over touching patches from the corner one.
+  const lab = new Int32Array(N).fill(-1);
+  let k = 0;
+  for (let i = 0; i < N; i++) {
+    if (lab[i] >= 0) continue;
+    lab[i] = k;
+    const st = [i];
+    while (st.length)
+      for (const j of nb(st.pop()!))
+        if (lab[j] < 0 && g[j] === g[i]) {
+          lab[j] = k;
+          st.push(j);
+        }
+    k++;
+  }
+  const adj = Array.from({ length: k }, () => new Set<number>());
+  for (let i = 0; i < N; i++) for (const j of nb(i)) if (lab[j] !== lab[i]) adj[lab[i]].add(lab[j]);
+  const dist = new Int32Array(k).fill(-1);
+  dist[lab[0]] = 0;
+  const q = [lab[0]];
+  for (let x = 0; x < q.length; x++)
+    for (const y of adj[q[x]])
+      if (dist[y] < 0) {
+        dist[y] = dist[q[x]] + 1;
+        q.push(y);
+      }
+  let far = 0,
+    farCell = 0;
+  const colours = new Set<number>();
+  for (let i = 0; i < N; i++) {
+    const d = dist[lab[i]];
+    if (d > far) [far, farCell] = [d, i];
+    if (d > 0) colours.add(g[i]);
+  }
+  return { colours: colours.size, far, farCell };
+}
+
 /** Colour names for the guide, matching PALETTE (French as nouns: « le vert »). */
 const NAMES_EN = ['orange', 'blue', 'green', 'yellow', 'purple', 'teal', 'pink', 'lime'];
 const NAMES_FR = ['l’orange', 'le bleu', 'le vert', 'le jaune', 'le violet', 'le turquoise', 'le rose', 'le lime'];
@@ -186,10 +235,80 @@ export const floodPuzzle: PuzzleDef = {
       return b.map((_, i) => i).filter((i) => a[i] !== b[i]);
     };
     const cap = (t: string) => t[0].toUpperCase() + t.slice(1);
+    const need = (b: number[]) => {
+      const m = movesNeeded(b, n);
+      return Math.max(m.colours, m.far);
+    };
+    /** A sequence of colours that covers the board within `left` moves (beam search), or null. */
+    const plans = new Map<string, number[]>();
+    const planFor = (b: number[], left: number): number[] | null => {
+      const key = b.join('');
+      const known = plans.get(key);
+      if (known && known.length <= left) return known;
+      type St = { b: number[]; seq: number[]; score: number };
+      let beam: St[] = [{ b, seq: [], score: 0 }];
+      for (let depth = 0; depth < left && beam.length; depth++) {
+        const next: St[] = [];
+        const seen = new Set<string>();
+        for (const st of beam)
+          for (let c = 0; c < k; c++) {
+            if (c === st.b[0]) continue;
+            const a = flood(st.b, n, c);
+            const size = regionSize(a, n);
+            if (size === n * n) {
+              const seq = [...st.seq, c];
+              // Remember the rest of the plan for each position along it.
+              let x = b;
+              for (let i = 0; i < seq.length; i++) {
+                plans.set(x.join(''), seq.slice(i));
+                x = flood(x, n, seq[i]);
+              }
+              return seq;
+            }
+            const lb = need(a);
+            if (depth + 1 + lb > left) continue;
+            const id = a.join('');
+            if (seen.has(id)) continue;
+            seen.add(id);
+            next.push({ b: a, seq: [...st.seq, c], score: size - 6 * lb });
+          }
+        next.sort((x, y) => y.score - x.score);
+        beam = next.slice(0, 16);
+      }
+      return null;
+    };
+    /** Dead end: more moves needed than are left (a proven lower bound). There's no undo, so play on. */
+    const check = (): Hint | null => {
+      const size = regionSize(g, n);
+      if (size === n * n || moves >= limit) return null;
+      const left = limit - moves;
+      const m = movesNeeded(g, n);
+      const want = Math.max(m.colours, m.far);
+      if (want <= left) return null;
+      const h0 = hint();
+      return {
+        kind: 'stuck',
+        text:
+          m.far >= m.colours
+            ? L(
+                `You’d need at least ${want} more moves: the outlined tile is ${m.far} colour patches away from your area, and each move crosses only one. Only ${left} ${left === 1 ? 'move is' : 'moves are'} left, so this board is lost.`,
+                `Il vous faudrait au moins ${want} coups de plus : la case encadrée est à ${m.far} zones de couleur de votre zone, et chaque coup n’en franchit qu’une. Il ne reste que ${left} ${left === 1 ? 'coup' : 'coups'} : cette grille est perdue.`,
+              )
+            : L(
+                `You’d need at least ${want} more moves: ${m.colours} colours are still outside your area and each takes a move. Only ${left} ${left === 1 ? 'move is' : 'moves are'} left, so this board is lost.`,
+                `Il vous faudrait au moins ${want} coups de plus : ${m.colours} couleurs restent hors de votre zone et chacune coûte un coup. Il ne reste que ${left} ${left === 1 ? 'coup' : 'coups'} : cette grille est perdue.`,
+              ),
+        why: m.far >= m.colours ? [cells[m.farCell]] : [],
+        at: h0?.at ?? [],
+        action: L('Play on', 'Continuer'),
+        play: () => h0?.play(),
+      };
+    };
     let lastKind = '';
     const hint = (): Hint | null => {
       const size = regionSize(g, n);
       if (size === n * n || moves >= limit) return null;
+      const plan = planFor(g, limit - moves);
       const mine = new Set(area(g));
       // Score each colour the way the move limit was set: grab now, plus the best follow-up.
       const opts = [...Array(k).keys()]
@@ -204,7 +323,7 @@ export const floodPuzzle: PuzzleDef = {
           return { c, gain: now - size, more: next - now, score: Math.max(now * 4, now * 3 + next), gone, reg };
         });
       opts.sort((x, y) => y.score - x.score);
-      const best = opts[0];
+      const best = (plan && opts.find((o) => o.c === plan[0])) || opts[0];
       const most = opts.reduce((x, y) => (y.gain > x.gain ? y : x));
       const grabbed = [...best.reg].filter((i) => !mine.has(i));
       const en = NAMES_EN[best.c],
@@ -279,6 +398,7 @@ export const floodPuzzle: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ g, moves }),
+      check,
       hint,
       onKey(e) {
         const v = Number(e.key);

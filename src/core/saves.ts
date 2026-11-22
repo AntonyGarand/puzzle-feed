@@ -6,6 +6,8 @@ export interface Save {
   level: Difficulty;
   elapsed: number;
   mistakes: number;
+  /** Hints used so far. */
+  hints?: number;
   state: unknown;
   at: number;
   /** Locale the puzzle was generated in (matters for word games). */

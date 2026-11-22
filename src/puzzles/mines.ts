@@ -3,6 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h } from '../core/ui';
 import { nb8 } from './logickit/kit';
 import { flood, genMines, mineCounts } from './logickit/minesgen';
+import { wrongFlag } from './sweepkit/check';
 import './mines.css';
 
 export const mines: PuzzleDef = {
@@ -339,10 +340,18 @@ export const mines: PuzzleDef = {
       return null;
     };
 
+    // Mines is partly luck, so check() only covers flags: one on a tile without a mine is a mistake.
+    const nbAll = Array.from({ length: N }, (_, i) => nb8(i, cols, rows));
+    const check = (): Hint | null =>
+      over || first < 0
+        ? null
+        : wrongFlag({ flag, mine, count, nbs: nbAll, cells, open: (i) => open[i], name: (i) => String(count[i]), unflag: toggleFlag });
+
     const list = (a: boolean[]) => a.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
     return {
       snapshot: () => ({ first, open: list(open), flag: list(flag) }),
       hint,
+      check,
       onKey(e) {
         if (e.key !== 'f' && e.key !== 'F') return false;
         const i = cellOf(document.activeElement);

@@ -133,14 +133,30 @@ export function tableEl(n: number, hcw: number, extra = ''): HTMLDivElement {
   return h('div', { class: `ctable ${extra}`.trim(), style: `--n:${n};--hcw:${hcw}` });
 }
 
+/**
+ * Elements under `root` (document order) that pass `ok`. A plain walk over `children`: the guide looks
+ * elements up after every move, and attribute selectors (querySelector) are much slower in test DOMs.
+ */
+function collect(root: Element, ok: (el: HTMLElement) => boolean, out: HTMLElement[] = []): HTMLElement[] {
+  for (const el of root.children) {
+    if (ok(el as HTMLElement)) out.push(el as HTMLElement);
+    if (el.children.length) collect(el, ok, out);
+  }
+  return out;
+}
+
 /** Card (or slot, i = -1) element for pile p / index i on a rendered table (guide hints). */
-export const elAt = (table: HTMLElement, p: string, i: number): HTMLElement | null => table.querySelector(`[data-p="${p}"][data-i="${i}"]`);
+export const elAt = (table: HTMLElement, p: string, i: number): HTMLElement | null =>
+  collect(table, (el) => el.dataset.p === p && el.dataset.i === String(i))[0] ?? null;
 
 /** Topmost rendered element of pile p: its top card, or its empty slot. */
 export function topEl(table: HTMLElement, p: string): HTMLElement | null {
-  const all = table.querySelectorAll<HTMLElement>(`[data-p="${p}"]`);
+  const all = collect(table, (el) => el.dataset.p === p);
   return all.length ? all[all.length - 1] : null;
 }
+
+/** Pile containers whose id starts with `prefix` (e.g. 'f' for every foundation). */
+export const pilesEl = (table: HTMLElement, prefix: string): HTMLElement[] => collect(table, (el) => !!el.dataset.pile?.startsWith(prefix));
 
 /** Capitalise the first letter (sentence starts like "Le 7♥…"). */
 export const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);

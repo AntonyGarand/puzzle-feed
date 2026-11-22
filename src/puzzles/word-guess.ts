@@ -190,6 +190,48 @@ export const wordGuess: PuzzleDef = {
       const sc = coverage(pool);
       return from.reduce((a, b) => (sc(b) > sc(a) ? b : a));
     };
+    /**
+     * The row being typed ignores a clue already on the board: a letter that came out grey (it isn't in
+     * the word at all), or a spot where a green letter is already known. Erase back to it.
+     */
+    const check = (): Hint | null => {
+      if (over || !cur.length) return null;
+      const r = guesses.length;
+      const erase = (k: number, text: string, why: Element[]): Hint => ({
+        kind: 'fix',
+        text,
+        why,
+        at: [cells[r * len + k]],
+        action: L('Erase', 'Effacer'),
+        play: () => {
+          while (cur.length > k) press('back');
+        },
+      });
+      for (let k = 0; k < cur.length; k++) {
+        const ch = cur[k];
+        const gi = guesses.findIndex((g) => g.includes(ch));
+        if (gi >= 0 && !answer.includes(ch))
+          return erase(
+            k,
+            L(
+              `${up(ch)} came out grey: it isn’t in the word. Erase it.`,
+              `Le ${up(ch)} est sorti en gris : il n’est pas dans le mot. Effacez-le.`,
+            ),
+            [cells[gi * len + guesses[gi].indexOf(ch)]],
+          );
+        const gk = guesses.findIndex((g) => g[k] === answer[k]);
+        if (gk >= 0 && ch !== answer[k])
+          return erase(
+            k,
+            L(
+              `${up(answer[k])} is green in this spot, so the word has ${up(answer[k])} here, not ${up(ch)}.`,
+              `Le ${up(answer[k])} est vert à cette place : le mot a donc un ${up(answer[k])} ici, pas un ${up(ch)}.`,
+            ),
+            [cells[gk * len + k]],
+          );
+      }
+      return null;
+    };
     const hint = (): Hint | null => {
       if (over) return null;
       const r = guesses.length;
@@ -216,8 +258,8 @@ export const wordGuess: PuzzleDef = {
       const cands = all.filter((w) => guesses.every((g, k) => score(g, w).join() === fb[k]));
       if (!cands.length) return null;
       // Any word that fits the colours; save the answer itself for when it's the only one left (or one of two).
-      const rest = cands.length > 2 ? cands.filter((w) => w !== answer) : cands;
-      const w = cands.length === 1 ? cands[0] : best(rest, cands);
+      const rest = cands.length > 2 && max - r > 2 ? cands.filter((w) => w !== answer) : cands;
+      const w = cands.length === 1 || max - r <= 1 ? answer : best(rest, cands);
       const g = guesses[r - 1];
       const f = score(g, answer);
       const greens: string[] = [],
@@ -264,6 +306,7 @@ export const wordGuess: PuzzleDef = {
     };
 
     return {
+      check,
       hint,
       snapshot: () => ({ g: guesses, cur }),
       onKey(e) {

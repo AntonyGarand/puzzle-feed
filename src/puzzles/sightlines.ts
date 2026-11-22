@@ -246,25 +246,6 @@ export const sightlines: PuzzleDef = {
         return { c, k: clue[c], need: clue[c] - 1, lo, hi, sumLo: lo.reduce((a, b) => a + b, 0), sumHi: hi.reduce((a, b) => a + b, 0) };
       });
 
-      const wrong = (): Hint | null => {
-        // A mark that contradicts the (unique) solution: undo it first.
-        const i = st.findIndex((v, j) => (v === 1 && !sol[j]) || (v === 2 && sol[j]));
-        if (i < 0) return null;
-        return {
-          text:
-            st[i] === 1
-              ? L(
-                  'This shaded cell leads to a dead end: it has to stay white. Clear it.',
-                  'Cette case noire mène à une impasse : elle doit rester blanche. Effacez-la.',
-                )
-              : L(
-                  'This dot leads to a dead end: the cell has to be shaded. Clear it.',
-                  'Ce point mène à une impasse : la case doit être noircie. Effacez-le.',
-                ),
-          at: els([i]),
-          play: fill([i], 0),
-        };
-      };
       const beside = (): Hint | null => {
         for (let i = 0; i < n * n; i++) {
           if (st[i] !== 1) continue;
@@ -405,8 +386,6 @@ export const sightlines: PuzzleDef = {
         }
         return null;
       };
-      const mistake = wrong();
-      if (mistake) return mistake;
       const rules: [string, () => Hint | null][] = [
         ['beside', beside],
         ['reach', reachAll],
@@ -440,10 +419,126 @@ export const sightlines: PuzzleDef = {
       };
     };
 
+    /** A mark that breaks a visible rule (touching shades, a number that can't work, a cut-off area), else one off the unique solution. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const wrongAt = (j: number) => (st[j] === 1 && !sol[j]) || (st[j] === 2 && sol[j]);
+      const fix = (i: number, text: string, why: number[] = []): Hint => ({
+        kind: 'fix',
+        text,
+        why: els(why),
+        at: els([i]),
+        action: st[i] === 1 ? L('Clear the shade', 'Effacer la case noire') : L('Clear the dot', 'Effacer le point'),
+        play: fill([i], 0),
+      });
+      // Two shades side by side: at least one of them is wrong.
+      for (let i = 0; i < n * n; i++) {
+        if (st[i] !== 1) continue;
+        const j = nb4(i, n).find((k) => st[k] === 1);
+        if (j === undefined) continue;
+        const bad = wrongAt(i) ? i : wrongAt(j) ? j : -1;
+        if (bad < 0) continue;
+        return fix(
+          bad,
+          L(
+            'These two shaded cells touch side by side, which is never allowed. This one has to go.',
+            'Ces deux cases noires se touchent par un côté, ce qui est interdit. Celle-ci doit partir.',
+          ),
+          [i, j],
+        );
+      }
+      // A number that sees too many or can no longer see enough.
+      for (let c = 0; c < n * n; c++) {
+        if (!given[c]) continue;
+        const { lo, hi } = reach(R, c, at);
+        const seen = lo.reduce((a, b) => a + b, 1),
+          most = hi.reduce((a, b) => a + b, 1);
+        if (seen > clue[c]) {
+          // A dot in its view should be shaded.
+          const i = R[c].flatMap((ray, dd) => ray.slice(0, lo[dd])).find(wrongAt);
+          if (i !== undefined)
+            return fix(
+              i,
+              L(
+                `This ${clue[c]} already sees ${seen} white cells, too many. This dot is in the way: that cell must be shaded.`,
+                `Ce ${clue[c]} voit déjà ${seen} cases blanches, c’est trop. Ce point est de trop : cette case doit être noircie.`,
+              ),
+              [c],
+            );
+        }
+        if (most < clue[c]) {
+          // A shade that stops its view too early.
+          const i = R[c].map((ray, dd) => ray[hi[dd]]).find((j) => j !== undefined && st[j] === 1 && wrongAt(j));
+          if (i !== undefined)
+            return fix(
+              i,
+              L(
+                `This ${clue[c]} can see at most ${most} cells now, too few. This shaded cell blocks its view: it has to be white.`,
+                `Ce ${clue[c]} ne peut plus voir que ${most} cases, c’est trop peu. Cette case noire bloque sa vue : elle doit être blanche.`,
+              ),
+              [c],
+            );
+        }
+      }
+      // White cells split in pieces: a shade on the wall between them is wrong.
+      const piece = new Int32Array(n * n).fill(-1);
+      let pieces = 0;
+      for (let s0 = 0; s0 < n * n; s0++) {
+        if (st[s0] === 1 || piece[s0] >= 0) continue;
+        const stack = [s0];
+        piece[s0] = pieces;
+        while (stack.length) {
+          const i = stack.pop()!;
+          for (const j of nb4(i, n))
+            if (st[j] !== 1 && piece[j] < 0) {
+              piece[j] = pieces;
+              stack.push(j);
+            }
+        }
+        pieces++;
+      }
+      if (pieces > 1) {
+        const i = st.findIndex(
+          (v, j) =>
+            v === 1 &&
+            wrongAt(j) &&
+            new Set(
+              nb4(j, n)
+                .map((k) => piece[k])
+                .filter((p) => p >= 0),
+            ).size > 1,
+        );
+        if (i >= 0)
+          return fix(
+            i,
+            L(
+              'This shaded cell cuts the white cells in two, and they must stay in one piece. It has to be white.',
+              'Cette case noire coupe les cases blanches en deux, alors qu’elles doivent rester d’un seul morceau. Elle doit être blanche.',
+            ),
+          );
+      }
+      // Nothing visible yet: compare with the (unique) solution.
+      const i = st.findIndex((_, j) => wrongAt(j));
+      if (i < 0) return null;
+      return fix(
+        i,
+        st[i] === 1
+          ? L(
+              'This shaded cell breaks no rule yet, but it leads to a dead end: it has to stay white. Clear it.',
+              'Cette case noire ne brise encore aucune règle, mais elle mène à une impasse : elle doit rester blanche. Effacez-la.',
+            )
+          : L(
+              'This dot breaks no rule yet, but it leads to a dead end: the cell has to be shaded. Clear it.',
+              'Ce point ne brise encore aucune règle, mais il mène à une impasse : la case doit être noircie. Effacez-le.',
+            ),
+      );
+    };
+
     const DIRS: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
     return {
       snapshot: () => ({ st, cur }),
       hint,
+      check,
       onKey(e) {
         if (done) return false;
         const dir = DIRS[e.key];

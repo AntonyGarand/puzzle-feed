@@ -214,3 +214,76 @@ export function genTrail(rng: Rng, d: Difficulty): TrailPuzzle {
   }
   return { n, path, marks: marksOf(), last: cps.size, walls: [...walls] };
 }
+
+/**
+ * Finish a partial path (`prefix`, starting on mark 1): every cell once, marks in order, ending on
+ * the last mark. Returns the full path, `null` when proven impossible, or `undefined` when the node
+ * budget ran out first.
+ */
+export function finishTrail(P: TrailPuzzle, prefix: number[], budget: number): number[] | null | undefined {
+  const { n, marks, last } = P;
+  const N = n * n;
+  const walls = new Set(P.walls);
+  const adj = Array.from({ length: N }, (_, i) => nbrs(i, n, n).filter((j) => !walls.has(wallKey(i, j))));
+  const end = marks.indexOf(last);
+  const vis = new Uint8Array(N);
+  for (const x of prefix) vis[x] = 1;
+  const cur = prefix.slice();
+  let next = 1;
+  for (const x of prefix) if (marks[x]) next = Math.max(next, marks[x] + 1);
+  const stack = new Int16Array(N);
+  const seen = new Uint8Array(N);
+  let nodes = 0;
+  let capped = false;
+  /** Unvisited cells stay connected to the head, and none but the end is a dead end. */
+  const ok = (head: number, left: number) => {
+    for (let i = 0; i < N; i++) {
+      if (vis[i]) continue;
+      let deg = 0;
+      for (const j of adj[i]) if (!vis[j] || j === head) deg++;
+      if (deg < (i === end ? 1 : 2)) return false;
+    }
+    seen.fill(0);
+    let sp = 0,
+      cnt = 0;
+    for (const j of adj[head])
+      if (!vis[j] && !seen[j]) {
+        seen[j] = 1;
+        stack[sp++] = j;
+      }
+    while (sp) {
+      const i = stack[--sp];
+      cnt++;
+      for (const j of adj[i])
+        if (!vis[j] && !seen[j]) {
+          seen[j] = 1;
+          stack[sp++] = j;
+        }
+    }
+    return cnt === left;
+  };
+  const dfs = (head: number, nx: number): boolean => {
+    if (cur.length === N) return head === end;
+    if (head === end) return false;
+    if (++nodes > budget) {
+      capped = true;
+      return false;
+    }
+    if (!ok(head, N - cur.length)) return false;
+    for (const j of adj[head]) {
+      if (vis[j]) continue;
+      const m = marks[j];
+      if (m && m !== nx) continue;
+      if (m === last && cur.length + 1 !== N) continue;
+      vis[j] = 1;
+      cur.push(j);
+      if (dfs(j, m ? nx + 1 : nx)) return true;
+      cur.pop();
+      vis[j] = 0;
+      if (capped) return false;
+    }
+    return false;
+  };
+  if (dfs(cur[cur.length - 1], next)) return cur;
+  return capped ? undefined : null;
+}

@@ -411,3 +411,129 @@ export const lineHUnits = (n: number): HUnit[] => [
     cells: Array.from({ length: n }, (_x, r) => r * n + c),
   })),
 ];
+
+/** A rule the board breaks, for `makeCheck`: which cells, and why (via L()). */
+export interface Broken {
+  text: string;
+  /** Clue elements to outline (a sign, a sum label…). */
+  why?: Element[];
+  /** Cells at fault: the hint rings them and clears the first one that isn't a given. */
+  at: number[];
+}
+
+/**
+ * `check()` for the number-entry grids: first a rule the board visibly breaks (a digit twice in a
+ * unit, a full cage with the wrong sum, then the game's own `rules`), else any entry that differs
+ * from the (unique) solution. `play()` clears the faulty entry through `o.place(i, 0)`.
+ */
+export function makeCheck(o: HintOpts & { rules?: ((vals: number[]) => Broken | null)[] }): () => Hint | null {
+  const fix = (b: Broken): Hint | null => {
+    const vals = o.vals();
+    // Clear the entry that's actually wrong when there is one, else the first one the player made.
+    const mine = b.at.filter((i) => !o.givens[i] && vals[i] > 0);
+    const target = mine.find((i) => vals[i] !== o.sol[i]) ?? mine[0];
+    if (target == null) return null;
+    return {
+      kind: 'fix',
+      text: b.text,
+      why: b.why,
+      at: b.at.map((i) => o.cells[i]),
+      action: L(`Clear the ${vals[target]}`, `Effacer le ${vals[target]}`),
+      play: () => {
+        if (o.vals()[target] > 0) o.place(target, 0);
+      },
+    };
+  };
+  return () => {
+    const vals = o.vals();
+    for (const u of o.units) {
+      const seen = new Map<number, number>();
+      for (const c of u.cells) {
+        const v = vals[c];
+        if (v <= 0) continue;
+        const j = seen.get(v);
+        if (j != null) {
+          const h = fix({
+            text: L(
+              `${cap(unitName(u))} has two ${v}s: each number goes in it only once.`,
+              `${cap(unitName(u))} contient deux ${v} : chaque nombre n’y va qu’une fois.`,
+            ),
+            why: u.clue,
+            at: [j, c],
+          });
+          if (h) return h;
+        }
+        seen.set(v, c);
+      }
+      if (u.sum == null) continue;
+      const filled = u.cells.filter((c) => vals[c] > 0);
+      const got = filled.reduce((t, c) => t + vals[c], 0);
+      const left = u.cells.length - filled.length;
+      if (!left && got !== u.sum) {
+        const h = fix({
+          text: L(
+            `${cap(unitName(u))} should add up to ${u.sum}, but its digits make ${got}.`,
+            `${cap(unitName(u))} devrait faire ${u.sum}, mais ses chiffres font ${got}.`,
+          ),
+          why: u.clue,
+          at: u.cells,
+        });
+        if (h) return h;
+      } else if (left && filled.length && seen.size === filled.length) {
+        // The digits in so far leave no way to finish the sum with distinct unused digits.
+        const avail = Array.from({ length: o.n }, (_, t) => t + 1).filter((d) => !seen.has(d));
+        const need = u.sum - got;
+        if (!subsets(avail, left, need).length) {
+          const low = avail.slice(0, left).reduce((a, b) => a + b, 0);
+          const high = avail.slice(-left).reduce((a, b) => a + b, 0);
+          const fv = filled.map((c) => vals[c]);
+          const parts = fv.length > 1 ? `${plus(fv)} = ${got}` : `${got}`;
+          const name = cap(unitName(u));
+          const cellsEn = left > 1 ? `its ${left} empty cells` : 'its empty cell';
+          const cellsFr = left > 1 ? `ses ${left} cases vides` : 'sa case vide';
+          const en = `${name} adds up to ${u.sum}`;
+          const fr = `${name} fait ${u.sum}`;
+          const would = L(
+            `with ${parts} in it, ${cellsEn} would need ${need}`,
+            `avec ${parts}, ${cellsFr} devrai${left > 1 ? 'en' : ''}t faire ${need}`,
+          );
+          const h = fix({
+            text:
+              need <= 0
+                ? L(
+                    `${en}, but ${parts} already ${need < 0 ? 'goes over it' : 'uses it all up'}, with ${cellsEn} still to fill.`,
+                    `${fr}, mais ${parts} ${need < 0 ? 'le dépasse' : 'l’atteint'} déjà, et ${cellsFr} reste${left > 1 ? 'nt' : ''} à remplir.`,
+                  )
+                : left === 1 && need <= o.n
+                  ? L(`${en}: ${would}, but there’s already a ${need} in it.`, `${fr} : ${would}, mais il y a déjà un ${need}.`)
+                  : need < low
+                    ? L(
+                        `${en}: ${would}, too little for ${left} different digits.`,
+                        `${fr} : ${would}, trop peu pour ${left} chiffres différents.`,
+                      )
+                    : need > high
+                      ? L(`${en}: ${would}, more than ${left > 1 ? 'they' : 'it'} can hold.`, `${fr} : ${would}, c’est trop.`)
+                      : L(`${en}: ${would}, and no unused digits make that.`, `${fr} : ${would}, et aucun chiffre libre n’y arrive.`),
+            why: u.clue,
+            at: filled,
+          });
+          if (h) return h;
+        }
+      }
+    }
+    for (const r of o.rules ?? []) {
+      const b = r(vals);
+      const h = b && fix(b);
+      if (h) return h;
+    }
+    const i = vals.findIndex((v, j) => v > 0 && !o.givens[j] && v !== o.sol[j]);
+    if (i < 0) return null;
+    return fix({
+      text: L(
+        `This ${vals[i]} breaks no rule yet, but it leads to a dead end: it doesn’t belong here.`,
+        `Ce ${vals[i]} ne brise encore aucune règle, mais il mène à une impasse : il ne va pas ici.`,
+      ),
+      at: [i],
+    });
+  };
+}

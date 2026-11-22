@@ -2,8 +2,22 @@ import './pyramid.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, h, shake } from '../core/ui';
-import { cardEl, elAt, label, leCard, pileEl, rank, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
-import { cardAt, canRecycle, clearedP, deadP, drawP, exposed, genP, idx, removeP, solveP, type PState } from './cardkit/pyramid';
+import { cardEl, elAt, label, leCard, pileEl, pilesEl, rank, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
+import {
+  cardAt,
+  canRecycle,
+  clearedP,
+  deadP,
+  drawP,
+  exposed,
+  genP,
+  idx,
+  removeP,
+  searchP,
+  solveP,
+  type PAct,
+  type PState,
+} from './cardkit/pyramid';
 import { bindTable, History } from './cardkit/table';
 
 const STEP = 0.7; // row step in card widths
@@ -83,8 +97,12 @@ export const pyramid: PuzzleDef = {
 
     /** Proven unwinnable from here, though moves remain (undo can still save it). */
     let doomed = false;
+    /** Exact position key, to follow a winning line one move at a time. */
+    const keyOf = (x: PState) => JSON.stringify([x.pyr, x.stock, x.waste, x.passes]);
+    /** Winning line the guide follows, with the position expected before each of its moves. */
+    let plan: { keys: string[]; line: PAct[] } | null = null;
     const judge = () => {
-      doomed = solveP(s, passes, 6000) === 'dead';
+      doomed = !plan?.keys.includes(keyOf(s)) && solveP(s, passes, 6000) === 'dead';
     };
 
     const status = () => {
@@ -148,7 +166,7 @@ export const pyramid: PuzzleDef = {
     };
 
     const bump = (p: string) => {
-      const el = table.querySelector(`[data-p="${p}"]`);
+      const el = topEl(table, p);
       if (el) shake(el);
     };
 
@@ -234,37 +252,173 @@ export const pyramid: PuzzleDef = {
     if (sv) judge();
     status();
 
-    let lastRule = '';
+    const el = (p: string) => (p === 'w' ? elAt(table, 'w', 0) : elAt(table, p, 0))!;
+    /** Pyramid cards a removal would uncover. */
+    const frees = (ps: string[]) => {
+      const pyr = s.pyr.slice();
+      for (const p of ps) if (p !== 'w') pyr[Number(p.slice(1))] = -1;
+      const out: number[] = [];
+      for (let i = 0; i < 28; i++) if (pyr[i] >= 0 && !exposed(s.pyr, i) && exposed(pyr, i)) out.push(i);
+      return out;
+    };
+    /** "Q♦ + A♣ = 12 + 1 = 13" (values spelled out for letters), "8♠ + 5♥ = 13" otherwise. */
+    const sum = (a: number, b: number) =>
+      rank(a) > 10 || rank(a) === 1 || rank(b) > 10 || rank(b) === 1
+        ? `${label(a)} + ${label(b)} = ${rank(a)} + ${rank(b)} = 13`
+        : `${label(a)} + ${label(b)} = 13`;
+    const freed = (ps: string[]) => {
+      const f = frees(ps);
+      if (!f.length) return ['', ''];
+      const names = f.map((i) => label(s.pyr[i])).join(L(' and ', ' et '));
+      return [` That opens the ${names} above.`, ` Cela libère ${f.length > 1 ? 'les cartes ' + names : leCard(s.pyr[f[0]])} au-dessus.`];
+    };
+    /** Could some open cards be removed right now (a king, or two making 13)? */
+    const somePair = () => {
+      const all: string[] = [];
+      for (let i = 0; i < 28; i++) if (exposed(s.pyr, i)) all.push('p' + i);
+      if (cardAt(s, 'w') != null) all.push('w');
+      return all.some((a, x) => removeP(s, a, undefined, true) || all.slice(x + 1).some((b) => removeP(s, a, b, true)));
+    };
+
+    /** Positions the solver could not settle within its budget (not searched twice). */
+    const unsure = new Set<string>();
+    /** Next step of a winning line from here, planned once and followed while the player does. */
+    const planned = (): PAct | null => {
+      const k = keyOf(s);
+      const at = plan ? plan.keys.indexOf(k) : -1;
+      if (plan && at >= 0) return plan.line[at];
+      if (unsure.has(k)) return null;
+      const r = searchP(s, passes, 8000);
+      if (r.v !== 'win' || !r.line.length) {
+        unsure.add(k);
+        return null;
+      }
+      const keys: string[] = [];
+      const x = structuredClone(s);
+      for (const a of r.line) {
+        keys.push(keyOf(x));
+        if (a.k === 'p') removeP(x, 'p' + a.a);
+        else if (a.k === 'w') removeP(x, 'w');
+        else if (a.k === 'pp') removeP(x, 'p' + a.a, 'p' + a.b);
+        else if (a.k === 'wp') removeP(x, 'w', 'p' + a.a);
+        else drawP(x, passes);
+      }
+      plan = { keys, line: r.line };
+      return r.line[0];
+    };
+
+    /** Explain one step of the winning line. */
+    const describe = (a: PAct): Hint => {
+      if (a.k === 'p' || a.k === 'w') {
+        const p = a.k === 'w' ? 'w' : 'p' + a.a;
+        const c = cardAt(s, p)!;
+        const [fe, ff] = freed([p]);
+        return {
+          text: L(
+            `A king is worth 13 by itself: tap the ${label(c)} to remove it.${fe}`,
+            `Un roi vaut 13 à lui seul : touchez ${leCard(c)} pour le retirer.${ff}`,
+          ),
+          at: [el(p)],
+          play: () => pick(p),
+        };
+      }
+      if (a.k === 'pp' || a.k === 'wp') {
+        const pa = a.k === 'wp' ? 'w' : 'p' + a.a;
+        const pb = a.k === 'wp' ? 'p' + a.a : 'p' + a.b;
+        const ca = cardAt(s, pa)!;
+        const cb = cardAt(s, pb)!;
+        const [fe, ff] = freed([pa, pb]);
+        return {
+          text:
+            a.k === 'wp'
+              ? L(
+                  `The waste’s top card is open too, and ${sum(ca, cb)}: pair the ${label(ca)} with the ${label(cb)}.${fe}`,
+                  `La carte du dessus du talon est libre aussi, et ${sum(ca, cb)} : associez ${leCard(ca)} et ${leCard(cb)}.${ff}`,
+                )
+              : L(
+                  `${sum(ca, cb)}, and both cards are open (nothing covers them): pair them.${fe}`,
+                  `${sum(ca, cb)}, et les deux cartes sont libres (rien ne les couvre) : associez-les.${ff}`,
+                ),
+          why: [el(pa)],
+          at: [el(pb)],
+          play: () => {
+            if (sel !== pa) pick(pa);
+            pick(pb);
+          },
+        };
+      }
+      return {
+        text: !s.stock.length
+          ? L('The stock is empty: tap ↻ to go through the waste again.', 'La pioche est vide : touchez ↻ pour reparcourir le talon.')
+          : somePair()
+            ? L(
+                'Turn a stock card first: the open pairs can wait, and taking them now would leave cards that never find a partner.',
+                'Retournez d’abord une carte de la pioche : les paires libres peuvent attendre, les prendre maintenant laisserait des cartes sans partenaire.',
+              )
+            : L(
+                'No two open cards make 13: turn a stock card over.',
+                'Aucune paire de cartes libres ne fait 13 : retournez une carte de la pioche.',
+              ),
+        at: [topEl(table, 's')!],
+        play: draw,
+      };
+    };
+
+    /** Dead end: the solver tried every order of removals and draws from here, and none clears the pyramid. */
+    const check = (): Hint | null => {
+      if (over || !doomed || tired()) return null;
+      deadEnds.add(keyOf(s));
+      giveUps++;
+      return {
+        kind: 'stuck',
+        text: L(
+          'No way to clear the pyramid from here: in every order, some cards never find a partner adding up to 13 in time. Undo.',
+          'Impossible de vider la pyramide d’ici : dans tous les ordres, des cartes ne trouvent jamais à temps de partenaire qui fasse 13. Annulez.',
+        ),
+        at: pilesEl(table, 'p'),
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      };
+    };
+
+    /** Dead ends shown since the pyramid last got smaller, and its smallest size so far. */
+    let giveUps = 0;
+    let fewest = 99;
+    /** The guide keeps backing into dead ends without getting further: it stops suggesting moves. */
+    const tired = () => {
+      const left = s.pyr.filter((c) => c >= 0).length;
+      if (left < fewest) {
+        fewest = left;
+        giveUps = 0;
+      }
+      return giveUps >= 8;
+    };
+
     const hint = (): Hint | null => {
-      if (over) return null;
-      const el = (p: string) => (p === 'w' ? elAt(table, 'w', 0) : elAt(table, p, 0))!;
+      if (over || (doomed && tired())) return null;
+      const a = planned();
+      return a ? describe(a) : heuristic();
+    };
+
+    /** Positions found to be dead ends (the heuristic never steers back into one). */
+    const deadEnds = new Set<string>();
+    /** Would removing these cards leave a position known or quickly proven to be lost? */
+    const bad = (a: string, b?: string) => {
+      const x = structuredClone(s);
+      removeP(x, a, b);
+      return deadEnds.has(keyOf(x)) || deadP(x, passes) || solveP(x, passes, 1500) === 'dead';
+    };
+    let lastRule = '';
+    /** No line from the solver within its budget: the old rules of thumb. */
+    const heuristic = (): Hint | null => {
       const open: string[] = [];
       for (let i = 0; i < 28; i++) if (exposed(s.pyr, i)) open.push('p' + i);
       const wasteTop = cardAt(s, 'w');
-      /** Pyramid cards a removal would uncover. */
-      const frees = (ps: string[]) => {
-        const pyr = s.pyr.slice();
-        for (const p of ps) if (p !== 'w') pyr[Number(p.slice(1))] = -1;
-        const out: number[] = [];
-        for (let i = 0; i < 28; i++) if (pyr[i] >= 0 && !exposed(s.pyr, i) && exposed(pyr, i)) out.push(i);
-        return out;
-      };
-      /** "Q♦ + A♣ = 12 + 1 = 13" (values spelled out for letters), "8♠ + 5♥ = 13" otherwise. */
-      const sum = (a: number, b: number) =>
-        rank(a) > 10 || rank(a) === 1 || rank(b) > 10 || rank(b) === 1
-          ? `${label(a)} + ${label(b)} = ${rank(a)} + ${rank(b)} = 13`
-          : `${label(a)} + ${label(b)} = 13`;
-      const freed = (ps: string[]) => {
-        const f = frees(ps);
-        if (!f.length) return ['', ''];
-        const names = f.map((i) => label(s.pyr[i])).join(L(' and ', ' et '));
-        return [` That opens the ${names} above.`, ` Cela libère ${f.length > 1 ? 'les cartes ' + names : leCard(s.pyr[f[0]])} au-dessus.`];
-      };
       const cands: { rule: string; h: Hint }[] = [];
       // Kings leave on their own.
       for (const p of [...open, ...(wasteTop != null ? ['w'] : [])]) {
         const c = cardAt(s, p)!;
-        if (rank(c) !== 13) continue;
+        if (rank(c) !== 13 || bad(p)) continue;
         const [fe, ff] = freed([p]);
         cands.push({
           rule: 'king',
@@ -284,6 +438,7 @@ export const pyramid: PuzzleDef = {
         for (let y = x + 1; y < open.length; y++)
           if (removeP(s, open[x], open[y], true)) pairs.push({ a: open[x], b: open[y], n: frees([open[x], open[y]]).length });
       if (wasteTop != null) for (const a of open) if (removeP(s, 'w', a, true)) pairs.push({ a: 'w', b: a, n: frees([a]).length });
+      for (let k = pairs.length - 1; k >= 0; k--) if (bad(pairs[k].a, pairs[k].b)) pairs.splice(k, 1);
       pairs.sort((x, y) => y.n - x.n || Number(y.b.slice(1)) - Number(x.b.slice(1)));
       for (const { a, b } of pairs) {
         const ca = cardAt(s, a)!;
@@ -347,6 +502,7 @@ export const pyramid: PuzzleDef = {
 
     return {
       hint,
+      check,
       snapshot: () => ({ s, hist: hist.stack, sel }),
       onKey(e) {
         if (e.key === 'z' || e.key === 'Backspace') {

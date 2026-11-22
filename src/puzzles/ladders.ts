@@ -2,7 +2,7 @@ import './ladders.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, shake } from '../core/ui';
-import { cap, cardEl, elAt, fan, label, leCard, pileEl, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
+import { cap, cardEl, elAt, fan, label, leCard, pileEl, pilesEl, rankLabel, slotEl, tableEl, topEl } from './cardkit/cards';
 import {
   cardAtL,
   cloneL,
@@ -11,6 +11,7 @@ import {
   type LConfig,
   type LMove,
   type LState,
+  type LVerdict,
   moveL,
   movableL,
   movesL,
@@ -268,37 +269,104 @@ export const ladders: PuzzleDef = {
       );
     };
 
+    /** Exact position key (column and cell order matter to replay a line). */
+    const keyOf = (x: LState) => x.cols.map((c) => c.join('.')).join('/') + '|' + x.cells.join(',');
+    /** Solver verdicts by position, so check() and hint() never search the same position twice. */
+    const verdicts = new Map<string, LVerdict>();
+    const solveHere = (): LVerdict => {
+      const k = keyOf(s);
+      let r = verdicts.get(k);
+      if (!r) {
+        if (verdicts.size > 300) verdicts.clear();
+        r = solveL(s, 4000);
+        verdicts.set(k, r);
+      }
+      return r;
+    };
+    /** Winning line the guide follows, with the position expected before each of its moves. */
+    let plan: { keys: string[]; line: LMove[] } | null = null;
+    const planned = (): LMove | null => {
+      const k = keyOf(s);
+      const at = plan ? plan.keys.indexOf(k) : -1;
+      if (plan && at >= 0) return plan.line[at];
+      const r = solveHere();
+      if (r.v !== 'win' || !r.line.length) return null;
+      const keys: string[] = [];
+      const x = cloneL(s);
+      for (const m of r.line) {
+        keys.push(keyOf(x));
+        moveL(x, m.p, m.i, m.to);
+      }
+      plan = { keys, line: r.line };
+      return r.line[0];
+    };
+    /** Positions the guide already went through: its fallback never walks back into one. */
+    const seenByGuide = new Set<string>();
+    const fallback = (): LMove | null => {
+      for (const m of movesL(s)) {
+        const x = cloneL(s);
+        moveL(x, m.p, m.i, m.to);
+        const k = keyOf(x);
+        if (seenByGuide.has(k) || verdicts.get(k)?.v === 'dead' || solveL(x, 200).v === 'dead') continue;
+        return m;
+      }
+      return null;
+    };
+    /** Undo the last move, or deal the same game again when there is nothing to undo. */
+    const backOut = () => (hist.size ? undo() : restart());
+
+    /** Dead end: the solver went through every position reachable from here without a win. */
+    const check = (): Hint | null => {
+      if (over || solveHere().v !== 'dead') return null;
+      const cellsFull = cfg.cells > 0 && s.cells.every((c) => c >= 0);
+      return {
+        kind: 'stuck',
+        text: cellsFull
+          ? L(
+              'No way to win from here: the free cells are full and no series of moves sorts the buried cards. Undo.',
+              'Impossible de gagner d’ici : les cellules sont pleines et aucune suite de coups ne remet en ordre les cartes enfouies. Annulez.',
+            )
+          : L(
+              'No way to win from here: every series of moves gets blocked before the four ladders are built. Undo.',
+              'Impossible de gagner d’ici : toute suite de coups bloque avant que les quatre échelles soient bâties. Annulez.',
+            ),
+        at: pilesEl(table, 't'),
+        action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+        play: backOut,
+      };
+    };
+
     const hint = (): Hint | null => {
       if (over) return null;
-      const r = solveL(s, 4000);
-      if (r.v === 'dead') return null;
-      let m: LMove | undefined = r.v === 'win' ? r.line[0] : undefined;
-      if (!m) {
-        // Budget ran out: fall back on what a tap would do with an uncovered card.
-        for (let a = 0; a < nc && !m; a++) {
-          const col = s.cols[a];
-          if (!col.length) continue;
-          const to = destsL(s, 't' + a, col.length - 1).find((x) => x[0] === 't');
-          if (to) m = { p: 't' + a, i: col.length - 1, to };
-        }
-      }
-      if (!m) return null;
-      const mv = m;
-      const src = elAt(table, mv.p, mv.i);
-      const at = topEl(table, mv.to);
+      seenByGuide.add(keyOf(s));
+      const m = planned() ?? fallback();
+      if (!m)
+        return {
+          kind: 'stuck',
+          text: L(
+            'The guide can’t find a way to win from here. Undo a few moves and try another route.',
+            'Le guide ne trouve pas de façon de gagner d’ici. Annulez quelques coups et essayez une autre voie.',
+          ),
+          at: pilesEl(table, 't'),
+          action: hist.size ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+          play: backOut,
+        };
+      const src = elAt(table, m.p, m.i);
+      const at = topEl(table, m.to);
       if (!src || !at) return null;
       const why = [src];
-      if (mv.p[0] === 't' && mv.i > 0) why.push(elAt(table, mv.p, mv.i - 1)!);
+      if (m.p[0] === 't' && m.i > 0) why.push(elAt(table, m.p, m.i - 1)!);
       return {
-        text: describe(mv),
+        text: describe(m),
         why,
         at: [at],
-        play: () => go(mv.p, mv.i, mv.to),
+        play: () => go(m.p, m.i, m.to),
       };
     };
 
     return {
       hint,
+      check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
         if (e.key === 'z' || e.key === 'Backspace') {

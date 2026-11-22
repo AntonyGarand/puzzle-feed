@@ -11,7 +11,11 @@ import {
   draw,
   finishK,
   hasProgress,
+  type KGoal,
+  type KMove,
   moveK,
+  progressPlan,
+  talonPlays,
   picked,
   trivialK,
   wonK,
@@ -169,7 +173,7 @@ export const solitaire: PuzzleDef = {
     };
 
     const bump = (p: string, i: number) => {
-      const el = table.querySelector(`[data-p="${p}"][data-i="${i}"]`);
+      const el = elAt(table, p, i);
       if (el) shake(el);
     };
 
@@ -233,18 +237,109 @@ export const solitaire: PuzzleDef = {
     status();
 
     let lastRule = '';
+    const fit = (dst: number) =>
+      L(
+        `one lower, ${isRed(dst) ? 'black on red' : 'red on black'}`,
+        `une valeur de moins, ${isRed(dst) ? 'noir sur rouge' : 'rouge sur noir'}`,
+      );
+    /** Exact position key, to follow a plan of shuffles one move at a time. */
+    const keyOf = (x: KState) => JSON.stringify([x.stock, x.waste, x.found, x.tab]);
+    /** Face-down cards plus talon cards: drops with every flip and every card taken from the talon. */
+    const hidden = (x: KState) => x.stock.length + x.waste.length + x.tab.reduce((a, t) => a + t.d.length, 0);
+    const homeCount = (x: KState) => x.found.reduce((a, b) => a + b, 0);
+    /**
+     * Shuffles the guide is walking through (no direct progress was possible), with the position
+     * expected before each, and the foundation cards they take down: those must not go straight back
+     * home until the shuffle has paid off (a flip, a talon card played or another card home).
+     */
+    let plan: { keys: string[]; line: KMove[]; keep: Set<number>; hidden: number; home: number } | null = null;
+    const planStep = (m: KMove, goal: KGoal): Hint => {
+      const c = picked(s, m.p, m.i)![0];
+      const col = s.tab[Number(m.to.slice(1))];
+      const dst = col.u[col.u.length - 1];
+      const then =
+        goal === 'flip'
+          ? L('so that a face-down card can turn over', 'pour qu’une carte cachée puisse se retourner')
+          : goal === 'home'
+            ? L('so that another card can go home', 'pour qu’une autre carte puisse monter sur sa fondation')
+            : L('so that a card from the stock can be played', 'pour qu’une carte de la pioche puisse se jouer');
+      return {
+        text:
+          dst == null
+            ? L(
+                `Nothing plays directly. Move the ${label(c)} to the empty column (only kings may) ${then}.`,
+                `Rien ne se joue directement. Déplacez ${leCard(c)} dans la colonne vide (seuls les rois le peuvent) ${then}.`,
+              )
+            : m.p[0] === 'f'
+              ? L(
+                  `Nothing plays directly. Take the ${label(c)} back down onto the ${label(dst)} (${fit(dst)}) ${then}.`,
+                  `Rien ne se joue directement. Redescendez ${leCard(c)} sur ${leCard(dst)} (${fit(dst)}) ${then}.`,
+                )
+              : L(
+                  `Nothing plays directly. Move the ${label(c)} onto the ${label(dst)} (${fit(dst)}) ${then}.`,
+                  `Rien ne se joue directement. Déplacez ${leCard(c)} sur ${leCard(dst)} (${fit(dst)}) ${then}.`,
+                ),
+        why: [m.p[0] === 'f' ? topEl(table, m.p)! : elAt(table, m.p, m.i)!],
+        at: [topEl(table, m.to)!],
+        play: () => go(m.p, m.i, m.to),
+      };
+    };
+    let planGoal: KGoal = 'flip';
+    /** Positions where the guide found no useful move (it steers around them after an undo). */
+    const deadEnds = new Set<string>();
+    /** Positions the guide already drew from since the last real progress. */
+    const drawSeen = new Set<string>();
+    let drawMeasure = '';
+    /** Hints given since the last real progress, and the position where that stretch began. */
+    let idle = 0;
+    let stretch = '';
+    let best = -1e9;
+    let giveUps = 0;
+    const stuckHint = (): Hint => ({
+      kind: 'stuck',
+      text: L(
+        'The guide finds no useful move from here: nothing more goes home, turns over or comes off the stock. Undo a few moves and try another way.',
+        'Le guide ne trouve aucun coup utile d’ici : plus rien ne monte, ne se retourne ni ne sort de la pioche. Annulez quelques coups et essayez autrement.',
+      ),
+      at: [topEl(table, 's')!],
+      action: L('Undo', 'Annuler'),
+      play: undo,
+    });
+
     const hint = (): Hint | null => {
       if (over) return null;
-      const cands: { rule: string; h: Hint }[] = [];
-      const fit = (dst: number) =>
-        L(
-          `one lower, ${isRed(dst) ? 'black on red' : 'red on black'}`,
-          `une valeur de moins, ${isRed(dst) ? 'noir sur rouge' : 'rouge sur noir'}`,
-        );
+      // Follow the shuffles under way; drop the plan once it paid off (or the player went elsewhere).
+      const measure = `${hidden(s)}/${homeCount(s)}`;
+      if (measure !== drawMeasure) {
+        drawSeen.clear();
+        drawMeasure = measure;
+        idle = 0;
+        stretch = keyOf(s);
+      }
+      // Going round in circles (the useful-looking moves all lead back here): give up on this stretch.
+      // After a few give-ups without ever getting further, stop suggesting anything.
+      const record = homeCount(s) * 100 - hidden(s);
+      if (record > best) {
+        best = record;
+        giveUps = 0;
+      }
+      if (giveUps >= 3) return null;
+      if (++idle > 40 && hist.size) {
+        deadEnds.add(stretch);
+        giveUps++;
+        idle = 0;
+        return stuckHint();
+      }
+      const at = plan ? plan.keys.indexOf(keyOf(s)) : -1;
+      if (plan && at >= 0) return planStep(plan.line[at], planGoal);
+      if (plan && (hidden(s) !== plan.hidden || homeCount(s) > plan.home)) plan = null;
+      const keep = plan?.keep ?? new Set<number>();
+      let cands: { rule: string; h: Hint; m: KMove }[] = [];
       // Home: a top card that continues its foundation.
       const homeFrom = (p: string, i: number, c: number) =>
         cands.push({
           rule: 'home',
+          m: { p, i, to: 'f' },
           h: {
             text:
               rank(c) === 1
@@ -263,7 +358,8 @@ export const solitaire: PuzzleDef = {
         });
       s.tab.forEach((col, a) => {
         const i = col.d.length + col.u.length - 1;
-        if (col.u.length && moveK(s, 't' + a, i, 'f', true)) homeFrom('t' + a, i, col.u[col.u.length - 1]);
+        if (col.u.length && !keep.has(col.u[col.u.length - 1]) && moveK(s, 't' + a, i, 'f', true))
+          homeFrom('t' + a, i, col.u[col.u.length - 1]);
       });
       if (s.waste.length && moveK(s, 'w', s.waste.length - 1, 'f', true)) homeFrom('w', s.waste.length - 1, s.waste[s.waste.length - 1]);
       // Reveal: move a whole face-up run off a face-down card, deepest pile first.
@@ -279,6 +375,7 @@ export const solitaire: PuzzleDef = {
           const n = col.u.length;
           cands.push({
             rule: dst == null ? 'king' : 'reveal',
+            m: { p: 't' + a, i, to: 't' + b },
             h: {
               text:
                 dst == null
@@ -307,6 +404,7 @@ export const solitaire: PuzzleDef = {
           const dst = s.tab[b].u[s.tab[b].u.length - 1];
           cands.push({
             rule: 'waste',
+            m: { p: 'w', i, to: 't' + b },
             h: {
               text:
                 dst == null
@@ -326,9 +424,44 @@ export const solitaire: PuzzleDef = {
           break;
         }
       }
+      // Never walk back into a position the guide already found to be a dead end.
+      cands = cands.filter(({ m }) => {
+        const x = structuredClone(s);
+        moveK(x, m.p, m.i, m.to);
+        return !deadEnds.has(keyOf(x));
+      });
+      // Drawing is useful while some talon card plays; a full turn of the talon back to a position
+      // already drawn from (with nothing flipped or sent home since) means none of them helps.
+      const talon = !cands.length && talonPlays(s, rules) && !drawSeen.has(keyOf(s));
+      if (!cands.length && !talon) {
+        // Nothing plays directly and the talon has nothing either: shuffle the tableau toward a play.
+        const pl = progressPlan(s, rules, keep);
+        if (!pl && keep.size) {
+          // The player left the planned shuffles: forget which cards were held back.
+          plan = null;
+          return hint();
+        }
+        if (pl?.line.length) {
+          const keys: string[] = [];
+          const x = structuredClone(s);
+          const down = new Set<number>(keep);
+          for (const m of pl.line) {
+            keys.push(keyOf(x));
+            if (m.p[0] === 'f') down.add(picked(x, m.p, m.i)![0]);
+            moveK(x, m.p, m.i, m.to);
+          }
+          plan = { keys, line: pl.line, keep: down, hidden: hidden(x), home: homeCount(x) };
+          planGoal = pl.goal;
+          return planStep(pl.line[0], pl.goal);
+        }
+        // Nothing to back out of: say nothing rather than offer an Undo that can't happen.
+        if (!hist.size) return null;
+        deadEnds.add(keyOf(s));
+        return stuckHint();
+      }
       if (!cands.length) {
-        if (!canDraw(s, rules) || !hasProgress(s, rules)) return null;
         lastRule = 'draw';
+        drawSeen.add(keyOf(s));
         return {
           text: s.stock.length
             ? L(

@@ -278,12 +278,48 @@ export const blackBox: PuzzleDef = {
               );
     };
 
+    /** Layouts that fit the rays fired so far, kept until another ray is fired (check() then hint()). */
+    let memo: { key: string; list: number[][]; complete: boolean } | null = null;
+    const fitting = () => {
+      const key = fired.join();
+      if (memo?.key !== key) {
+        const shots = fired.map((port) => ({ port, res: known[port]! }));
+        let seed = 0x9e3779b1 ^ n;
+        for (const k of fired) seed = Math.imul(seed ^ (k + 1), 0x01000193) >>> 0;
+        memo = { key, ...layouts(n, count, shots, seed) };
+      }
+      return memo;
+    };
+    /** A ball guess that no layout fitting the rays uses: take it back. */
+    const wrongGuess = (): Hint | null => {
+      if (over || !guess.size) return null;
+      const { list, complete } = fitting();
+      if (!complete || !list.length) return null;
+      for (const i of guess) {
+        if (list.some((lay) => lay.includes(i))) continue;
+        const why = raysAbout(list[0], i, 'pass');
+        return {
+          kind: 'fix',
+          text: why.length
+            ? L(
+                `No layout that fits your rays has a ball here: the outlined ray (${results(why)}) passes right through this cell. Remove it.`,
+                `Aucune disposition qui respecte vos rayons n’a de bille ici : le rayon encadré (${results(why)}) traverse cette case. Retirez-la.`,
+              )
+            : L(
+                'No layout that fits your rays has a ball here. Remove it.',
+                'Aucune disposition qui respecte vos rayons n’a de bille ici. Retirez-la.',
+              ),
+          why: why.map((k) => portEls[k]),
+          action: L('Remove', 'Retirer'),
+          ...place(i),
+        };
+      }
+      return null;
+    };
+
     const hint = (): Hint | null => {
       if (over) return null;
-      const shots = fired.map((port) => ({ port, res: known[port]! }));
-      let seed = 0x9e3779b1 ^ n;
-      for (const k of fired) seed = Math.imul(seed ^ (k + 1), 0x01000193) >>> 0;
-      const { list, complete } = layouts(n, count, shots, seed);
+      const { list, complete } = fitting();
       if (!list.length) {
         // Search came up empty-handed: fall back to an unused edge cell near the middle.
         const mid = (n - 1) / 2;
@@ -306,23 +342,8 @@ export const blackBox: PuzzleDef = {
 
       if (complete) {
         // A guess no fitting layout uses: take it back.
-        for (const i of guess) {
-          if (list.some((lay) => lay.includes(i))) continue;
-          const why = raysAbout(list[0], i, 'pass');
-          return {
-            text: why.length
-              ? L(
-                  `No layout that fits your rays has a ball here: the outlined ray (${results(why)}) passes right through this cell. Remove it.`,
-                  `Aucune disposition qui respecte vos rayons n’a de bille ici : le rayon encadré (${results(why)}) traverse cette case. Retirez-la.`,
-                )
-              : L(
-                  'No layout that fits your rays has a ball here. Remove it.',
-                  'Aucune disposition qui respecte vos rayons n’a de bille ici. Retirez-la.',
-                ),
-            why: why.map((k) => portEls[k]),
-            ...place(i),
-          };
-        }
+        const wrong = wrongGuess();
+        if (wrong) return wrong;
         // A ball every fitting layout needs.
         for (let i = 0; i < n * n; i++) {
           if (guess.has(i) || guess.size >= count || !list.every((lay) => lay.includes(i))) continue;
@@ -423,6 +444,7 @@ export const blackBox: PuzzleDef = {
     };
 
     return {
+      check: wrongGuess,
       hint,
       snapshot: () => ({ rays: fired, guess: [...guess], checks }),
       onKey(e) {

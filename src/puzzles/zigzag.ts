@@ -4,7 +4,7 @@ import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, PALETTE, s } from '../core/ui';
 import { adjacent, capture, cellAt, pts, stepsToward } from './pathkit/grid';
-import { genZigzag, numberLines, twistError } from './pathkit/zigzag-gen';
+import { genZigzag, turnsOf, numberLines, twistError } from './pathkit/zigzag-gen';
 import './zigzag.css';
 
 export const zigzag: PuzzleDef = {
@@ -354,6 +354,59 @@ export const zigzag: PuzzleDef = {
       });
     };
 
-    return { hint, snapshot: () => ({ paths }) };
+    /** The solution is unique: a line that breaks the zigzag rule, else one that leaves the solution. */
+    const checkHint = (): Hint | null => {
+      if (finished) return null;
+      const fix = (j: number, m: number, text: string): Hint => {
+        const p = paths[j];
+        const back = p[Math.max(0, m - 1)];
+        return {
+          kind: 'fix',
+          text,
+          why: [el(nums[j])],
+          at: p.slice(m).map(el),
+          action: L('Cut it back', 'La couper'),
+          play: () => {
+            start(back);
+            active = -1;
+          },
+        };
+      };
+      for (let j = 0; j < k; j++) {
+        const e = twistError(paths[j], n);
+        if (e < 0) continue;
+        const straight = turnsOf(paths[j], n)[e - 1] === 0;
+        return fix(
+          j,
+          e + 1,
+          straight
+            ? L(
+                'This line goes straight through two cells in a row: it must turn in every other cell.',
+                'Cette ligne va tout droit dans deux cases de suite : elle doit tourner une case sur deux.',
+              )
+            : L(
+                'This line turns the same way in two cells in a row: it must alternate left and right.',
+                'Cette ligne tourne du même côté dans deux cases de suite : elle doit alterner gauche et droite.',
+              ),
+        );
+      }
+      for (let j = 0; j < k; j++) {
+        const p = paths[j];
+        let m = 0;
+        while (m < p.length && p[m] === sol[j][m]) m++;
+        if (m < p.length)
+          return fix(
+            j,
+            m,
+            L(
+              'This line breaks no rule yet, but it leads to a dead end: the other lines can’t all fit around it. Cut it back.',
+              'Cette ligne ne brise encore aucune règle, mais elle mène à une impasse : les autres lignes ne peuvent pas toutes entrer autour. Coupez-la.',
+            ),
+          );
+      }
+      return null;
+    };
+
+    return { hint, check: checkHint, snapshot: () => ({ paths }) };
   },
 };

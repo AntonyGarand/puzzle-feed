@@ -56,7 +56,7 @@ export const mosaic: PuzzleDef = {
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
     const n = byLevel(d, [5, 6, 7, 8, 10]);
-    const { clue, sol } = genMosaic(n, byLevel(d, [0.6, 0.45, 0.3, 0.15, 0]), rng);
+    const { clue, sol, unique } = genMosaic(n, byLevel(d, [0.6, 0.45, 0.3, 0.15, 0]), rng);
     const blocks = clue.map((_, i) => block(i, n));
 
     // 0 empty, 1 filled, 2 marked
@@ -196,7 +196,7 @@ export const mosaic: PuzzleDef = {
               text: c.k
                 ? L(
                     `This ${c.k} already has its ${c.k} filled cell${c.k > 1 ? 's' : ''}, so ${c.open.length === 1 ? 'its last open cell is empty: mark it' : 'the rest of its square is empty: mark those cells'} ✕.`,
-                    `Ce ${c.k} a déjà ${c.k > 1 ? `ses ${c.k} cases pleines` : 'sa case pleine'}  : ${c.open.length === 1 ? 'sa dernière case ouverte est vide, marquez-la' : 'le reste de son carré est vide, marquez ces cases'} d’un ✕.`,
+                    `Ce ${c.k} a déjà ${c.k > 1 ? `ses ${c.k} cases pleines` : 'sa case pleine'} : ${c.open.length === 1 ? 'sa dernière case ouverte est vide, marquez-la' : 'le reste de son carré est vide, marquez ces cases'} d’un ✕.`,
                   )
                 : L(
                     'A 0: nothing in its 3×3 square is filled. Tap twice to mark those cells ✕.',
@@ -279,10 +279,73 @@ export const mosaic: PuzzleDef = {
       };
     };
 
+    /** A cell that makes a number impossible, else one off the unique picture. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const wrongAt = (j: number) => (st[j] === 1 && !sol[j]) || (st[j] === 2 && sol[j]);
+      const fix = (i: number, text: string, why: number[] = []): Hint => ({
+        kind: 'fix',
+        text,
+        why: why.map((j) => cells[j]),
+        at: [cells[i]],
+        action: st[i] === 1 ? L('Clear it', 'L’effacer') : L('Clear the ✕', 'Effacer le ✕'),
+        play: () => {
+          ctx.touch();
+          set(i, 0);
+        },
+      });
+      for (let c = 0; c < n * n; c++) {
+        const k = clue[c];
+        if (k < 0) continue;
+        const on = blocks[c].filter((j) => st[j] === 1).length;
+        const room = blocks[c].filter((j) => st[j] !== 2).length;
+        if (on > k) {
+          const i = blocks[c].find((j) => st[j] === 1 && wrongAt(j));
+          if (i !== undefined)
+            return fix(
+              i,
+              L(
+                `This ${k} has ${on} filled cells in its square, more than ${k}. This one should be empty.`,
+                `Ce ${k} a ${on} cases pleines dans son carré, plus que ${k}. Celle-ci doit être vide.`,
+              ),
+              [c],
+            );
+        }
+        if (room < k) {
+          const i = blocks[c].find((j) => st[j] === 2 && wrongAt(j));
+          if (i !== undefined)
+            return fix(
+              i,
+              L(
+                `This ${k} can no longer reach ${k}: too many cells in its square are marked ✕. This one should be filled.`,
+                `Ce ${k} ne peut plus atteindre ${k} : trop de cases de son carré ont un ✕. Celle-ci doit être pleine.`,
+              ),
+              [c],
+            );
+        }
+      }
+      if (!unique) return null;
+      const i = st.findIndex((_, j) => wrongAt(j));
+      if (i < 0) return null;
+      return fix(
+        i,
+        st[i] === 1
+          ? L(
+              'This filled cell breaks no number yet, but it leads to a dead end: it belongs empty. Clear it.',
+              'Cette case pleine ne contredit encore aucun nombre, mais elle mène à une impasse : elle doit rester vide. Effacez-la.',
+            )
+          : L(
+              'This ✕ breaks no number yet, but it leads to a dead end: the cell has to be filled. Clear it.',
+              'Ce ✕ ne contredit encore aucun nombre, mais il mène à une impasse : la case doit être pleine. Effacez-le.',
+            ),
+      );
+    };
+
     const DIRS: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
     return {
       snapshot: () => ({ st, cur }),
       hint,
+      check,
       onKey(e) {
         if (done) return false;
         const dir = DIRS[e.key];

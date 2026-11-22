@@ -115,3 +115,103 @@ export function genCollapse(rng: Rng, W: number, H: number, k: number): { cols: 
   }
   return { cols: best.cols, solution: best.steps.reverse() };
 }
+
+/** What the solver knows about a board: a winning group to tap next, proven hopeless, or not sure. */
+export type CollapseVerdict = { status: 'win'; next: [number, number] | null } | { status: 'dead' } | { status: 'capped' };
+
+/** Every group of 2+ on the board as its cells, smallest first (the solver tries them in that order: small groups keep big ones for later). */
+export function groupList(cols: Cols): [number, number][][] {
+  const S = 32;
+  const seen = new Uint8Array(cols.length * S);
+  const out: [number, number][][] = [];
+  const st: number[] = [];
+  for (let x = 0; x < cols.length; x++)
+    for (let y = 0; y < cols[x].length; y++) {
+      if (seen[x * S + y]) continue;
+      const c = cols[x][y];
+      const g: [number, number][] = [];
+      seen[x * S + y] = 1;
+      st.push(x * S + y);
+      while (st.length) {
+        const v = st.pop()!;
+        const a = (v / S) | 0,
+          b = v % S;
+        g.push([a, b]);
+        const add = (u: number, ok: boolean) => {
+          if (ok && !seen[u]) {
+            seen[u] = 1;
+            st.push(u);
+          }
+        };
+        add(v - S, a > 0 && cols[a - 1][b] === c);
+        add(v + S, a + 1 < cols.length && cols[a + 1][b] === c);
+        add(v - 1, b > 0 && cols[a][b - 1] === c);
+        add(v + 1, cols[a][b + 1] === c);
+      }
+      if (g.length >= 2) out.push(g);
+    }
+  return out.sort((a, b) => a.length - b.length);
+}
+
+/** Remove a group (cells from `groupList`), let the rest fall and close empty columns. */
+function without(cols: Cols, g: [number, number][]): Cols {
+  const gone = new Map<number, Set<number>>();
+  for (const [x, y] of g) {
+    let s = gone.get(x);
+    if (!s) gone.set(x, (s = new Set()));
+    s.add(y);
+  }
+  const out: Cols = [];
+  cols.forEach((col, x) => {
+    const s = gone.get(x);
+    const c = s ? col.filter((_, y) => !s.has(y)) : col;
+    if (c.length) out.push(c);
+  });
+  return out;
+}
+
+/**
+ * Solver with memory across calls: can the board get down to `target` blocks or fewer? Positions
+ * proven winnable keep their next tap; hopeless ones are remembered; running out of budget proves nothing.
+ */
+export function collapseSolver(target: number) {
+  const win = new Map<string, [number, number] | null>();
+  const dead = new Set<string>();
+  const key = (cols: Cols) => cols.map((c) => c.join('')).join('|');
+  const size = (cols: Cols) => cols.reduce((a, c) => a + c.length, 0);
+  const solve = (start: Cols, budget: number, plan: [number, number][] = []): CollapseVerdict => {
+    let nodes = 0;
+    let capped = false;
+    /** `step`: index into `plan` while the search still follows it, else -1. */
+    const go = (cols: Cols, step: number): boolean => {
+      if (size(cols) <= target) return true;
+      const k = key(cols);
+      if (win.has(k)) return true;
+      if (dead.has(k) || stranded(cols) > target) return false;
+      if (++nodes > budget) {
+        capped = true;
+        return false;
+      }
+      const opts = groupList(cols);
+      const planned = step >= 0 ? plan[step] : undefined;
+      const pg = planned ? opts.findIndex((g) => g.some(([a, b]) => a === planned[0] && b === planned[1])) : -1;
+      if (pg > 0) opts.unshift(...opts.splice(pg, 1));
+      for (let i = 0; i < opts.length; i++) {
+        if (go(without(cols, opts[i]), i === 0 && pg >= 0 ? step + 1 : -1)) {
+          win.set(k, opts[i][0]);
+          return true;
+        }
+        if (capped) return false;
+      }
+      dead.add(k);
+      return false;
+    };
+    if (go(start, plan.length ? 0 : -1)) return { status: 'win', next: size(start) <= target ? null : (win.get(key(start)) ?? null) };
+    return capped ? { status: 'capped' } : { status: 'dead' };
+  };
+  /** Proven hopeless already (from earlier searches)? */
+  const known = (cols: Cols) => dead.has(key(cols));
+  /** How many positions are proven hopeless so far (grows as searches learn). */
+  const learned = () => dead.size;
+  return { solve, known, learned };
+}

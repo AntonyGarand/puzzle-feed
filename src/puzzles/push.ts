@@ -2,7 +2,7 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, pad, s, shake } from '../core/ui';
 import { anim, keyDir, type Dir } from './movekit/kit';
-import { solvePush } from './movekit/push-hint';
+import { deadCrates, planPush, type PushPlan } from './movekit/push-hint';
 import { generateRoom, liveCells, stepper, stuckCrates } from './movekit/pushgen';
 import './push.css';
 
@@ -245,10 +245,64 @@ export const push: PuzzleDef = {
       render();
     };
 
+    /** Solver result for the current position, kept until it changes (check() then hint() solve once). */
+    let memo: { key: string; plan: PushPlan } | null = null;
+    const solveHere = () => {
+      const key = `${boxes.join(',')}|${player}`;
+      if (memo?.key !== key) memo = { key, plan: planPush(w, hh, floor, targets, boxes, player, 30000, live) };
+      return memo.plan;
+    };
+    const stuckHint = (text: string, at: number[]): Hint => ({
+      kind: 'stuck',
+      text,
+      at: at.map((i) => els.get(i)!).filter(Boolean),
+      action: history.length ? L('Undo', 'Annuler') : L('Restart', 'Repartir'),
+      play: () => (history.length ? undo() : reset()),
+    });
+    /** Dead ends: a crate that can never reach a target any more, or no solution left at all. */
+    const check = (): Hint | null => {
+      if (done || drag || !history.length) return null;
+      const dc = deadCrates(w, hh, floor, targets, boxes, live);
+      if (dc.length) {
+        const b = dc[0].box;
+        const wallAt = (dd: number) => {
+          const y = nb(b, dd);
+          return y < 0 || !floor[y];
+        };
+        const corner = (wallAt(0) || wallAt(2)) && (wallAt(1) || wallAt(3));
+        return stuckHint(
+          dc[0].why === 'frozen'
+            ? L(
+                'This crate is wedged against walls and other crates: none of them can move again, and it isn’t on a target. Undo.',
+                'Cette caisse est coincée contre des murs et d’autres caisses : plus rien ne bouge, et elle n’est pas sur une cible. Annulez.',
+              )
+            : corner
+              ? L(
+                  'This crate is in a corner with no target: you can never push it out again. Undo.',
+                  'Cette caisse est dans un coin sans cible : vous ne pourrez plus jamais l’en sortir. Annulez.',
+                )
+              : L(
+                  'This crate is against a wall with no target along it: it can only slide along that wall and never reach a target. Undo.',
+                  'Cette caisse est contre un mur sans cible : elle ne peut que glisser le long de ce mur, sans jamais atteindre une cible. Annulez.',
+                ),
+          dc.map((x) => x.box),
+        );
+      }
+      const r = solveHere();
+      if (!r.sol && !r.capped)
+        return stuckHint(
+          L(
+            'No way to finish from here: the crates block each other. Undo a move or two.',
+            'Impossible de finir d’ici : les caisses se bloquent entre elles. Annulez un pas ou deux.',
+          ),
+          boxes.filter((b) => !tset.has(b)),
+        );
+      return null;
+    };
     /** Guide: follow a fewest-pushes solution; walking behind a crate and pushing it are separate steps. */
     const hint = (): Hint | null => {
-      if (done) return null;
-      const sol = solvePush(w, hh, floor, targets, boxes, player);
+      if (done || drag) return null;
+      const sol = solveHere().sol;
       if (!sol?.length) return null;
       const { box, dir } = sol[0];
       const el = (i: number) => els.get(i)!;
@@ -436,6 +490,7 @@ export const push: PuzzleDef = {
 
     return {
       snapshot: () => ({ h: drag?.cur ? [...history, drag.cur] : history }),
+      check,
       hint,
       onKey(e) {
         const k = keyDir(e);

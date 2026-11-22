@@ -167,6 +167,55 @@ export const codebreaker: PuzzleDef = {
       cur = sv.cur ?? [];
     }
     // ---------- guide ----------
+    /**
+     * The row being entered contradicts feedback already on the board: a colour a no-peg row ruled out,
+     * or a full row that would have scored an earlier guess differently than it did. A full row the
+     * player is still free to submit as a probe, so it's flagged only when it can't be the code.
+     */
+    const check = (): Hint | null => {
+      const last = guesses[guesses.length - 1];
+      if (!cur.length || (last && last.exact === len) || guesses.length >= maxGuesses) return null;
+      const rowEl = board.children[guesses.length];
+      const fix = (text: string, k: number, why: Element): Hint => ({
+        kind: 'fix',
+        text,
+        why: [why],
+        at: [rowEl],
+        action: L('Delete', 'Effacer'),
+        play: () => {
+          while (cur.length > k) back();
+        },
+      });
+      for (let r = 0; r < guesses.length; r++) {
+        const x = guesses[r];
+        if (x.exact + x.near) continue;
+        const k = cur.findIndex((c) => x.g.includes(c));
+        if (k >= 0)
+          return fix(
+            L(
+              `Row ${r + 1} got no pegs, so ${colourName(cur[k])} is not in the code at all. Delete it.`,
+              `La rangée ${r + 1} n’a reçu aucun indice : ${colourName(cur[k])} n’est donc pas dans le code. Effacez-la.`,
+            ),
+            k,
+            board.children[r],
+          );
+      }
+      if (cur.length < len) return null;
+      for (let r = 0; r < guesses.length; r++) {
+        const x = guesses[r];
+        const s = scoreOf(cur, x.g);
+        if (s.exact === x.exact && s.near === x.near) continue;
+        return fix(
+          L(
+            `This can’t be the code: if it were, row ${r + 1} would have scored ${s.exact} ● ${s.near} ○, not ${x.exact} ● ${x.near} ○. Change it.`,
+            `Ce ne peut pas être le code : sinon la rangée ${r + 1} aurait obtenu ${s.exact} ● ${s.near} ○, et non ${x.exact} ● ${x.near} ○. Modifiez cette rangée.`,
+          ),
+          0,
+          board.children[r],
+        );
+      }
+      return null;
+    };
     const hint = (): Hint | null => {
       const last = guesses[guesses.length - 1];
       if ((last && last.exact === len) || guesses.length >= maxGuesses) return null;
@@ -211,7 +260,9 @@ export const codebreaker: PuzzleDef = {
           ...guessOf(g),
         };
       }
-      const g = cands.find((c) => c.join() !== code.join() || cands.length === 1) ?? cands[0];
+      // Any code that fits will do; keep the secret one back while there are rows to spare.
+      const spare = maxGuesses - guesses.length > 2;
+      const g = (spare && cands.find((c) => c.join() !== code.join())) || code;
       const tot = last.exact + last.near;
       const tried = names(last.g);
       const first =
@@ -239,6 +290,7 @@ export const codebreaker: PuzzleDef = {
     root.append(board, palette);
     render();
     return {
+      check,
       hint,
       snapshot: () => ({ guesses, cur }),
       onKey(e) {

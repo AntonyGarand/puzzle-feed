@@ -3,6 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, s } from '../core/ui';
 import { nb8 } from './logickit/kit';
 import { explain, explainCount } from './sweepkit/explain';
+import { wrongFlag } from './sweepkit/check';
 import { cellOf, gridPress } from './sweepkit/press';
 import { SHAPES, footprint, patches } from './sweepkit/shapes';
 import { genField, pair, single, type Con, type Deduction } from './sweepkit/solve';
@@ -301,10 +302,26 @@ export const shapeMines: PuzzleDef = {
       return null;
     };
 
+    // Partly luck, so check() only covers flags: one on a tile without a mine is a mistake.
+    const check = (): Hint | null =>
+      over || first < 0
+        ? null
+        : wrongFlag({
+            flag,
+            mine,
+            count,
+            nbs,
+            cells,
+            open: (i) => open[i],
+            name: (i) => `${count[i]} (${SHAPES[kind[i]].name()})`,
+            unflag: toggleFlag,
+          });
+
     const list = (a: boolean[]) => a.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
     return {
       snapshot: () => ({ first, open: list(open), flag: list(flag), sel }),
       hint,
+      check,
       onKey(e) {
         if (e.key !== 'f' && e.key !== 'F') return false;
         const i = cellOf(grid, document.activeElement);

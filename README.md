@@ -15,18 +15,18 @@ npm run dev           # dev server on http://localhost:5180 (also on your LAN)
 npm run check         # everything CI runs: fmt:check, lint, typecheck, knip, test
 ```
 
-| Command                             | What it does                                                                                          |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `npm run dev` / `build` / `preview` | Vite dev server, production build into `dist/`, preview of the build                                  |
-| `npm run fmt` / `fmt:check`         | Format with [oxfmt](https://oxc.rs)                                                                   |
-| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs) (warnings fail)                                                    |
-| `npm run typecheck`                 | Type-check with [tsrs](https://github.com/oxc-project/tsrs), a Rust port of the TypeScript 7 compiler |
-| `npm run knip`                      | Unused files, exports and dependencies                                                                |
-| `npm test` / `test:watch`           | Vitest: generation speed, resume round-trip, i18n, auto-levelling                                     |
-| `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                  |
-| `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)  |
-| `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                |
-| `node scripts/og-image.mjs`         | Re-renders `public/og.png`, the link-preview image (needs Chrome installed)                           |
+| Command                             | What it does                                                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev` / `build` / `preview` | Vite dev server, production build into `dist/`, preview of the build                                                        |
+| `npm run fmt` / `fmt:check`         | Format with [oxfmt](https://oxc.rs)                                                                                         |
+| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs) (warnings fail)                                                                          |
+| `npm run typecheck`                 | Type-check with [tsrs](https://github.com/oxc-project/tsrs), a Rust port of the TypeScript 7 compiler                       |
+| `npm run knip`                      | Unused files, exports and dependencies                                                                                      |
+| `npm test` / `test:watch`           | Vitest: generation speed, resume round-trip, i18n, auto-levelling; then the hint-button suites (`test/hints*`) on their own |
+| `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                                        |
+| `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)                        |
+| `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                                      |
+| `node scripts/og-image.mjs`         | Re-renders `public/og.png`, the link-preview image (needs Chrome installed)                                                 |
 
 The same commands are available as mise tasks (`mise run check`, `mise run fix`, …).
 

@@ -63,6 +63,11 @@ const diff = (a: number[], b: number[]) => a.reduce((s, x, i) => s + (x === b[i]
 
 /** Can `target` be reached from `start` with a single paste (any allowed orientation)? */
 function oneShot(start: number[], target: number[], n: number, turns: boolean, flips: boolean): boolean {
+  return sameGrid(start, target) || !!findShot(start, target, n, turns, flips);
+}
+
+/** A single paste turning `start` into `target` (any allowed orientation), or null. */
+function findShot(start: number[], target: number[], n: number, turns: boolean, flips: boolean): Op | null {
   let r0 = n,
     r1 = -1,
     c0 = n,
@@ -76,7 +81,7 @@ function oneShot(start: number[], target: number[], n: number, turns: boolean, f
       c0 = Math.min(c0, c);
       c1 = Math.max(c1, c);
     }
-  if (r1 < 0) return true;
+  if (r1 < 0) return null;
   const orients: [number, boolean][] = [];
   for (const f of flips ? [false, true] : [false]) for (let k = 0; k < (turns ? 4 : 1); k++) orients.push([k, f]);
   // Every paste footprint that covers all changed cells.
@@ -90,10 +95,11 @@ function oneShot(start: number[], target: number[], n: number, turns: boolean, f
               sh = k % 2 ? pw : ph;
             for (let sr = 0; sr + sh <= n; sr++)
               for (let sc = 0; sc + sw <= n; sc++)
-                if (sameBlock(orient(extract(start, n, { r: sr, c: sc, w: sw, h: sh }), k, f), want)) return true;
+                if (sameBlock(orient(extract(start, n, { r: sr, c: sc, w: sw, h: sh }), k, f), want))
+                  return { src: { r: sr, c: sc, w: sw, h: sh }, rot: k, flip: f, r: pr, c: pc };
           }
         }
-  return false;
+  return null;
 }
 
 interface Level {
@@ -443,15 +449,68 @@ export const copyPaste: PuzzleDef = {
 
     // ---- Guide: replay the generator's moves while the board is still on that path ----
     const at = (r: number, c: number) => L(`row ${r + 1}, column ${c + 1}`, `rangée ${r + 1}, colonne ${c + 1}`);
+    /**
+     * The next paste: the generator's, from wherever the board sits on its path with enough pastes
+     * left, else any single paste that finishes the board. Memoised per board (check() then hint()).
+     */
+    let memo: { key: string; next: { op: Op; after: number[] } | null } | null = null;
+    const route = () => {
+      const left = limit - hist.length;
+      const key = `${g.join('')}:${left}`;
+      if (memo?.key === key) return memo.next;
+      let next: { op: Op; after: number[] } | null = null;
+      for (let j = ops.length - 1; j >= 0 && !next; j--)
+        if (ops.length - j <= left && sameGrid(g, path[j])) next = { op: ops[j], after: path[j + 1] };
+      if (!next && left > 0 && !sameGrid(g, target)) {
+        const op = findShot(g, target, n, turns, flips);
+        if (op) next = { op, after: target };
+      }
+      memo = { key, next };
+      return next;
+    };
+    /** Out of pastes, or no paste left that the guide can see leading to the target: undo. */
+    const check = (): Hint | null => {
+      if (done || !hist.length || route()) return null;
+      const left = limit - hist.length;
+      const off = g.reduce((t, v, i) => t + (v === target[i] ? 0 : 1), 0);
+      const offCells = cells.filter((_, i) => g[i] !== target[i]);
+      const out = { at: offCells, why: [tgt], action: L('Undo', 'Annuler'), play: undo };
+      if (left === 0)
+        return {
+          kind: 'stuck',
+          text: L(
+            `No pastes left, and ${P(off, ['cell still differs', 'cells still differ'], ['case diffère encore', 'cases diffèrent encore'])} from the target. Undo a paste.`,
+            `Plus de collages, et ${P(off, ['cell still differs', 'cells still differ'], ['case diffère encore', 'cases diffèrent encore'])} de la cible. Annulez un collage.`,
+          ),
+          ...out,
+        };
+      if (left === 1)
+        return {
+          kind: 'stuck',
+          text: L(
+            `One paste left, but no block of your board, turned or not, fixes all ${off} differing cells at once. Undo a paste.`,
+            `Un seul collage restant, mais aucun bloc de votre grille, tourné ou non, ne corrige d’un coup les ${off} cases qui diffèrent. Annulez un collage.`,
+          ),
+          ...out,
+        };
+      return {
+        kind: 'fix',
+        text: L(
+          `This paste led away from the target: the guide sees no way to finish in the ${left} pastes left. Undo it.`,
+          `Ce collage vous a éloigné de la cible : le guide ne voit aucune façon de finir avec les ${left} collages restants. Annulez-le.`,
+        ),
+        ...out,
+      };
+    };
     const hint = (): Hint | null => {
-      const m = hist.length;
-      if (done || m >= ops.length || !sameGrid(g, path[m])) return null;
-      const op = ops[m];
+      if (done) return null;
+      const next = route();
+      if (!next) return check();
+      const { op, after } = next;
       const raw = extract(g, n, op.src);
       const need = orient(raw, op.rot, op.flip);
       const foot = cells.filter((_, i) => inRect({ r: op.r, c: op.c, w: need.w, h: need.h }, i));
       const srcCells = cells.filter((_, i) => inRect(op.src, i));
-      const after = path[m + 1];
       const fixed = foot.filter((el) => {
         const i = Number(el.dataset.i);
         return g[i] !== after[i];
@@ -523,6 +582,7 @@ export const copyPaste: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ g, hist, clip, src }),
+      check,
       hint,
       onKey(e) {
         const key = e.key.toLowerCase();

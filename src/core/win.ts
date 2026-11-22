@@ -1,4 +1,4 @@
-import { L } from './i18n';
+import { L, P } from './i18n';
 import type { RecordOutcome } from './store';
 import { fmtTime, h, s } from './ui';
 import { TODAY_BONUSES, xpLevel, type XpGain, type XpLevel, type XpOutcome } from './xp';
@@ -10,6 +10,8 @@ export interface WinInfo {
   daily?: boolean;
   ms: number;
   mistakes: number;
+  /** Hints used (shown under the title when any). */
+  hints?: number;
   parMs: number;
   /** Solves of this game so far, this one included. */
   solved: number;
@@ -27,6 +29,8 @@ export interface LostInfo {
   daily?: boolean;
   ms: number;
   mistakes: number;
+  /** Hints used (shown under the title when any). */
+  hints?: number;
   /** Best time at this level, if any. */
   best?: number;
   /** Attempts of this game that ended (solved or failed), this one included, and how many were solves. */
@@ -59,7 +63,13 @@ export function lostCard(w: LostInfo): HTMLElement {
       { class: 'win-card' },
       h('div', { class: 'win-badge' }, crossIcon()),
       h('h3', { class: 'win-title' }, L('Not this time', 'Pas cette fois')),
-      h('p', { class: 'win-sub' }, [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : ''].filter(Boolean).join(' · ')),
+      h(
+        'p',
+        { class: 'win-sub' },
+        [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : '', w.hints ? P(w.hints, ['hint', 'hints'], ['indice', 'indices']) : '']
+          .filter(Boolean)
+          .join(' · '),
+      ),
       h(
         'div',
         { class: 'win-time' },
@@ -103,7 +113,13 @@ export function winCard(w: WinInfo): HTMLElement {
       { class: 'win-card' },
       h('div', { class: 'win-badge' }, checkIcon()),
       h('h3', { class: 'win-title' }, L('Solved!', 'Réussi!')),
-      h('p', { class: 'win-sub' }, [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : ''].filter(Boolean).join(' · ')),
+      h(
+        'p',
+        { class: 'win-sub' },
+        [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : '', w.hints ? P(w.hints, ['hint', 'hints'], ['indice', 'indices']) : '']
+          .filter(Boolean)
+          .join(' · '),
+      ),
       h(
         'div',
         { class: 'win-time' },

@@ -32,6 +32,8 @@ export interface XpOutcome {
 export function xpGains(r: {
   d: Difficulty;
   m: number;
+  /** Hints used: a hinted solve isn't flawless. */
+  hn?: number;
   ms: number;
   parMs: number;
   first: boolean;
@@ -43,7 +45,7 @@ export function xpGains(r: {
   today: number;
 }): XpGain[] {
   const out: XpGain[] = [{ why: 'solve', xp: 5 + 5 * r.d }];
-  if (r.m === 0) out.push({ why: 'flawless', xp: 5 });
+  if (r.m === 0 && !r.hn) out.push({ why: 'flawless', xp: 5 });
   if (r.ms <= r.parMs) out.push({ why: 'par', xp: 5 });
   if (r.first) out.push({ why: 'first', xp: 10 });
   else if (r.best) out.push({ why: 'best', xp: 10 });

@@ -12,7 +12,7 @@ const dirOf = (a: number, b: number, cols: number) => (b === a - cols ? 0 : b ==
  * Turn in each inner cell of a path: 0 straight, 1 right, 3 left (2 = U-turn, never valid).
  * `turns[j]` belongs to `path[j + 1]`.
  */
-function turnsOf(path: number[], cols: number): number[] {
+export function turnsOf(path: number[], cols: number): number[] {
   const out: number[] = [];
   for (let j = 1; j + 1 < path.length; j++) out.push((dirOf(path[j], path[j + 1], cols) - dirOf(path[j - 1], path[j], cols) + 4) % 4);
   return out;

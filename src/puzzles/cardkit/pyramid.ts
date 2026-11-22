@@ -116,6 +116,23 @@ export type Verdict = 'win' | 'dead' | 'unknown';
  * through the stock in all (-1 = unlimited)?
  */
 export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
+  return searchP(s0, maxPasses, budget).v;
+}
+
+/**
+ * One step of a winning line: remove a pyramid king (`p` = slot), the waste king (`w`), a pyramid
+ * pair (`pp`), the waste top with a pyramid card (`wp`), draw (`d`) or turn the waste over (`r`).
+ */
+export type PAct =
+  | { k: 'p'; a: number }
+  | { k: 'w' }
+  | { k: 'pp'; a: number; b: number }
+  | { k: 'wp'; a: number }
+  | { k: 'd' }
+  | { k: 'r' };
+
+/** Like solveP, with the winning line when there is one. */
+export function searchP(s0: PState, maxPasses: number, budget = 20000): { v: Verdict; line: PAct[] } {
   const talon = [...s0.waste, ...s0.stock.slice().reverse()]; // draw order
   const T = talon.length;
   const unlimited = maxPasses < 0;
@@ -124,6 +141,7 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
   let tm = 0; // removed talon bits
   let nodes = 0;
   let out = false;
+  const path: PAct[] = [];
   const pyr = s0.pyr.slice();
   const tal = new Array<boolean>(T).fill(false); // removed
   const exp = (i: number) => exposed(pyr, i);
@@ -150,7 +168,9 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
         const c = pyr[i];
         pyr[i] = -1;
         pm += 2 ** i;
+        path.push({ k: 'p', a: i });
         const ok = rec(ptr, pass, left - 1);
+        if (!ok) path.pop();
         pyr[i] = c;
         pm -= 2 ** i;
         return ok; // removing a king is always safe
@@ -159,7 +179,9 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
     if (w >= 0 && rank(talon[w]) === 13) {
       tal[w] = true;
       tm += 2 ** w;
+      path.push({ k: 'w' });
       const ok = rec(ptr, pass, left);
+      if (!ok) path.pop();
       tal[w] = false;
       tm -= 2 ** w;
       return ok;
@@ -175,7 +197,9 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
         pyr[a] = -1;
         pyr[b] = -1;
         pm += 2 ** a + 2 ** b;
+        path.push({ k: 'pp', a, b });
         const ok = rec(ptr, pass, left - 2);
+        if (!ok) path.pop();
         pyr[a] = ca;
         pyr[b] = cb;
         pm -= 2 ** a + 2 ** b;
@@ -191,7 +215,9 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
         tal[w] = true;
         pm += 2 ** a;
         tm += 2 ** w;
+        path.push({ k: 'wp', a });
         const ok = rec(ptr, pass, left - 1);
+        if (!ok) path.pop();
         pyr[a] = ca;
         tal[w] = false;
         pm -= 2 ** a;
@@ -200,12 +226,19 @@ export function solveP(s0: PState, maxPasses: number, budget = 20000): Verdict {
       }
     }
     // draw, or start a new pass
-    if (ptr < T) return rec(ptr + 1, pass, left);
-    if ((unlimited || pass < maxPasses - 1) && tal.some((r) => !r)) return rec(0, pass + 1, left);
+    const step = (act: PAct, p: number, n: number) => {
+      path.push(act);
+      const ok = rec(p, n, left);
+      if (!ok) path.pop();
+      return ok;
+    };
+    // (a talon card already removed isn't in the stock any more: passing it isn't a draw)
+    if (ptr < T) return tal[ptr] ? rec(ptr + 1, pass, left) : step({ k: 'd' }, ptr + 1, pass);
+    if ((unlimited || pass < maxPasses - 1) && tal.some((r) => !r)) return step({ k: 'r' }, 0, pass + 1);
     return false;
   };
   const ok = rec(s0.waste.length, s0.passes, pyr.filter((c) => c >= 0).length);
-  return ok ? 'win' : out ? 'unknown' : 'dead';
+  return { v: ok ? 'win' : out ? 'unknown' : 'dead', line: ok ? path : [] };
 }
 
 /**

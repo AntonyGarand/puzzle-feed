@@ -152,23 +152,36 @@ export const anagram: PuzzleDef = {
         if (i >= 0) pick(i);
       }
     };
+    /** A start no word begins with: take back from the first letter that leaves the word list. */
+    const wrongStart = (): Hint | null => {
+      const pre = picked.map((i) => letters[i]).join('');
+      if (!pre || [...valid].some((w) => w.startsWith(pre))) return null;
+      let k = 0;
+      while (k < pre.length && [...valid].some((w) => w.startsWith(pre.slice(0, k + 1)))) k++;
+      return {
+        kind: 'fix',
+        text:
+          k === 0
+            ? L(
+                `No word here starts with ${up(pre[0])}. Tap the first slot to take the letters back.`,
+                `Aucun mot ici ne commence par ${up(pre[0])}. Touchez la première case pour retirer les lettres.`,
+              )
+            : L(
+                `No word starts with ${up(pre.slice(0, k + 1))}. Tap the ${up(pre[k])} slot to take back that letter and the ones after it.`,
+                `Aucun mot ne commence par ${up(pre.slice(0, k + 1))}. Touchez la case du ${up(pre[k])} pour retirer cette lettre et les suivantes.`,
+              ),
+        why: slotEls(k),
+        at: slotEls(pre.length).slice(k, k + 1),
+        action: L('Take back', 'Retirer'),
+        play: () => unpick(k),
+      };
+    };
     const hint = (): Hint | null => {
       const pre = picked.map((i) => letters[i]).join('');
-      if (pre.length === len) return null; // checked (solved, or clearing after a miss)
-      const target = word.startsWith(pre) ? word : [...valid].find((w) => w.startsWith(pre));
-      if (!target) {
-        // A wrong start: take back from the first letter that doesn't fit.
-        let k = 0;
-        while (k < pre.length && pre[k] === word[k]) k++;
-        return {
-          text: L(
-            `No word starts with ${up(pre)}. Tap a filled slot to take back that letter and the ones after it.`,
-            `Aucun mot ne commence par ${up(pre)}. Touchez une case remplie pour retirer cette lettre et les suivantes.`,
-          ),
-          at: slotEls(pre.length).slice(k, k + 1),
-          play: () => unpick(k),
-        };
-      }
+      const wrong = wrongStart();
+      if (wrong) return wrong;
+      if (pre.length === len) return null; // solved
+      const target = word.startsWith(pre) ? word : [...valid].find((w) => w.startsWith(pre))!;
       const rest = target.slice(pre.length);
       const one = (s: string, text: string, why: Element[] = []): Hint | null => {
         const ix = tilesFor(s);
@@ -267,6 +280,7 @@ export const anagram: PuzzleDef = {
       );
     };
     return {
+      check: wrongStart,
       hint,
       snapshot: () => ({ letters, picked }),
       onKey(e) {

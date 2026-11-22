@@ -173,6 +173,52 @@ export const guess: PuzzleDef = {
     root.append(boardEl, ...pads);
     render();
     // ---------- guide ----------
+    /**
+     * The row being entered contradicts feedback already on the board: a digit a no-dot row ruled out,
+     * or a full row that would have scored an earlier guess differently. Probing with a partial idea
+     * is fine, so a full row is flagged only when it can't be the code.
+     */
+    const check = (): Hint | null => {
+      if (over || !cur.length) return null;
+      const rowEl = curRow();
+      for (let r = 0; r < guesses.length; r++) {
+        const x = guesses[r];
+        if (x.exact + x.near) continue;
+        const v = cur.find((c) => x.g.includes(c));
+        if (v !== undefined)
+          return {
+            kind: 'fix',
+            text: L(
+              `Row ${r + 1} got no dots, so ${v} is not in the code. Tap it again to take it back.`,
+              `La rangée ${r + 1} n’a reçu aucune pastille : le ${v} n’est donc pas dans le code. Touchez-le de nouveau pour le retirer.`,
+            ),
+            why: [boardEl.children[r]],
+            at: [rowEl, keyEls.get(v)!],
+            action: L('Take back', 'Retirer'),
+            play: () => add(v),
+          };
+      }
+      if (cur.length < len) return null;
+      for (let r = 0; r < guesses.length; r++) {
+        const x = guesses[r];
+        const s = scoreGuess(cur, x.g);
+        if (s.exact === x.exact && s.near === x.near) continue;
+        return {
+          kind: 'fix',
+          text: L(
+            `This can’t be the code: if it were, row ${r + 1} would have scored ${s.exact} ● ${s.near} ○, not ${x.exact} ● ${x.near} ○. Change it.`,
+            `Ce ne peut pas être le code : sinon la rangée ${r + 1} aurait obtenu ${s.exact} ● ${s.near} ○, et non ${x.exact} ● ${x.near} ○. Modifiez cette rangée.`,
+          ),
+          why: [boardEl.children[r]],
+          at: [rowEl],
+          action: L('Clear', 'Effacer'),
+          play: () => {
+            while (cur.length) back();
+          },
+        };
+      }
+      return null;
+    };
     const hint = (): Hint | null => {
       if (over) return null;
       const fits = (s: number[]) =>
@@ -191,7 +237,8 @@ export const guess: PuzzleDef = {
       gen([]);
       if (!cands.length) return null;
       // A code that fits every row; keep the secret for last so the guide shows a few deductions.
-      const g = cands.find((c) => c.join() !== secret.join() || cands.length === 1) ?? cands[0];
+      const spare = maxGuesses - guesses.length > 2;
+      const g = (spare && cands.find((c) => c.join() !== secret.join())) || secret;
       const shown = g.join(' ');
       const at = g.map((v) => keyEls.get(v)!);
       const play = () => {
@@ -234,6 +281,7 @@ export const guess: PuzzleDef = {
     };
 
     return {
+      check,
       hint,
       snapshot: () => ({ guesses, cur }),
       onKey(e) {

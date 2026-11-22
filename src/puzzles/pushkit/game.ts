@@ -2,7 +2,7 @@ import { L, P } from '../../core/i18n';
 import type { Hint, PuzzleCtx, PuzzleInstance } from '../../core/types';
 import { board, btn, h, pad, s, shake } from '../../core/ui';
 import { anim, type Dir, keyDir } from '../movekit/kit';
-import { type Board, caught, front, frozen, isGoal, type Moved, nbr, type Rules, solve, type St, step } from './engine';
+import { type Board, caught, front, frozen, isGoal, type Moved, nbr, type Rules, solve, type St, stateKey, step } from './engine';
 import type { Level } from './gen';
 import './pushkit.css';
 
@@ -263,9 +263,63 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
   const dirName = (d: number) =>
     [L('up', 'vers le haut'), L('right', 'vers la droite'), L('down', 'vers le bas'), L('left', 'vers la gauche')][d];
   /** Guide: follow a fewest-moves solution; walking into position and pushing are separate steps. */
+  /** Solver result for the current position, kept until the position changes (check() then hint()). */
+  let memo: { key: string; sol: number[] | null; capped: boolean } | null = null;
+  const solveHere = () => {
+    const st = cur();
+    const key = `${stateKey(st)}:${st.t}`;
+    if (memo?.key !== key) {
+      const info = { capped: false };
+      memo = { key, sol: solve(B, R, st, 400000, info), capped: info.capped };
+    }
+    return memo;
+  };
+  /** Back out of a dead end: undo the last action, or restart when there's nothing to undo. */
+  const backOut = () => (history.length ? undo() : reset());
+  const stuckHint = (text: string, at: number[]): Hint => ({
+    kind: 'stuck',
+    text,
+    at: at.map((i) => els.get(i)!).filter(Boolean),
+    action: L('Undo', 'Annuler'),
+    play: backOut,
+  });
+  /** Dead ends: caught by the wall, a crate that can never move again, or no solution left at all. */
+  const check = (): Hint | null => {
+    if (done || !history.length) return null;
+    const st = cur();
+    if (dead())
+      return stuckHint(
+        L('The wall caught you. Undo until you are clear of it.', 'Le mur vous a rattrapé. Annulez jusqu’à vous en dégager.'),
+        [st.p],
+      );
+    const k = st.b.findIndex((b, j) => !tset.has(b) && ((R.counted && st.c[j] === 0) || frozen(B, nb, b)));
+    if (k >= 0)
+      return stuckHint(
+        R.counted && st.c[k] === 0
+          ? L(
+              'This crate has no pushes left and it isn’t on a target: it can never get home. Undo.',
+              'Cette caisse n’a plus de poussées et n’est pas sur une cible : elle n’arrivera jamais. Annulez.',
+            )
+          : L(
+              'This crate is stuck against walls on two sides: it can never move again, and it isn’t on a target. Undo.',
+              'Cette caisse est coincée contre des murs sur deux côtés : elle ne bougera plus, et elle n’est pas sur une cible. Annulez.',
+            ),
+        [st.b[k]],
+      );
+    const r = solveHere();
+    if (!r.sol && !r.capped)
+      return stuckHint(
+        L(
+          'No way to finish from here: the crates are boxed in. Undo a move or two.',
+          'Impossible de finir d’ici : les caisses sont bloquées. Annulez un pas ou deux.',
+        ),
+        st.b.filter((b) => !tset.has(b)),
+      );
+    return null;
+  };
   const hint = (): Hint | null => {
     if (done || dead()) return null;
-    const sol = solve(B, R, cur(), 80000);
+    const sol = solveHere().sol;
     if (!sol?.length) return null;
     const el = (i: number) => els.get(i)!;
     // Leading walk steps (no push): walk there first.
@@ -504,6 +558,7 @@ export function playPush(ctx: PuzzleCtx, lv: Level, R: Rules, kind: Kind): Puzzl
   return {
     snapshot: () => ({ h: drag?.cur ? [...history, drag.cur] : history }),
     hint,
+    check,
     onKey(e) {
       const k = keyDir(e);
       if (k != null) {

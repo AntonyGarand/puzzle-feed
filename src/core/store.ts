@@ -11,6 +11,8 @@ export interface Result {
   o: Outcome;
   ms: number;
   m: number;
+  /** Hints used (absent = none): a hinted solve never counts toward levelling up. */
+  hn?: number;
   at: number;
   /** Played from a share code: counts in stats, never in auto-levelling. */
   sh?: true;
@@ -241,7 +243,7 @@ export interface RecordOutcome {
 
 /**
  * Record a finished puzzle and run auto-levelling.
- * Level goes up after 3 clean solves within par (or 2 very fast flawless ones) at the current level,
+ * Level goes up after 3 clean, unhinted solves within par (or 2 very fast flawless ones) at the current level,
  * and down after 2 failures/skips in a row. Manual levels, shared (`sh`) and daily (`dy`) puzzles never move it.
  */
 export function record(id: string, r: Omit<Result, 'at'>, parMs: number): RecordOutcome {
@@ -265,6 +267,7 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
     const gains = xpGains({
       d: r.d,
       m: r.m,
+      hn: r.hn ?? 0,
       ms: r.ms,
       parMs,
       first: prev == null,
@@ -295,8 +298,8 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
     const rel = s.recent.filter((x) => x.d === p.level && x.at >= p.since && !x.sh && !x.dy);
     const last3 = rel.slice(-3);
     const last2 = rel.slice(-2);
-    const good = (x: Result) => x.o === 'solved' && x.ms <= parMs && x.m <= 1;
-    const great = (x: Result) => x.o === 'solved' && x.ms <= parMs * 0.5 && x.m === 0;
+    const good = (x: Result) => x.o === 'solved' && x.ms <= parMs && x.m <= 1 && !x.hn;
+    const great = (x: Result) => x.o === 'solved' && x.ms <= parMs * 0.5 && x.m === 0 && !x.hn;
     let to = p.level;
     if (p.level < 5 && ((last3.length === 3 && last3.every(good)) || (last2.length === 2 && last2.every(great)))) {
       to = (p.level + 1) as Difficulty;

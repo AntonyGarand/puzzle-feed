@@ -2,6 +2,7 @@ import { L } from '../core/i18n';
 import { byLevel, type Difficulty, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, shake } from '../core/ui';
 import { anim, baseSeed, GROW, int, isIntArr, keyDir, onSwipe, POP, subRng, type Dir } from './movekit/kit';
+import { mergeAI } from './playkit/merge-ai';
 import './merge.css';
 
 /** Fill colour per exponent (2 = 2^1 …). Low values are tints so they stay readable in both themes. */
@@ -257,10 +258,14 @@ export const merge: PuzzleDef = {
       }
       return { merges, moves };
     };
-    /** The guide builds in the bottom-left corner: down and left push into it. */
+    const ai = mergeAI(n);
+    /** The corner the guide builds in: the one holding the biggest tile (bottom-left until one does). */
     const corner = () => {
       const top = best();
-      return { top, at: cells.lastIndexOf(top), dirs: [2, 3] as Dir[], idx: (n - 1) * n };
+      const corners = [(n - 1) * n, n * n - 1, 0, n - 1];
+      const idx = corners.find((i) => cells[i] === top) ?? (n - 1) * n;
+      const dirs: Dir[] = [idx >= n ? 2 : 0, idx % n ? 1 : 3];
+      return { top, at: corners.includes(cells.lastIndexOf(top)) ? idx : cells.lastIndexOf(top), dirs, idx };
     };
     let lastKind = '';
     const hint = (): Hint | null => {
@@ -275,9 +280,8 @@ export const merge: PuzzleDef = {
         })
         .filter((o) => o.res.moved);
       if (!opts.length) return null;
-      const rank = (o: (typeof opts)[number]) => (o.pref ? 1000 : 0) + (o.keeps ? 500 : 0) + o.res.gained * 20 + o.empty;
-      opts.sort((x, y) => rank(y) - rank(x));
-      const pick = opts[0];
+      const want = ai(cells);
+      const pick = opts.find((o) => o.dir === want) ?? opts[0];
       const dir = pick.dir;
       const t = track(dir);
       const way = L(DIRS_EN[dir], DIRS_FR[dir]);
@@ -325,11 +329,16 @@ export const merge: PuzzleDef = {
       }
       if (!pick.pref)
         kinds.push({
-          kind: 'stuck',
-          text: L(
-            `Neither of your corner directions moves anything, so slide ${way}${pick.keeps ? `: the ${cn.top} stays put` : ''}. Next move, push back toward the corner.`,
-            `Aucune des deux directions vers votre coin ne bouge rien : glissez ${way}${pick.keeps ? `; le ${cn.top} ne bouge pas` : ''}. Au prochain coup, revenez vers le coin.`,
-          ),
+          kind: 'detour',
+          text: opts.some((o) => o.pref)
+            ? L(
+                `Slide ${way} this time: ${DIRS_EN[cn.dirs[0]]} or ${DIRS_EN[cn.dirs[1]]} would scatter the tiles you’ve lined up toward the ${cornerName} corner. Next move, push back toward the corner.`,
+                `Glissez ${way} cette fois : ${DIRS_FR[cn.dirs[0]]} ou ${DIRS_FR[cn.dirs[1]]}, vous dérangeriez les tuiles alignées vers le coin ${cornerName}. Au prochain coup, revenez vers le coin.`,
+              )
+            : L(
+                `Neither of your corner directions moves anything, so slide ${way}${pick.keeps ? `: the ${cn.top} stays put` : ''}. Next move, push back toward the corner.`,
+                `Aucune des deux directions vers votre coin ne bouge rien : glissez ${way}${pick.keeps ? `; le ${cn.top} ne bouge pas` : ''}. Au prochain coup, revenez vers le coin.`,
+              ),
           why: [els[cn.at]],
           at: t.moves.length ? t.moves.map((m) => els[m.to]) : mergeEls.at,
         });
@@ -357,8 +366,8 @@ export const merge: PuzzleDef = {
       kinds.push({
         kind: 'space',
         text: L(
-          `Each move adds a new 2 or 4, so free space matters: sliding ${way} leaves ${pick.empty} empty cell${pick.empty === 1 ? '' : 's'}${cn.top >= 8 ? ` and keeps the ${cn.top} in its corner` : ''}.`,
-          `Chaque coup ajoute un 2 ou un 4 : l’espace libre compte. Glisser ${way} laisse ${pick.empty} case${pick.empty > 1 ? 's' : ''} vide${pick.empty > 1 ? 's' : ''}${cn.top >= 8 ? ` et garde le ${cn.top} dans son coin` : ''}.`,
+          `Each move adds a new 2 or 4, so free space matters: sliding ${way} leaves ${pick.empty} empty cell${pick.empty === 1 ? '' : 's'}${cn.top >= 8 && pick.keeps ? ` and keeps the ${cn.top} in its corner` : ''}.`,
+          `Chaque coup ajoute un 2 ou un 4 : l’espace libre compte. Glisser ${way} laisse ${pick.empty} case${pick.empty > 1 ? 's' : ''} vide${pick.empty > 1 ? 's' : ''}${cn.top >= 8 && pick.keeps ? ` et garde le ${cn.top} dans son coin` : ''}.`,
         ),
         ...(big ? mergeEls : { why: [], at: t.moves.filter((m) => m.from !== m.to).map((m) => els[m.to]) }),
       });

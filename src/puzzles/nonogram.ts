@@ -53,6 +53,53 @@ function lineSolve(clue: number[], st: number[]): { fill: boolean[]; empty: bool
   return ways ? { fill, empty, ways } : null;
 }
 
+/**
+ * A full picture that fits every clue and agrees with `st` (1 filled, 2 ✕, 0 unknown), by line
+ * deductions plus guesses (trying `prefer` first). `capped`: ran out of budget, so null means "don't know".
+ */
+function solveGrid(n: number, rowClues: number[][], colClues: number[][], st: number[], prefer: boolean[], budget: number) {
+  let nodes = 0;
+  let capped = false;
+  const rec = (g: number[]): boolean[] | null => {
+    if (++nodes > budget) {
+      capped = true;
+      return null;
+    }
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const isRow of [true, false])
+        for (let k = 0; k < n; k++) {
+          const ix = Array.from({ length: n }, (_, j) => (isRow ? k * n + j : j * n + k));
+          const line = ix.map((i) => g[i]);
+          if (!line.includes(0)) {
+            if (!same(runs(line.map((v) => v === 1)), (isRow ? rowClues : colClues)[k])) return null;
+            continue;
+          }
+          const res = lineSolve((isRow ? rowClues : colClues)[k], line);
+          if (!res) return null;
+          ix.forEach((i, j) => {
+            if (g[i]) return;
+            if (res.fill[j]) g[i] = 1;
+            else if (res.empty[j]) g[i] = 2;
+            else return;
+            changed = true;
+          });
+        }
+    }
+    const i = g.indexOf(0);
+    if (i < 0) return g.map((v) => v === 1);
+    for (const v of prefer[i] ? [1, 2] : [2, 1]) {
+      const h2 = g.slice();
+      h2[i] = v;
+      const got = rec(h2);
+      if (got || capped) return got;
+    }
+    return null;
+  };
+  const pic = rec(st.slice());
+  return { pic, capped: !pic && capped };
+}
+
 export const nonogram: PuzzleDef = {
   id: 'nonogram',
   get name() {
@@ -227,6 +274,73 @@ export const nonogram: PuzzleDef = {
     root.append(wrap);
     render();
 
+    /** Cells that disagree with picture `p`: filled where it's empty, or ✕ where it's filled. */
+    const wrongFor = (p: boolean[], i: number) => (st[i] === 1 && !p[i]) || (st[i] === 2 && p[i]);
+    /** A picture the board can still reach: the stored one when it fits, else one found by search (memoised). */
+    let memo: { key: string; pic: boolean[] | null; capped: boolean } | null = null;
+    const target = () => {
+      if (!st.some((_, i) => wrongFor(sol, i))) return { pic: sol, capped: false };
+      const key = st.join('');
+      if (memo?.key !== key) memo = { key, ...solveGrid(n, rowClues, colClues, st, sol, 400) };
+      return memo;
+    };
+    const lineName = (isRow: boolean, k: number) =>
+      isRow ? L(`Row ${k + 1}`, `La rangée ${k + 1}`) : L(`Column ${k + 1}`, `La colonne ${k + 1}`);
+    /** Filled or ✕ cells that a line's clue can't accept, else ones that rule out every picture. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const fix = (i: number, text: string, why: Element[]): Hint => ({
+        kind: 'fix',
+        text,
+        why,
+        at: [cells[i]],
+        action: st[i] === 1 ? L('Clear it', 'L’effacer') : L('Remove the ✕', 'Enlever le ✕'),
+        play: () => {
+          if (!done && st[i]) set(i, 0);
+        },
+      });
+      for (const isRow of [true, false])
+        for (let k = 0; k < n; k++) {
+          const ix = Array.from({ length: n }, (_, j) => (isRow ? k * n + j : j * n + k));
+          const clue = (isRow ? rowClues : colClues)[k];
+          const line = ix.map((i) => st[i]);
+          if (lineSolve(clue, line)) continue;
+          const i = ix.find((x) => wrongFor(sol, x)) ?? ix.find((x) => st[x])!;
+          const name = lineName(isRow, k);
+          const cl = clue.length ? clue.join(' ') : '0';
+          const over = line.filter((v) => v === 1).length > clue.reduce((a, b) => a + b, 0);
+          return fix(
+            i,
+            over
+              ? L(
+                  `${name} has more filled cells than its clue ${cl} allows.`,
+                  `${name} a plus de cases remplies que son indice ${cl} ne le permet.`,
+                )
+              : L(
+                  `${name}’s filled and ✕ cells can no longer fit its clue ${cl}.`,
+                  `Les cases remplies et les ✕ de ${name.toLowerCase()} ne peuvent plus correspondre à son indice ${cl}.`,
+                ),
+            [(isRow ? rowEls : colEls)[k]],
+          );
+        }
+      const t = target();
+      if (t.pic || t.capped) return null;
+      const i = st.findIndex((_, x) => wrongFor(sol, x));
+      return fix(
+        i,
+        st[i] === 1
+          ? L(
+              'This filled cell breaks no clue yet, but it leads to a dead end: no picture fits every clue with it.',
+              'Cette case remplie ne brise encore aucun indice, mais elle mène à une impasse : aucune image ne respecte tous les indices avec elle.',
+            )
+          : L(
+              'This ✕ breaks no clue yet, but it leads to a dead end: no picture fits every clue without filling this cell.',
+              'Ce ✕ ne brise encore aucun indice, mais il mène à une impasse : aucune image ne respecte tous les indices sans remplir cette case.',
+            ),
+        [],
+      );
+    };
+
     type Kind = 'zero' | 'fit' | 'overlap' | 'done' | 'fill' | 'empty';
     let last: Kind | undefined;
     const used = new Map<Kind, number>();
@@ -269,8 +383,18 @@ export const nonogram: PuzzleDef = {
       const f = found[0];
       if (!f) {
         // Nothing a single line decides: lean on the picture's solution, honestly.
-        const i = st.findIndex((v, j) => v === 0 && sol[j]);
-        if (i < 0) return null;
+        const pic = target().pic ?? sol;
+        const i = st.findIndex((v, j) => v === 0 && pic[j]);
+        if (i < 0) {
+          // Only stray cells left (the search gave up on this board): clear one.
+          const w = st.findIndex((_, j) => wrongFor(pic, j));
+          if (w < 0) return null;
+          return {
+            text: L('This cell isn’t part of the picture: clear it.', 'Cette case ne fait pas partie de l’image : effacez-la.'),
+            at: [cells[w]],
+            play: () => set(w, 0),
+          };
+        }
         last = undefined;
         return {
           text: L(
@@ -335,6 +459,7 @@ export const nonogram: PuzzleDef = {
     const DIRS: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
     return {
       hint,
+      check,
       snapshot: () => ({ st, cur }),
       onKey(e) {
         if (done) return false;

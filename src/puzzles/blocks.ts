@@ -4,6 +4,7 @@ import { byLevel, type Difficulty, type Hint, type PuzzleDef } from '../core/typ
 import { board, btn, h, PALETTE, shake } from '../core/ui';
 import { anim, baseSeed, int, isIntArr, subRng } from './movekit/kit';
 import { drawPiece, fits, fitsAnywhere, fullLines, PIECES, type Piece } from './movekit/pieces';
+import { planTray, type TrayPlan } from './playkit/blocks-plan';
 import './blocks.css';
 
 const colour = (p: Piece) => PALETTE[p.fam % PALETTE.length];
@@ -366,62 +367,49 @@ export const blocks: PuzzleDef = {
       el.addEventListener('pointercancel', (e) => endDrag(e, true));
     }
 
-    /** Guide: the best-looking placement (clears first, then building lines, edges, no holes), explained. */
+    /** Guide: plan the whole tray (every order, the most open board after it) and play its first piece. */
+    let memo: { key: string; plan: TrayPlan } | null = null;
+    const planHere = () => {
+      const key = `${cells.map((v) => (v ? 1 : 0)).join('')}:${tray.join(',')}:${cleared}`;
+      if (memo?.key !== key) memo = { key, plan: planTray(cells, n, tray, Math.max(1, goal - cleared), maxTier, bigBias) };
+      return memo.plan;
+    };
+    /** Dead end: no order fits every piece left, and they can't clear the lines still needed first. */
+    const check = (): Hint | null => {
+      if (over || cleared >= goal) return null;
+      const plan = planHere();
+      if (plan.fitsAll || plan.reachesGoal || plan.capped) return null;
+      const left = tray.filter((x) => x >= 0).length;
+      const first = plan.steps[0];
+      return {
+        kind: 'stuck',
+        text:
+          left === 1
+            ? L(
+                `Your last piece fits nowhere and the board can’t clear the ${goal - cleared} lines still needed: the game is over. Pieces don’t rotate, so leave room for every shape next time.`,
+                `Votre dernière pièce ne rentre nulle part et il manque encore ${goal - cleared} lignes : la partie est finie. Les pièces ne tournent pas : gardez de la place pour toutes les formes la prochaine fois.`,
+              )
+            : L(
+                `However you order them, your ${left} pieces can’t all fit and won’t clear the ${goal - cleared} lines still needed: the game ends before the goal. Place what you can for points.`,
+                `Peu importe l’ordre, vos ${left} pièces ne rentrent pas toutes et n’effaceront pas les ${goal - cleared} lignes qui manquent : la partie finira avant l’objectif. Placez ce que vous pouvez pour les points.`,
+              ),
+        why: slots.filter((_, k) => tray[k] >= 0),
+        at: first ? PIECES[tray[first.k]].cells.map(([dr, dc]) => els[(first.r + dr) * n + first.c + dc]) : [],
+        action: L('Place a piece', 'Placer une pièce'),
+        play: () => {
+          if (first) place(first.k, first.r, first.c);
+          else finish();
+        },
+      };
+    };
     const hint = (): Hint | null => {
       if (over) return null;
-      let best: { k: number; r: number; c: number; val: number; rows: number[]; cols: number[]; tmp: number[] } | null = null;
-      for (let k = 0; k < 3; k++) {
-        const p = PIECES[tray[k]];
-        if (!p) continue;
-        for (let r = 0; r + p.h <= n; r++)
-          for (let c = 0; c + p.w <= n; c++) {
-            if (!fits(cells, n, p, r, c)) continue;
-            const tmp = cells.slice();
-            for (const [dr, dc] of p.cells) tmp[(r + dr) * n + c + dc] = 1;
-            const { rows, cols } = fullLines(tmp, n);
-            const after = tmp.slice();
-            for (const rr of rows) for (let j = 0; j < n; j++) after[rr * n + j] = 0;
-            for (const cc of cols) for (let j = 0; j < n; j++) after[j * n + cc] = 0;
-            let val = (rows.length + cols.length) * 1000;
-            // Build lines up: fuller rows and columns score more.
-            for (let j = 0; j < n; j++) {
-              let rc = 0,
-                cc = 0;
-              for (let x = 0; x < n; x++) {
-                rc += after[j * n + x] ? 1 : 0;
-                cc += after[x * n + j] ? 1 : 0;
-              }
-              val += rc * rc + cc * cc;
-            }
-            // Hug edges and other pieces; avoid single-cell holes.
-            for (const [dr, dc] of p.cells) {
-              const rr = r + dr,
-                cc = c + dc;
-              for (const [y, x] of [
-                [rr - 1, cc],
-                [rr + 1, cc],
-                [rr, cc - 1],
-                [rr, cc + 1],
-              ])
-                if (y < 0 || x < 0 || y >= n || x >= n || tmp[y * n + x]) val += 2;
-            }
-            for (let i = 0; i < n * n; i++) {
-              if (after[i]) continue;
-              const y = Math.floor(i / n),
-                x = i % n;
-              const shut = [
-                [y - 1, x],
-                [y + 1, x],
-                [y, x - 1],
-                [y, x + 1],
-              ].every(([a, b]) => a < 0 || b < 0 || a >= n || b >= n || after[a * n + b]);
-              if (shut) val -= 30;
-            }
-            if (!best || val > best.val) best = { k, r, c, val, rows, cols, tmp };
-          }
-      }
-      if (!best) return null;
-      const { k, r, c, rows, cols, tmp } = best;
+      const step = planHere().steps[0];
+      if (!step) return null;
+      const { k, r, c } = step;
+      const tmp = cells.slice();
+      for (const [dr, dc] of PIECES[tray[k]].cells) tmp[(r + dr) * n + c + dc] = 1;
+      const { rows, cols } = fullLines(tmp, n);
       const p = PIECES[tray[k]];
       const at = p.cells.map(([dr, dc]) => els[(r + dr) * n + c + dc]);
       const play = () => place(k, r, c);
@@ -491,6 +479,7 @@ export const blocks: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ cells, tray, batch, cleared, sel, score, combo, beat }),
+      check,
       hint,
       onKey(e) {
         const k = Number(e.key) - 1;

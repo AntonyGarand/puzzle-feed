@@ -197,26 +197,28 @@ export const tower: PuzzleDef = {
     whenDict(() => {
       if (!won) status();
     });
-    /** Next word on a shortest ladder from `w` to the goal, skipping words already used: the built path, else a BFS over common words. */
-    const nextWord = (w: string): string | null => {
-      const k = path.indexOf(w);
+    const up = (x: string) => x.toUpperCase();
+    /**
+     * Shortest ladder from `w` up to the goal (goal included in `dist`) within `maxD` steps, skipping
+     * words already used, through words `ok` accepts. Breadth-first, so it stops early when far.
+     */
+    const ladder = (w: string, maxD: number, ok: (v: string) => boolean): { next: string; dist: number } | null => {
+      if (w === goal) return { next: goal, dist: 0 };
       const used = new Set([start, ...rungs]);
-      if (k >= 0 && k < path.length - 1 && !used.has(path[k + 1])) return path[k + 1];
-      const words = new Set(commonOfLength(len));
       const prev = new Map<string, string>([[w, '']]);
       let frontier = [w];
-      while (frontier.length) {
+      for (let depth = 1; depth <= maxD && frontier.length; depth++) {
         const nx: string[] = [];
         for (const u of frontier)
           for (let i = 0; i < len; i++)
             for (let ch = 97; ch <= 122; ch++) {
               const v = u.slice(0, i) + String.fromCharCode(ch) + u.slice(i + 1);
-              if ((!words.has(v) && v !== goal) || prev.has(v) || used.has(v)) continue;
+              if (prev.has(v) || used.has(v) || (v !== goal && !ok(v))) continue;
               prev.set(v, u);
               if (v === goal) {
                 let x = v;
                 while (prev.get(x) !== w) x = prev.get(x)!;
-                return x;
+                return { next: x, dist: depth };
               }
               nx.push(v);
             }
@@ -224,12 +226,70 @@ export const tower: PuzzleDef = {
       }
       return null;
     };
+    let common: Set<string> | null = null;
+    const isCommon = (v: string) => (common ??= new Set(commonOfLength(len))).has(v);
+    const isAny = (v: string) => isCommon(v) || isWord(v) === true;
+    /** Floors still free above the top word. */
+    const floorsLeft = () => floors - rungs.length;
+    /** Whether the goal is still reachable from the top word in the floors left (memoised per tower). */
+    let memo: { key: string; ok: boolean } | null = null;
+    const reachable = () => {
+      const key = rungs.join();
+      if (memo?.key !== key) memo = { key, ok: !!ladder(last(), floorsLeft() + 1, isAny) };
+      return memo.ok;
+    };
+    const rowCellsOf = (r: number) => cells.slice(r * len, r * len + len);
+    /** Dead end: the top word can't reach the goal in the floors left. Or the typing changes two letters. */
+    const check = (): Hint | null => {
+      if (won || !dictReady()) return null;
+      const prev = last();
+      if (rungs.length && !reachable()) {
+        const n = floorsLeft();
+        return {
+          kind: 'stuck',
+          text: n
+            ? L(
+                `From ${up(prev)}, no ladder of real words reaches ${up(goal)} in the ${n} floor${n > 1 ? 's' : ''} left. Undo this floor.`,
+                `À partir de ${up(prev)}, aucune échelle de vrais mots n’atteint ${up(goal)} dans ${n > 1 ? `les ${n} étages restants` : 'le dernier étage'}. Annulez cet étage.`,
+              )
+            : L(
+                `No floors left, and ${up(prev)} is more than one letter away from ${up(goal)}. Undo this floor.`,
+                `Plus d’étages, et ${up(prev)} est à plus d’une lettre de ${up(goal)}. Annulez cet étage.`,
+              ),
+          why: [...rowCellsOf(0)],
+          at: rowCellsOf(floors - rungs.length + 1),
+          action: L('Undo', 'Annuler'),
+          play: () => {
+            if (cur) undo();
+            undo();
+          },
+        };
+      }
+      const changed = [...cur].flatMap((ch, i) => (ch !== prev[i] ? [i] : []));
+      if (changed.length > 1) {
+        const k = changed[1];
+        const r = floors - rungs.length;
+        return {
+          kind: 'fix',
+          text: L(
+            `Only one letter may change per floor, and this already changes the ${up(prev[changed[0]])} and the ${up(prev[k])} of ${up(prev)}. Erase back.`,
+            `Une seule lettre peut changer par étage, et ceci change déjà le ${up(prev[changed[0]])} et le ${up(prev[k])} de ${up(prev)}. Effacez.`,
+          ),
+          why: rowCellsOf(r + 1),
+          at: [cells[r * len + k]],
+          action: L('Erase', 'Effacer'),
+          play: () => {
+            while (cur.length > k) press('back');
+          },
+        };
+      }
+      return null;
+    };
     const keyEl = (k: string) =>
       [...kb.el.querySelectorAll<HTMLElement>('.key')].find(
         (b) => b.getAttribute('aria-label') === (k === 'enter' ? L('Enter', 'Entrée') : k),
       )!;
-    const rowCells = (r: number) => cells.slice(r * len, r * len + len);
-    const up = (x: string) => x.toUpperCase();
+    const rowCells = rowCellsOf;
     const hint = (): Hint | null => {
       if (won) return null;
       const prev = last();
@@ -242,11 +302,14 @@ export const tower: PuzzleDef = {
         if (w === start || rungs.includes(w)) continue;
         const ok = isWord(w);
         if (ok === false) nonWords.push(up(w));
-        else if (ok && (diff(w, goal) === 1 || nextWord(w))) straight.push(w);
+        // It takes a floor, so it must reach the goal in the floors left after it.
+        else if (ok && (diff(w, goal) === 1 || ladder(w, floorsLeft(), isCommon))) straight.push(w);
       }
-      const planned = nextWord(prev);
+      const k = path.indexOf(prev);
+      const onPath = k >= 0 && path.length - 1 - k <= floorsLeft() + 1 && !rungs.includes(path[k + 1]) ? path[k + 1] : null;
+      const planned = onPath ?? (ladder(prev, floorsLeft() + 1, isCommon) ?? ladder(prev, floorsLeft() + 1, isAny))?.next ?? null;
       const target = planned && straight.includes(planned) ? planned : (straight[0] ?? planned);
-      if (!target || rungs.length >= floors) return null;
+      if (!target || rungs.length >= floors) return check();
       const r = floors - rungs.length; // grid row being typed
       if (cur && cur !== target)
         return {
@@ -300,6 +363,7 @@ export const tower: PuzzleDef = {
     };
 
     return {
+      check,
       hint,
       snapshot: () => ({ r: rungs, cur }),
       onKey(e) {

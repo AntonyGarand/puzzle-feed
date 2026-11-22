@@ -269,11 +269,12 @@ export const galaxies: PuzzleDef = {
     const dist = (g: number, i: number) => Math.hypot(dots[g].y - (2 * Math.floor(i / n) + 1), dots[g].x - (2 * (i % n) + 1));
 
     let lastKind = '';
-    const hint = (): Hint | null => {
+    /** A cell put in the wrong galaxy (the solution is unique): undo it first. */
+    const audit = (): Hint | null => {
       if (done) return null;
-      const cands: { kind: string; hint: Hint }[] = [];
-      // 1. A cell put in the wrong galaxy: undo it first.
-      const wrong = own.findIndex((g, i) => g >= 0 && given[i] < 0 && g !== sol[i]);
+      // A visibly broken cell (red: no twin across the dot) first, then any other misplaced one.
+      const mistakes = own.flatMap((g, i) => (g >= 0 && given[i] < 0 && g !== sol[i] ? [i] : []));
+      const wrong = mistakes.find(broken) ?? mistakes[0] ?? -1;
       if (wrong >= 0) {
         const g = own[wrong];
         const m = twin(g, wrong);
@@ -284,19 +285,28 @@ export const galaxies: PuzzleDef = {
                 `Cette case ne peut pas rester dans cette galaxie : ${reasonText(m < 0 ? 'off' : 'taken')}. Choisissez la galaxie et touchez la case pour l’enlever.`,
               )
             : L(
-                'This cell doesn’t belong to this galaxy: it would leave a neighbouring galaxy no symmetric shape. Pick the galaxy and tap it to remove it.',
-                'Cette case n’appartient pas à cette galaxie : une galaxie voisine n’aurait plus de forme symétrique. Choisissez la galaxie et touchez la case pour l’enlever.',
+                'This cell breaks no rule yet, but it leads to a dead end: a neighbouring galaxy would have no symmetric shape left. Pick the galaxy and tap the cell to remove it.',
+                'Cette case ne brise encore aucune règle, mais elle mène à une impasse : une galaxie voisine n’aurait plus de forme symétrique. Choisissez la galaxie et touchez la case pour l’enlever.',
               );
         return {
+          kind: 'fix',
           text,
           why: cellsOf(g),
           at: [cells[wrong]],
+          action: L('Remove the cell', 'Enlever la case'),
           play: () => {
             pick(g);
             if (own[wrong] === g) tap(wrong);
           },
         };
       }
+      return null;
+    };
+    const hint = (): Hint | null => {
+      if (done) return null;
+      const fix = audit();
+      if (fix) return fix;
+      const cands: { kind: string; hint: Hint }[] = [];
       // Where each galaxy could still grow: through free cells, from its own cells.
       const reach = dots.map((_, g) => {
         const seen = new Set<number>();
@@ -392,6 +402,6 @@ export const galaxies: PuzzleDef = {
       };
     };
 
-    return { snapshot: () => ({ own, cur }), hint };
+    return { snapshot: () => ({ own, cur }), hint, check: audit };
   },
 };

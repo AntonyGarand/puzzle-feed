@@ -154,6 +154,67 @@ export const untangle: PuzzleDef = {
 
     // ---- guide: greedy moves that cut the most crossings ----
     let lastRule = '';
+    /** Set once greedy moves stop helping: the guide then places dots where the hidden layout has them. */
+    let planMode = false;
+    const showGhost = (to: Pt) => {
+      ghost.setAttribute('cx', String(to.x));
+      ghost.setAttribute('cy', String(to.y));
+      ghost.style.display = '';
+    };
+    /** Same path as a drag: grab, move, let go. */
+    const moveDot = (v: number, to: Pt) => {
+      ghost.style.display = 'none';
+      if (finished) return;
+      ctx.touch();
+      drag = v;
+      dotG.append(dots[v]);
+      pos[v] = to;
+      render();
+      end();
+    };
+    const near = (a: Pt, b: Pt, k: number) => Math.hypot(a.x - b.x, a.y - b.y) < k;
+    const home = (v: number) => near(pos[v], solution[v], 2);
+    /** Put a dot on its spot of the untangled layout, moving a dot out of the way first if needed. */
+    const planHint = (red: number): Hint | null => {
+      const away = [...Array(V).keys()].filter((v) => !home(v));
+      if (!away.length) return null;
+      const blockers = (v: number) => [...Array(V).keys()].filter((j) => j !== v && !home(j) && near(pos[j], solution[v], r * 2.2));
+      const free = away.find((v) => !blockers(v).length);
+      if (free != null) {
+        const to = solution[free];
+        showGhost(to);
+        return {
+          text: L(
+            `${red} red lines left. Drag this dot to the dashed circle: there it fits a layout where nothing crosses.`,
+            `Il reste ${red} lignes rouges. Glissez ce point dans le cercle pointillé : il y trouve sa place dans un tracé sans croisement.`,
+          ),
+          why: [dots[free]],
+          at: [ghost],
+          play: () => moveDot(free, to),
+        };
+      }
+      // Every spot is taken by a dot that isn't home yet: park one of them in an empty corner.
+      const v = away[0];
+      const j = blockers(v)[0];
+      let to: Pt | null = null;
+      for (let y = 6; y <= 94 && !to; y += 4)
+        for (let x = 6; x <= 94 && !to; x += 4) {
+          const p = { x, y };
+          if (!pos.some((q) => near(q, p, r * 2.2)) && !solution.some((q) => near(q, p, r * 2.2))) to = p;
+        }
+      if (!to) return null;
+      const spot = to;
+      showGhost(spot);
+      return {
+        text: L(
+          'This dot sits where another one belongs. Move it aside to the dashed circle first.',
+          'Ce point occupe la place d’un autre. Déplacez-le d’abord dans le cercle pointillé.',
+        ),
+        why: [dots[j]],
+        at: [ghost],
+        play: () => moveDot(j, spot),
+      };
+    };
     const hint = (): Hint | null => {
       ghost.style.display = 'none';
       if (finished) return null;
@@ -184,11 +245,12 @@ export const untangle: PuzzleDef = {
           if (!best || score < best.after * 100 - redAt(best.v) - (best.between ? 0 : 0.5)) best = { v, to, after, between };
         }
       }
-      if (!best) return null;
+      // Only take a greedy move that really cuts crossings; else (and from then on) rebuild the hidden
+      // untangled layout dot by dot, which always finishes.
+      if (!best || best.after >= bad.size) planMode = true;
+      if (planMode || !best) return planHint(bad.size);
       const { v, to, after, between } = best;
-      ghost.setAttribute('cx', String(to.x));
-      ghost.setAttribute('cy', String(to.y));
-      ghost.style.display = '';
+      showGhost(to);
       const red = redAt(v);
       const rule = after === 0 ? 'last' : between && lastRule !== 'between' ? 'between' : 'most';
       lastRule = rule;
@@ -212,20 +274,7 @@ export const untangle: PuzzleDef = {
                   `Red lines cross. ${red ? `This dot touches ${red} of them: drag it` : 'Drag this dot'} to the dashed circle and the count drops from ${bad.size} to ${after}.`,
                   `Les lignes rouges se croisent. ${red ? `Ce point en touche ${red} : glissez-le` : 'Glissez ce point'} dans le cercle pointillé et leur nombre passe de ${bad.size} à ${after}.`,
                 );
-      return {
-        text,
-        why: [dots[v]],
-        at: [ghost],
-        play: () => {
-          ghost.style.display = 'none';
-          ctx.touch();
-          drag = v;
-          dotG.append(dots[v]);
-          pos[v] = to;
-          render();
-          end();
-        },
-      };
+      return { text, why: [dots[v]], at: [ghost], play: () => moveDot(v, to) };
     };
 
     root.append(h('div', { class: 'untangle-wrap' }, svg));

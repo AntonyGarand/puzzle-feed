@@ -123,6 +123,13 @@ export const tilt: PuzzleDef = {
     grid.append(layer);
 
     const remaining = () => limit - history.length;
+    /** Solver result for the current position, kept until it changes (status line, check() and hint()). */
+    let memo: { key: string; sol: ReturnType<typeof solve> } | null = null;
+    const solveHere = () => {
+      const key = `${st.filled}|${st.pos.join(',')}`;
+      if (memo?.key !== key) memo = { key, sol: solve(lay, kinds, st, 60000) };
+      return memo.sol;
+    };
     const render = () => {
       cells.forEach((el, i) => {
         const hi2 = lay.holeIdx[i];
@@ -142,7 +149,7 @@ export const tilt: PuzzleDef = {
       const left = kinds.filter((k, i) => k !== BLOCK && st.pos[i] >= 0).length;
       const marblesLeft = P(left, ['marble', 'marbles'], ['bille', 'billes']);
       // Warn when the limit can no longer be met, so Undo still saves the game.
-      const sol = history.length ? solve(lay, kinds, st, 20000) : null;
+      const sol = history.length ? solveHere() : null;
       const stuck = !!sol && sol.dist > remaining();
       const moves = P(remaining(), ['move', 'moves'], ['coup', 'coups']);
       ctx.status(
@@ -205,9 +212,33 @@ export const tilt: PuzzleDef = {
     render();
 
     /** Guide: follow a shortest route, explaining what each tilt achieves. */
+    /** Dead ends: no sequence of tilts sinks every marble any more, or not within the moves left. */
+    const check = (): Hint | null => {
+      if (done || !history.length) return null;
+      const sol = solveHere();
+      if (!sol || sol.dist <= remaining()) return null;
+      const left = kinds.map((_, i) => i).filter((i) => kinds[i] !== BLOCK && st.pos[i] >= 0);
+      return {
+        kind: 'stuck',
+        text:
+          sol.dist === Infinity
+            ? L(
+                'No sequence of tilts can drop every marble in its hole from here: the pieces only ever stop against the same stoppers. Undo.',
+                'Plus aucune suite d’inclinaisons ne fait tomber toutes les billes dans leur trou : les pièces s’arrêtent toujours contre les mêmes butoirs. Annulez.',
+              )
+            : L(
+                `Not enough moves: from here it takes at least ${sol.dist} tilts, and you have ${remaining()} left. Undo.`,
+                `Pas assez de coups : d’ici, il faut au moins ${sol.dist} inclinaisons, et il vous en reste ${remaining()}. Annulez.`,
+              ),
+        why: left.map((i) => pieces[i]),
+        at: left.map((i) => cells[st.pos[i]]),
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      };
+    };
     const hint = (): Hint | null => {
       if (done) return null;
-      const sol = solve(lay, kinds, st, 60000);
+      const sol = solveHere();
       if (!sol || sol.first < 0 || sol.dist > remaining()) return null;
       const dir = sol.first as Dir;
       const r = tiltBoard(lay, kinds, st, dir);
@@ -272,6 +303,7 @@ export const tilt: PuzzleDef = {
 
     return {
       snapshot: () => ({ h: history }),
+      check,
       hint,
       onKey(e) {
         const k = keyDir(e);
