@@ -232,14 +232,14 @@ await page.locator('dialog.sheet').getByRole('button', { name: 'Skip' }).click()
 await page.waitForTimeout(900);
 ok('skip advances to the next card', (await feedScroll()) > 300);
 
-// ---- Labs: a half-played feed puzzle shows up as resumable, and resumes with the same board
+// ---- Games tab: a half-played feed puzzle shows up as resumable, and resumes with the same board
 await open('lights', 3);
 await card().locator('.cell').nth(0).click();
 await card().locator('.cell').nth(7).click();
 const before = await card()
   .locator('.cell')
   .evaluateAll((els) => els.map((e) => e.classList.contains('on')).join(''));
-await page.goto(`${base}labs`);
+await page.goto(`${base}games`);
 await page.waitForSelector('.lab-tile');
 // The unfinished game appears in "Continue" (first) and again in its category, marked as saved.
 const continueSec = page.locator('.cat').first();
@@ -256,8 +256,8 @@ const after = await page.locator('.lab .card .cell').evaluateAll((els) => els.ma
 ok('resume restores the same board', before === after);
 ok('resume keeps the move count', /2 moves/.test(await page.locator('.lab .status').innerText()));
 
-// ---- Labs: start a new one at a chosen level; reload resumes it rather than re-rolling
-await page.goto(`${base}labs`);
+// ---- Games tab: start a new one at a chosen level; reload resumes it rather than re-rolling
+await page.goto(`${base}games`);
 await page.waitForSelector('.lab-tile');
 const sudokuTile = page.locator('.lab-tile[data-puzzle="sudoku"]').last();
 // The level is picked in the tile's cog sheet; the tile link then starts a new game at that level.
@@ -288,7 +288,8 @@ ok('settings tab opens settings', (await page.locator('.page h1').innerText()) =
 // ---- Cog sheet, guide and confetti
 await open('lights', 1);
 await card().locator('.help-btn').click();
-ok('guide opens with a playable practice board', (await page.locator('dialog.sheet .practice-board .cell').count()) > 0);
+await page.waitForSelector('dialog.sheet .guide-board .cell');
+ok('guide opens with its walkthrough board', (await page.locator('dialog.sheet .guide-board .cell').count()) > 0);
 await page.keyboard.press('Escape');
 const before2 = await card().locator('.cell').count();
 await card().locator('[data-action="settings"]').click();
@@ -298,11 +299,13 @@ ok('cog sheet changes the level', (await card().locator('.cell').count()) > befo
 // ---- Stats & persistence
 await page.goto(`${base}stats`);
 await page.waitForTimeout(200);
-const solved = await page.locator('.stat-v').first().innerText();
+// Tiles: player level, XP, solved, ...
+const solvedTile = page.locator('.stat', { hasText: 'solved' }).first().locator('.stat-v');
+const solved = await solvedTile.innerText();
 ok('stats count solves', Number(solved) >= 8, `solved=${solved}`);
 await page.reload();
 await page.waitForTimeout(300);
-ok('stats persist after reload', (await page.locator('.stat-v').first().innerText()) === solved);
+ok('stats persist after reload', (await solvedTile.innerText()) === solved);
 
 ok('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();

@@ -6,6 +6,7 @@ import { LEVELS } from '../src/core/types';
 import {
   bestPut,
   cellsAt,
+  culprit,
   ext,
   finishFrom,
   fits,
@@ -198,6 +199,23 @@ describe('week guide', () => {
     expect(finishFrom(strip, lay)).toBeNull();
     expect(stranded(strip, lay, 0)).toEqual([0]);
     expect(stranded(strip, { pos: [0, -1], rot: [0, 0] }, 0)).toBeNull();
+  });
+
+  it('blames the placed task whose removal brings the target back, not just the first off-plan one', () => {
+    // Hours 0-3 and 5 (4 is busy). A lone hour (task 0, a decoy) at 5 is harmless; the domino at 1-2
+    // strands hours 0 and 3.
+    const w: Week = {
+      R: 1,
+      C: 6,
+      busy: [false, false, false, false, true, false],
+      tasks: [{ shape: [[0, 0]], col: 1, sol: -1 }, ...strip.tasks],
+      target: 5,
+    };
+    const lay: Layout = { pos: [5, 1, -1], rot: [0, 0, 0] };
+    expect(offPlan(w, lay)).toEqual([0, 1]);
+    expect(finishFrom(w, lay)).toBeNull();
+    expect(culprit(w, lay)).toBe(1);
+    expect(culprit(w, { pos: [-1, 0, -1], rot: [0, 0, 0] })).toBeNull();
   });
 
   it('suggests the most hemmed-in step and counts its bonus edges', () => {
