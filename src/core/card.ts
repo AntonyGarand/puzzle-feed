@@ -610,7 +610,7 @@ export class Card {
     this.syncLevelSel();
     this.queueSave();
     const res = this.reached.res!;
-    if (res.best || res.prevBest == null) {
+    if (celebrate(res)) {
       const r = this.stage.getBoundingClientRect();
       if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
     }
@@ -696,7 +696,8 @@ export class Card {
     else parts.push(h('strong', null, L('Skipped', 'Passé')));
     if (this.mistakes && o === 'failed') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
     if (this.hints && o === 'failed') parts.push(` · ${P(this.hints, ['hint', 'hints'], ['indice', 'indices'])}`);
-    if (o === 'solved' && known && !early && (res.best || res.prevBest == null)) {
+    // An endless game already celebrated when its goal was reached.
+    if (o === 'solved' && known && !early && celebrate(res)) {
       const r = this.stage.getBoundingClientRect();
       if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
     }
@@ -765,4 +766,19 @@ export class Card {
     this.inst.destroy?.();
     this.gen++;
   }
+}
+
+/**
+ * Confetti for a solve worth celebrating, not every one: a first clear, a new best, a level up
+ * (puzzle difficulty, game or player XP level), or a standout bonus (the day's first solve of this
+ * game, a daily challenge).
+ */
+function celebrate(res: RecordOutcome): boolean {
+  if (res.best || res.prevBest == null) return true;
+  if (res.levelChange && res.levelChange.to > res.levelChange.from) return true;
+  const xp = res.xp;
+  if (!xp) return false;
+  if (xpLevel(xp.game.after).level > xpLevel(xp.game.before).level) return true;
+  if (xpLevel(xp.player.after).level > xpLevel(xp.player.before).level) return true;
+  return xp.gains.some((g) => g.why === 'gameToday' || g.why === 'daily');
 }

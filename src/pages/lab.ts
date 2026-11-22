@@ -1,7 +1,7 @@
-import { openSheet, sheetOpen } from '../core/sheet';
+import { confirmSheet, openSheet, sheetOpen } from '../core/sheet';
 import { L, locale, setLocale, setWordLocale, wordLocale, type Locale } from '../core/i18n';
 import { Card, type DailyRef } from '../core/card';
-import { dailySaveKey, getSave } from '../core/saves';
+import { dailySaveKey, getSave, type Save } from '../core/saves';
 import type { DailyEntry } from '../core/store';
 import { setPath } from '../core/nav';
 import { prefs } from '../core/store';
@@ -48,7 +48,9 @@ export class LabView {
         ? undefined
         : getSave(def.id);
     const save = saved && (!def.localized || (saved.locale ?? 'en') === wordLocale()) ? saved : undefined;
-    const start = (lvl?: Difficulty, resume = save, code = shared) => {
+    // Explicit args (no defaults): "New puzzle" passes `undefined` to mean a fresh game, which a default
+    // parameter would silently turn back into the old save.
+    const start = (lvl: Difficulty | undefined, resume: Save | undefined, code: ShareCode | undefined) => {
       this.card?.setActive(false);
       this.card?.destroy();
       this.useWords(def, code); // "New puzzle" after a shared one goes back to your own language
@@ -77,6 +79,7 @@ export class LabView {
           { class: 'lab-bar' },
           h('a', { class: 'btn ghost', href: '/games' }, L('← Games', '← Jeux')),
           note,
+          btn(L('New game', 'Nouvelle partie'), () => void newGame(card), 'ghost'),
           btn(L('Share', 'Partager'), () => card.openShare(), 'ghost'),
         ),
         card.el,
@@ -84,7 +87,20 @@ export class LabView {
       card.mount();
       card.setActive(this.shown && !document.hidden);
     };
-    start(level);
+    const newGame = async (card: Card) => {
+      if (card.interacted && !card.done) {
+        card.setActive(false);
+        const ok = await confirmSheet({
+          title: L('Start a new game?', 'Commencer une nouvelle partie?'),
+          message: L('Your current game will be lost.', 'La partie en cours sera perdue.'),
+          action: L('New game', 'Nouvelle partie'),
+        });
+        if (this.card !== card) return;
+        if (!ok) return card.setActive(this.shown && !document.hidden);
+      }
+      start(card.level, undefined, undefined);
+    };
+    start(level, save, shared);
     this.notice = this.words;
     if (this.shown) this.showNotice();
   }
