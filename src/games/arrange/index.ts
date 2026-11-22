@@ -147,8 +147,9 @@ export const arrange: PuzzleDef = {
       if (placeChanged(cur, before)) hist.push(before);
     };
     const undo = () => {
-      const prev = hist.pop();
-      if (!prev || finished || drag) return;
+      if (finished || drag || !hist.length) return;
+      const prev = hist.pop()!;
+      ctx.touch();
       prev.place.forEach((o, p) => {
         place[p] = o;
         // Pieces in the tray keep the turn the player gave them since.
@@ -360,6 +361,7 @@ export const arrange: PuzzleDef = {
 
     const clear = () => {
       if (finished || drag || !place.some(Boolean)) return;
+      ctx.touch();
       hist.push(pos());
       place.fill(null);
       render();
@@ -424,11 +426,7 @@ export const arrange: PuzzleDef = {
         text,
         why: [trayEls[p]],
         at: solCells(P, p).map((i) => cells[i]),
-        play: () => {
-          hist.push(pos());
-          place[p] = [pieces[p].r, pieces[p].c];
-          settle();
-        },
+        play: dropAt(p, pieces[p].r, pieces[p].c),
       });
       switch (st.kind) {
         case 'alt-turn':

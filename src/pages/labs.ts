@@ -115,7 +115,8 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           : null,
       ],
       onClose: () => {
-        if (location.pathname.startsWith('/games')) rerender();
+        // Still on the list (/games, or its /labs alias): redraw so the tile links to the new level.
+        if (/^\/(games|labs)\/?$/.test(location.pathname)) rerender();
       },
     });
   };

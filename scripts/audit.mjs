@@ -37,6 +37,12 @@ async function open(id, level) {
 }
 const state = async () => (await card().getAttribute('class')).match(/is-(\w+)/)?.[1] ?? 'open';
 const footer = async () => (await card().locator('.card-foot').innerText()).replace(/\s+/g, ' ');
+/** The level change announced on the win panel ("Harder puzzles → Medium"), or ''. */
+const levelPill = async () => {
+  const pill = card().locator('.win-level');
+  return (await pill.count()) ? (await pill.innerText()).trim() : '';
+};
+const feedScroll = () => page.evaluate(() => document.querySelector('.feed').scrollTop);
 
 /** Solve the Lights board on the current card (GF(2) elimination in the page) and click the presses. */
 async function solveLights() {
@@ -87,13 +93,15 @@ ok('lights L1 solves', (await state()) === 'solved', await footer());
 await open('lights');
 await pickLevel(page, 'auto', card());
 await solveLights();
-const f1 = await footer();
+const f1 = await levelPill();
 await open('lights');
 await solveLights();
-const f2 = await footer();
-ok('auto level-up after fast flawless solves', /Level up/.test(f1 + f2), `${f1} | ${f2}`);
-await page.waitForTimeout(3000); // auto-advance waits longer after a first clear / record (confetti)
-const scrolled = await page.evaluate(() => document.querySelector('.feed').scrollTop);
+const f2 = await levelPill();
+// The level change is announced on the win panel, not in the footer.
+ok('auto level-up after fast flawless solves', /Harder puzzles/.test(f1 + f2), `${f1 || '-'} | ${f2 || '-'}`);
+// Auto-advance waits 2.4 s, or 3.2 s after a first clear, a record or a level change (confetti).
+await page.waitForFunction(() => document.querySelector('.feed').scrollTop > 300, null, { timeout: 6000 }).catch(() => {});
+const scrolled = await feedScroll();
 ok('auto-advance scrolls to the next card', scrolled > 300, `scrollTop=${scrolled}`);
 
 // ---- Memory (solve + fail)
@@ -222,23 +230,25 @@ await open('slide', 1);
 await card().locator('[data-action="settings"]').click(); // Skip lives in the cog sheet now
 await page.locator('dialog.sheet').getByRole('button', { name: 'Skip' }).click();
 await page.waitForTimeout(900);
-ok('skip advances to the next card', (await page.evaluate(() => document.querySelector('.feed').scrollTop)) > 300);
+ok('skip advances to the next card', (await feedScroll()) > 300);
 
-// ---- Labs: a half-played feed puzzle shows up as resumable, and resumes with the same board
+// ---- Games tab: a half-played feed puzzle shows up as resumable, and resumes with the same board
 await open('lights', 3);
 await card().locator('.cell').nth(0).click();
 await card().locator('.cell').nth(7).click();
 const before = await card()
   .locator('.cell')
   .evaluateAll((els) => els.map((e) => e.classList.contains('on')).join(''));
-await page.goto(`${base}labs`);
+await page.goto(`${base}games`);
 await page.waitForSelector('.lab-tile');
-// The unfinished game appears in "Continue" (first) and again in its category.
-const lightsTile = page.locator('.lab-tile[data-puzzle="lights"]').first();
+// The unfinished game appears in "Continue" (first) and again in its category, marked as saved.
+const continueSec = page.locator('.cat').first();
+const lightsTile = continueSec.locator('.lab-tile[data-puzzle="lights"]');
 ok(
   'games tab lists the unfinished puzzle under Continue',
-  (await lightsTile.locator('.badge').count()) === 1 &&
-    (await page.locator('.cat').first().locator('h3').innerText()).toLowerCase().startsWith('continue'),
+  (await continueSec.locator('h3').innerText()).toLowerCase().startsWith('continue') &&
+    (await lightsTile.count()) === 1 &&
+    /\bhas-save\b/.test((await lightsTile.getAttribute('class')) ?? ''),
 );
 await lightsTile.getByRole('link', { name: 'Resume' }).click();
 await page.waitForSelector('.lab .card .cell');
@@ -246,12 +256,15 @@ const after = await page.locator('.lab .card .cell').evaluateAll((els) => els.ma
 ok('resume restores the same board', before === after);
 ok('resume keeps the move count', /2 moves/.test(await page.locator('.lab .status').innerText()));
 
-// ---- Labs: start a new one at a chosen level; reload resumes it rather than re-rolling
-await page.goto(`${base}labs`);
+// ---- Games tab: start a new one at a chosen level; reload resumes it rather than re-rolling
+await page.goto(`${base}games`);
 await page.waitForSelector('.lab-tile');
 const sudokuTile = page.locator('.lab-tile[data-puzzle="sudoku"]').last();
-await sudokuTile.locator('select').selectOption('4');
-await sudokuTile.getByRole('button', { name: /Play|New/ }).click();
+// The level is picked in the tile's cog sheet; the tile link then starts a new game at that level.
+await sudokuTile.locator('.cog-btn').click();
+await page.locator('dialog.sheet').getByRole('radio', { name: 'Expert' }).click();
+await page.keyboard.press('Escape');
+await page.locator('.lab-tile[data-puzzle="sudoku"] .tile-link').last().click();
 await page.waitForSelector('.lab .card .cell');
 ok(
   'labs starts a new puzzle at the picked level',
@@ -275,7 +288,8 @@ ok('settings tab opens settings', (await page.locator('.page h1').innerText()) =
 // ---- Cog sheet, guide and confetti
 await open('lights', 1);
 await card().locator('.help-btn').click();
-ok('guide opens with a playable practice board', (await page.locator('dialog.sheet .practice-board .cell').count()) > 0);
+await page.waitForSelector('dialog.sheet .guide-board .cell');
+ok('guide opens with its walkthrough board', (await page.locator('dialog.sheet .guide-board .cell').count()) > 0);
 await page.keyboard.press('Escape');
 const before2 = await card().locator('.cell').count();
 await card().locator('[data-action="settings"]').click();
@@ -285,11 +299,13 @@ ok('cog sheet changes the level', (await card().locator('.cell').count()) > befo
 // ---- Stats & persistence
 await page.goto(`${base}stats`);
 await page.waitForTimeout(200);
-const solved = await page.locator('.stat-v').first().innerText();
+// Tiles: player level, XP, solved, ...
+const solvedTile = page.locator('.stat', { hasText: 'solved' }).first().locator('.stat-v');
+const solved = await solvedTile.innerText();
 ok('stats count solves', Number(solved) >= 8, `solved=${solved}`);
 await page.reload();
 await page.waitForTimeout(300);
-ok('stats persist after reload', (await page.locator('.stat-v').first().innerText()) === solved);
+ok('stats persist after reload', (await solvedTile.innerText()) === solved);
 
 ok('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();

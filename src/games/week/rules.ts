@@ -492,6 +492,20 @@ export function finishFrom(w: Week, lay: Layout): Put[] | null | 'capped' {
   return offPlan(w, lay).length ? search(w, lay.pos, own) : planRest(w, lay.pos, own);
 }
 
+/**
+ * The placed task to blame when the target is out of reach: an off-plan task whose removal makes the
+ * target reachable again (proved by a search), else one that strands a pocket no tray task fits,
+ * else the first off-plan task. Null when nothing is off the plan.
+ */
+export function culprit(w: Week, lay: Layout): number | null {
+  const off = offPlan(w, lay);
+  if (!off.length) return null;
+  const without = (k: number): Layout => ({ pos: lay.pos.map((p, x) => (x === k ? -1 : p)), rot: lay.rot });
+  const freeing = off.find((k) => Array.isArray(finishFrom(w, without(k))));
+  if (freeing != null) return freeing;
+  return off.find((k) => stranded(w, lay, k) !== null) ?? off[0];
+}
+
 /** Open hours next to placed task `k` that form a pocket too small for any task left in the tray, if any. */
 export function stranded(w: Week, lay: Layout, k: number): number[] | null {
   const { C, busy, tasks } = w;

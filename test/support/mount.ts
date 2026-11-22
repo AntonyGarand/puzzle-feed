@@ -22,6 +22,8 @@ export interface Played {
   events: GameEvent[];
   /** The first final result: '' while still playing. A `reached` solve counts as solved. */
   outcome: '' | 'solved' | 'failed';
+  /** How many times the game called `ctx.touch()` (every player action should). */
+  touches: number;
   /** Last text passed to `ctx.status()`. */
   status: string;
   /** Last controls passed to `ctx.controls()`. */
@@ -40,7 +42,7 @@ export function mountGame(game: PuzzleDef | string, difficulty: Difficulty, seed
   const def = typeof game === 'string' ? puzzle(game) : game;
   const root = document.createElement('div');
   if (opts.attach) document.body.append(root);
-  const g: Played = { def, root, inst: {}, events: [], outcome: '', status: '', controls: [] };
+  const g: Played = { def, root, inst: {}, events: [], outcome: '', touches: 0, status: '', controls: [] };
   const ctx: PuzzleCtx = {
     difficulty,
     rng: new Rng(seed),
@@ -55,7 +57,7 @@ export function mountGame(game: PuzzleDef | string, difficulty: Difficulty, seed
       g.outcome ||= 'failed';
     },
     mistake: () => g.events.push('mistake'),
-    touch: () => {},
+    touch: () => void g.touches++,
     status: (text) => (g.status = text),
     lives: () => {},
     controls: (...els) => {
