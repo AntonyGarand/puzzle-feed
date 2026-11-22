@@ -61,7 +61,8 @@ export default defineConfig(({ mode }) => {
           id: '/',
           name: 'Puzzle Feed',
           short_name: 'puzzles',
-          description: 'An endless feed of procedurally generated puzzles. Works offline.',
+          description:
+            'An endless feed of bite-sized puzzles: logic, word, number, card games and more. Free, no account, no ads, no limit.\nUn fil sans fin de petits casse-têtes : logique, mots, chiffres, cartes et plus encore. Gratuit, sans compte, sans pub, sans limite.',
           lang: 'en',
           start_url: '/',
           scope: '/',
