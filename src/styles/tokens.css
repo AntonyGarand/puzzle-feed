@@ -1,6 +1,7 @@
 /* =========================================================
-   puzzle feed — neo-brutalist theme
+   puzzle feed — neo-brutalist theme (the default "Neo" style)
    Flat colour, thick ink borders, hard offset shadows.
+   The other styles (Settings > Theme) override some of these in themes.css.
    ========================================================= */
 
 :root {
@@ -69,6 +70,10 @@
 
   --bw: 2.5px;
   --sh: 4px;
+  /* colour of the hard offset shadows (box-shadow / drop-shadow); flat styles make it transparent */
+  --drop: var(--ink);
+  --font: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --weight: 500;
   --r: 10px;
   --r-cell: 6px;
   --head: 60px;

@@ -15,7 +15,7 @@
   background-size: calc(100% / var(--cols)) calc(100% / var(--cols));
   background-position: -0.5px -0.5px;
   --line: color-mix(in srgb, var(--ink) 28%, transparent);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   touch-action: none;
 }
 [data-puzzle='connect'] .connect-grid .cell {

@@ -16,7 +16,7 @@
   padding: 0;
   border: calc(var(--bw) + 0.5px) solid var(--ink);
   border-radius: var(--r-cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   overflow: hidden;
   background: var(--sq-l);
 }

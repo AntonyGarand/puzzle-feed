@@ -10,7 +10,7 @@
   gap: 8px;
   padding: 10px 10px 10px 8px;
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   --board: calc(var(--fit, 380px) * 0.8);
 }
 [data-puzzle='nonogram'] .nono .cols {

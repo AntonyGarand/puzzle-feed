@@ -9,7 +9,7 @@
   border-radius: var(--r);
   overflow: hidden;
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   width: calc(var(--board) - var(--sh));
   margin-right: var(--sh);
   --in: calc(var(--board) / var(--cols) * 0.08);

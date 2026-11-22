@@ -29,7 +29,7 @@
   box-shadow:
     inset 0 var(--lit) 0 color-mix(in srgb, var(--cell) 45%, transparent),
     inset 0 calc(var(--lit) * -1) 0 color-mix(in srgb, var(--ink) 18%, transparent),
-    var(--lift) var(--lift) 0 var(--ink);
+    var(--lift) var(--lift) 0 var(--drop);
 }
 /* hole: a dark pit ringed in its colour */
 [data-puzzle='tilt'] .cell.hl::before {
@@ -85,7 +85,7 @@
   border-radius: 50%;
   border: max(2px, var(--cbw)) solid var(--ink);
   background: radial-gradient(circle at 34% 30%, transparent 52%, color-mix(in srgb, var(--on-tone) 22%, transparent) 54%), var(--c);
-  box-shadow: calc(var(--lift) * 0.8) calc(var(--lift) * 0.8) 0 var(--ink);
+  box-shadow: calc(var(--lift) * 0.8) calc(var(--lift) * 0.8) 0 var(--drop);
 }
 [data-puzzle='tilt'] .tilt-pc.bk::after {
   content: '';
@@ -97,7 +97,7 @@
   background:
     radial-gradient(circle, var(--ink) 0 9%, transparent 10%) 25% 25% / 50% 50%,
     color-mix(in srgb, var(--muted) 30%, var(--cell));
-  box-shadow: var(--lift) var(--lift) 0 var(--ink);
+  box-shadow: var(--lift) var(--lift) 0 var(--drop);
 }
 @media (prefers-reduced-motion: reduce) {
   [data-puzzle='tilt'] .tilt-pc {

@@ -32,7 +32,7 @@
   justify-content: center;
   border: var(--cbw) solid var(--ink);
   border-radius: var(--r-cell);
-  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  box-shadow: var(--csh) var(--csh) 0 var(--drop);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transition:
@@ -52,7 +52,7 @@
 }
 [data-puzzle='pairs'] .cell.pc.on .pc-face {
   background: var(--accent-soft);
-  box-shadow: 0 0 0 var(--ink);
+  box-shadow: 0 0 0 var(--drop);
 }
 [data-puzzle='pairs'] .cell.pc.miss .pc-face {
   opacity: 0.6;

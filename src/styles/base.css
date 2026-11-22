@@ -12,11 +12,7 @@ body {
 body {
   background: var(--bg);
   color: var(--fg);
-  font:
-    500 15px/1.4 'Space Grotesk Variable',
-    ui-sans-serif,
-    system-ui,
-    sans-serif;
+  font: var(--weight) 15px/1.4 var(--font);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;

@@ -7,7 +7,7 @@
   background: var(--cell);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   overflow: hidden;
   user-select: none;
   touch-action: manipulation;

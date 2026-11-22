@@ -34,7 +34,7 @@
   background: var(--accent);
   border: var(--cbw) solid var(--ink);
   border-radius: var(--r-cell);
-  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  box-shadow: var(--csh) var(--csh) 0 var(--drop);
   pointer-events: none;
 }
 [data-puzzle='dominoes'] .do-tile.err:not([data-hold]) {

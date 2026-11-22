@@ -1,5 +1,6 @@
 /* Global styles, in cascade order. Game styles live next to each game (src/games/<id>/style.css). */
 @import './tokens.css';
+@import './themes.css';
 @import './base.css';
 @import './shell.css';
 @import './result.css';

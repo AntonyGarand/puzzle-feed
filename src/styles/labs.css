@@ -20,7 +20,7 @@
   background: var(--cell);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 4px 4px 0 var(--drop);
   overflow: hidden;
   transition:
     transform 0.08s,
@@ -28,11 +28,11 @@
 }
 .lab-tile:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--drop);
 }
 .lab-tile:has(.tile-link:active) {
   transform: translate(4px, 4px);
-  box-shadow: 0 0 0 var(--ink);
+  box-shadow: 0 0 0 var(--drop);
 }
 .lab-tile:has(.tile-link:focus-visible) {
   outline: 3px solid var(--hi);
@@ -135,7 +135,7 @@
   width: 46px;
 }
 .lab-tile.off {
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }
 .lab-tile.off .tile-art,
 .lab-tile.off .tile-go {
@@ -248,7 +248,7 @@
   text-align: left;
   padding: 7px 14px;
   border-radius: 999px;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }
 .filters {
   display: flex;
@@ -285,7 +285,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: 999px;
   background: var(--cell);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }
 .chip-filter span {
   font-size: 11px;

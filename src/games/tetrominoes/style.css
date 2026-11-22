@@ -8,7 +8,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r-cell);
   overflow: hidden;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   background: var(--cell);
   touch-action: none;
   -webkit-user-select: none;

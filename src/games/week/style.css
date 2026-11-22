@@ -104,7 +104,7 @@
   gap: var(--gap);
   pointer-events: none;
   opacity: 0.85;
-  filter: drop-shadow(3px 3px 0 var(--ink));
+  filter: drop-shadow(3px 3px 0 var(--drop));
 }
 [data-puzzle='week'] .wk-ghost i {
   border-width: var(--bw);

@@ -18,7 +18,7 @@
 [data-puzzle='light-up'] .lu-grid .cell.glow {
   background: color-mix(in srgb, var(--accent) 36%, var(--cell));
   box-shadow:
-    var(--csh) var(--csh) 0 var(--ink),
+    var(--csh) var(--csh) 0 var(--drop),
     inset 0 0 calc(var(--board) / var(--cols) * 0.22) color-mix(in srgb, var(--accent) 75%, transparent);
 }
 [data-puzzle='light-up'] .lu-grid .cell.bulb {

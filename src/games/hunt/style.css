@@ -47,7 +47,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: 999px;
   background: var(--cell);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
   overflow: hidden;
 }
 [data-puzzle='hunt'] .hunt-fill {
@@ -115,7 +115,7 @@
 [data-puzzle='hunt'] .hunt-star.on {
   background: var(--hi);
   color: var(--on-tone);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }
 [data-puzzle='hunt'] .hunt-star.pop {
   animation: star-pop 0.5s ease;

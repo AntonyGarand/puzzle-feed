@@ -77,7 +77,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r-cell);
   background: var(--cell);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
 }
 [data-puzzle='logic-grid'] .lg-clue {
   display: block;

@@ -18,7 +18,7 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 1;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
   transition:
     transform 0.06s,
     box-shadow 0.06s;
@@ -68,7 +68,7 @@ dialog.sheet {
   background: var(--cell);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: 6px 6px 0 var(--ink);
+  box-shadow: 6px 6px 0 var(--drop);
 }
 dialog.sheet:not([open]) {
   display: none;
@@ -91,7 +91,7 @@ dialog.sheet::backdrop {
     margin: auto 0 0;
     border-radius: 16px 16px 0 0;
     border-bottom: 0;
-    box-shadow: 0 -4px 0 var(--ink);
+    box-shadow: 0 -4px 0 var(--drop);
     animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
   }
 }
@@ -116,7 +116,7 @@ dialog.sheet::backdrop {
   color: var(--on-tone);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   transform: rotate(-1.5deg);
 }
 .sheet-body {
@@ -344,7 +344,7 @@ dialog.sheet::backdrop {
   color: var(--on-tone);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   font-size: 14px;
   animation: sheet-up 0.25s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
@@ -365,7 +365,7 @@ dialog.sheet::backdrop {
   background: var(--cell);
   border: var(--bw) solid var(--ink);
   border-radius: 999px;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
   animation: sheet-up 0.25s ease;
 }
 .app-version {

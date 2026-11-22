@@ -31,7 +31,7 @@
 }
 [data-puzzle='factory'] .fx-slot.on {
   border-style: solid;
-  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  box-shadow: var(--csh) var(--csh) 0 var(--drop);
   cursor: grab;
 }
 [data-puzzle='factory'] .fx-slot.fx-over {

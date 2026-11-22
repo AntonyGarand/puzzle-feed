@@ -22,7 +22,7 @@
   border-style: solid;
   background: var(--accent);
   color: var(--on-tone);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
 }
 [data-puzzle='anagram'] .tiles .cell.used {
   opacity: 0.35;

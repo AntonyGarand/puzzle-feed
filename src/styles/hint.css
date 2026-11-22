@@ -27,7 +27,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   animation: guide-in 0.2s ease-out both;
 }
 .hint-pop.fix,

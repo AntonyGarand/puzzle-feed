@@ -13,7 +13,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   overflow: hidden;
   touch-action: none;
 }
@@ -121,7 +121,7 @@
   border: max(2px, var(--cbw)) solid var(--ink);
   border-radius: 46% 54% 40% 44%;
   background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--cell) 55%, var(--muted)) 0 22%, transparent 24%), var(--muted);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }
 
 /* the mower glides over the cells */

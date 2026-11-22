@@ -3,7 +3,7 @@
   background: var(--accent);
   color: var(--on-tone);
   border: var(--bw) solid var(--ink);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   font-variant-numeric: tabular-nums;
   transition: background 0.2s;
 }
