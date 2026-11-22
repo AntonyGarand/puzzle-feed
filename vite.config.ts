@@ -15,48 +15,55 @@ function buildVersion() {
   return `${sha} · ${new Date().toISOString().slice(0, 10)}`;
 }
 
-export default defineConfig({
-  // Fixed port so scripts/audit.mjs and scripts/shots.mjs find the dev server.
-  server: { port: 5180, strictPort: true },
-  preview: { port: 5181 },
-  build: { target: 'es2022', sourcemap: true },
-  define: { __APP_VERSION__: JSON.stringify(buildVersion()) },
-  plugins: [
-    // Installable app that works fully offline: every built file (JS, CSS, fonts, both dictionaries,
-    // icons) is precached by a Workbox service worker. A new version downloads in the background and
-    // src/core/update.ts shows a "new version" banner; reloading activates it.
-    VitePWA({
-      registerType: 'prompt',
-      injectRegister: false,
-      manifest: {
-        id: '/',
-        name: 'puzzle feed',
-        short_name: 'puzzles',
-        description: 'An endless feed of procedurally generated puzzles. Works offline.',
-        lang: 'en',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        orientation: 'portrait',
-        background_color: '#fff6e5',
-        theme_color: '#fff6e5',
-        categories: ['games', 'education', 'entertainment'],
-        icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-        // The dictionaries are lazy chunks of a few hundred KB; precache them too so word games work offline.
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Hash routing: every navigation is the app shell.
-        navigateFallback: '/index.html',
-        cleanupOutdatedCaches: true,
-      },
-      devOptions: { enabled: false },
-    }),
-  ],
+export default defineConfig(({ mode }) => {
+  // `npm run build:android` (mode "android", see .env.android) bundles dist/ into the F-Droid APK:
+  // no source maps or service worker there.
+  const android = mode === 'android';
+  return {
+    // Fixed port so scripts/audit.mjs and scripts/shots.mjs find the dev server.
+    server: { port: 5180, strictPort: true },
+    preview: { port: 5181 },
+    build: { target: 'es2022', sourcemap: !android },
+    define: { __APP_VERSION__: JSON.stringify(buildVersion()) },
+    plugins: [
+      // Installable app that works fully offline: every built file (JS, CSS, fonts, both dictionaries,
+      // icons) is precached by a Workbox service worker. A new version downloads in the background and
+      // src/core/update.ts shows a "new version" banner; reloading activates it.
+      VitePWA({
+        // Still resolves virtual:pwa-register, but emits no service worker or manifest.
+        disable: android,
+        registerType: 'prompt',
+        injectRegister: false,
+        manifest: {
+          id: '/',
+          name: 'puzzle feed',
+          short_name: 'puzzles',
+          description: 'An endless feed of procedurally generated puzzles. Works offline.',
+          lang: 'en',
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
+          orientation: 'portrait',
+          background_color: '#fff6e5',
+          theme_color: '#fff6e5',
+          categories: ['games', 'education', 'entertainment'],
+          icons: [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+          // The dictionaries are lazy chunks of a few hundred KB; precache them too so word games work offline.
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // Hash routing: every navigation is the app shell.
+          navigateFallback: '/index.html',
+          cleanupOutdatedCaches: true,
+        },
+        devOptions: { enabled: false },
+      }),
+    ],
+  };
 });

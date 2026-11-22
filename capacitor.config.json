@@ -1,0 +1,18 @@
+{
+  "appId": "dev.garand.puzzle.foss",
+  "appName": "puzzle feed",
+  "webDir": "dist",
+  "android": {
+    "path": "android-foss"
+  },
+  "server": {
+    "hostname": "puzzle.garand.dev",
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}
