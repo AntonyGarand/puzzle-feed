@@ -2,6 +2,7 @@ import { getProfile, prefs, resetAllToAuto, setLevel, setWeight, update, type Th
 import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
 import { btn, h } from '../core/ui';
 import { CATEGORIES } from '../core/categories';
+import { helpButton } from '../core/help';
 import { L, LOCALES, locale, setLocale, type Locale } from '../core/i18n';
 
 function segmented<T extends string | number>(options: { label: string; value: T }[], current: T, onpick: (v: T) => void) {
@@ -63,11 +64,16 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         'div',
         null,
         h(
-          'a',
-          { class: 'name', href: `#/game/${d.id}`, title: `${L('Open', 'Ouvrir')} ${d.name}` },
-          h('span', { class: 'swatchlet' }),
-          d.name,
-          h('span', { class: 'play-link' }, L('play →', 'jouer →')),
+          'div',
+          { class: 'pref-title' },
+          h(
+            'a',
+            { class: 'name', href: `#/game/${d.id}`, title: `${L('Open', 'Ouvrir')} ${d.name}` },
+            h('span', { class: 'swatchlet' }),
+            d.name,
+            h('span', { class: 'play-link' }, L('play →', 'jouer →')),
+          ),
+          helpButton(d, { quiet: true }),
         ),
         h('div', { class: 'muted small' }, d.rules),
       ),

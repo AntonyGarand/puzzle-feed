@@ -1243,6 +1243,17 @@ td a:hover {
   background: var(--cell);
   box-shadow: 3px 3px 0 var(--ink);
 }
+.pref-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pref-title .icon-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  flex: none;
+}
 .puzzle-pref .name {
   display: inline-flex;
   align-items: center;
