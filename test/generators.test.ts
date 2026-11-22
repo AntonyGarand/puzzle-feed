@@ -7,6 +7,7 @@ import {
   walk as echoWalk,
   type GenOpts,
 } from '../src/puzzles/echokit/gen';
+import { genArrows, rounds } from '../src/puzzles/arrowkit/arrows';
 import { genBridges } from '../src/puzzles/logickit/bridgesgen';
 import { genPearls, isSolved } from '../src/puzzles/gridkit/pearls';
 import { genMines, solvableByLogic } from '../src/puzzles/logickit/minesgen';
@@ -99,6 +100,24 @@ describe('echo', () => {
         // one run alone never gets out, nor (with three runs) two
         expect(echoWalk(room, [], room.start, 0, room.exit, room.T)).toBeNull();
         expect(room.runs === 3 && echoSearch(room, [], room.T, true)).toBeFalsy();
+      }
+  });
+});
+
+describe('arrows', () => {
+  it('fills the whole board with arrows that can all leave', () => {
+    for (const [n, len] of [
+      [5, 4],
+      [7, 6],
+      [16, 9],
+    ])
+      for (let seed = 1; seed <= 60; seed++) {
+        const arrows = genArrows(n, len, 10, new Rng(seed));
+        expect(rounds(n, arrows)).not.toBeNull();
+        expect(rounds(n, arrows)!.length).toBeGreaterThan(1);
+        const cells = arrows.flatMap((a) => a.cells);
+        expect(new Set(cells).size).toBe(cells.length);
+        expect(n * n - cells.length).toBeLessThanOrEqual(2);
       }
   });
 });
