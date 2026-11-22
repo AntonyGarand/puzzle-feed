@@ -846,8 +846,49 @@ h3 {
 .card.is-skipped .stage {
   opacity: 0.35;
 }
-.card.is-failed .stage {
-  opacity: 0.85;
+/* The lost twin of the win panel: red cross badge, calmer time block. */
+.win.lost .win-badge {
+  background: var(--bad);
+}
+.win.lost .win-check {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+}
+.win.lost .win-time {
+  background: var(--cell-alt);
+}
+.win.lost .win-card {
+  animation: win-shake 0.6s ease-out;
+}
+.win-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+@keyframes win-shake {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+  45% {
+    opacity: 1;
+    transform: none;
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+  90% {
+    transform: translateX(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win.lost .win-card {
+    animation: none;
+  }
 }
 
 .card-foot {
