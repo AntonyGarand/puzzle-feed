@@ -1,0 +1,141 @@
+[data-puzzle='hidden-rule'] {
+  --accent: var(--p6);
+  --cbw: 2px;
+  --csh: 3px;
+}
+[data-puzzle='hidden-rule'] .hr-ex {
+  width: var(--board);
+  display: grid;
+  gap: 8px;
+}
+[data-puzzle='hidden-rule'] .hr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-puzzle='hidden-rule'] .hr-tag {
+  flex: 0 0 24px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+[data-puzzle='hidden-rule'] .yes {
+  color: var(--good);
+}
+[data-puzzle='hidden-rule'] .no {
+  color: var(--bad);
+}
+[data-puzzle='hidden-rule'] .hr-specs {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 0 var(--csh) var(--csh) 0;
+}
+[data-puzzle='hidden-rule'] .hr-spec svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+[data-puzzle='hidden-rule'] .hr-lines {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 3;
+  opacity: 0.35;
+}
+[data-puzzle='hidden-rule'] .hr-play {
+  width: var(--board);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+[data-puzzle='hidden-rule'] .hr-stage {
+  flex: 0 0 36%;
+  padding: 0 var(--csh) var(--csh) 0;
+}
+[data-puzzle='hidden-rule'] .hr-test {
+  --cbw: var(--bw);
+  background: var(--accent-soft);
+}
+[data-puzzle='hidden-rule'] .hr-test.done {
+  background: var(--cell);
+}
+[data-puzzle='hidden-rule'] .hr-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+[data-puzzle='hidden-rule'] .hr-prompt {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-puzzle='hidden-rule'] .hr-prompt.hr-rule {
+  font-weight: 700;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: var(--r-cell);
+  background: var(--accent-soft);
+}
+[data-puzzle='hidden-rule'] .hr-keys {
+  display: flex;
+  gap: 10px;
+}
+[data-puzzle='hidden-rule'] .hr-keys[hidden] {
+  display: none;
+}
+[data-puzzle='hidden-rule'] .hr-keys .key {
+  flex: 1;
+  font-size: 26px;
+  height: 52px;
+}
+[data-puzzle='hidden-rule'] .key.hr-yes {
+  color: var(--good);
+}
+[data-puzzle='hidden-rule'] .key.hr-no {
+  color: var(--bad);
+}
+[data-puzzle='hidden-rule'] .hr-hist {
+  --cbw: 1.5px;
+  --csh: 2px;
+  display: grid;
+  grid-template-columns: repeat(var(--n), calc((var(--board) - 42px) / 8));
+  justify-content: center;
+  gap: 6px;
+  width: var(--board);
+}
+[data-puzzle='hidden-rule'] .hr-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+[data-puzzle='hidden-rule'] .hr-slot > .hr-spec,
+[data-puzzle='hidden-rule'] .hr-empty {
+  width: 100%;
+}
+[data-puzzle='hidden-rule'] .hr-empty {
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border: 2px dashed var(--muted);
+  border-radius: var(--r-cell);
+  opacity: 0.5;
+}
+[data-puzzle='hidden-rule'] .hr-slot.cur .hr-empty {
+  border-color: var(--ink);
+  opacity: 1;
+}
+[data-puzzle='hidden-rule'] .hr-slot.bad .hr-spec {
+  border-color: var(--bad);
+  box-shadow: var(--csh) var(--csh) 0 var(--bad);
+}
+/* The true mark of an answered pattern, under its thumbnail. */
+[data-puzzle='hidden-rule'] .hr-slot b {
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
+}
