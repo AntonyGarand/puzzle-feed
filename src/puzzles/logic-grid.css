@@ -1,0 +1,139 @@
+[data-puzzle='logic-grid'] {
+  --accent: var(--p5);
+}
+[data-puzzle='logic-grid'] .lg-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: var(--board);
+}
+[data-puzzle='logic-grid'] .grid.lg {
+  grid-template-columns: minmax(0, 0.5fr) repeat(var(--n), minmax(0, 1fr));
+  row-gap: 6px;
+  column-gap: 5px;
+}
+[data-puzzle='logic-grid'] .lg .cell {
+  aspect-ratio: auto;
+  height: calc(var(--board) * 0.13);
+  font-size: calc(var(--board) * 0.075);
+  overflow: hidden;
+}
+[data-puzzle='logic-grid'] .lg-hd,
+[data-puzzle='logic-grid'] .lg-rl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: calc(var(--board) * 0.04);
+  line-height: 1;
+}
+[data-puzzle='logic-grid'] .lg-rl {
+  font-size: calc(var(--board) * 0.05);
+}
+[data-puzzle='logic-grid'] .lg-v {
+  line-height: 1;
+}
+[data-puzzle='logic-grid'] .lg-v.lg-name {
+  font-size: calc(var(--board) * 0.042);
+  font-weight: 800;
+}
+[data-puzzle='logic-grid'] .lg-v.lg-sw {
+  width: 52%;
+  height: 52%;
+}
+[data-puzzle='logic-grid'] .lg-sw {
+  display: inline-block;
+  background: var(--c);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+[data-puzzle='logic-grid'] .lg-cands {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1px 3px;
+  padding: 2px;
+  font-size: calc(var(--board) / var(--n) * 0.17);
+  font-weight: 700;
+  line-height: 1.1;
+  opacity: 0.85;
+}
+[data-puzzle='logic-grid'] .lg-cand.lg-sw {
+  width: 0.9em;
+  height: 0.9em;
+  border-width: 1.5px;
+}
+[data-puzzle='logic-grid'] .lg-cand.lg-name {
+  font-size: 0.85em;
+}
+[data-puzzle='logic-grid'] .lg-clues {
+  width: 100%;
+  max-height: calc(var(--board) * (0.56 + (4 - var(--k)) * 0.15));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell);
+  background: var(--cell);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+[data-puzzle='logic-grid'] .lg-clue {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+[data-puzzle='logic-grid'] .lg-clue:last-child {
+  border-bottom: 0;
+}
+[data-puzzle='logic-grid'] .lg-clue.ok {
+  opacity: 0.5;
+}
+[data-puzzle='logic-grid'] .lg-clue.bad {
+  color: var(--bad);
+  font-weight: 700;
+}
+[data-puzzle='logic-grid'] .lg-clue.done {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+[data-puzzle='logic-grid'] .lg-nw {
+  white-space: nowrap;
+}
+[data-puzzle='logic-grid'] .lg-ic {
+  margin-left: 0.15em;
+}
+[data-puzzle='logic-grid'] .lg-ic.lg-sw {
+  width: 0.8em;
+  height: 0.8em;
+  vertical-align: -0.05em;
+  border-width: 1.5px;
+}
+[data-puzzle='logic-grid'] .lg-pad {
+  width: 100%;
+}
+[data-puzzle='logic-grid'] .lg-pad .pad {
+  width: 100%;
+}
+[data-puzzle='logic-grid'] .key.lg-k {
+  font-size: 22px;
+}
+[data-puzzle='logic-grid'] .key.lg-name {
+  font-size: 13px;
+  padding: 0 2px;
+  overflow: hidden;
+}
+[data-puzzle='logic-grid'] .key.lg-out {
+  opacity: 0.4;
+}
