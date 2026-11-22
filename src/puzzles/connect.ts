@@ -1,7 +1,7 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, PALETTE, s } from '../core/ui';
-import { genConnect, touchesSelf } from './pathkit/connect-gen';
+import { genConnect } from './pathkit/connect-gen';
 import { adjacent, capture, cellAt, nbrs, pts, stepsToward } from './pathkit/grid';
 import './connect.css';
 
@@ -31,8 +31,8 @@ export const connect: PuzzleDef = {
       ),
       L('Drawing over another colour cuts that path.', 'Tracer par-dessus une autre couleur coupe ce chemin.'),
       L(
-        'No U-turns: a path can’t step next to a cell it already went through, so you can’t fold one colour back and forth to fill a gap.',
-        'Pas de demi-tour : un chemin ne peut pas passer à côté d’une case qu’il a déjà traversée. Impossible donc de replier une couleur en zigzag pour combler un trou.',
+        'No U-turns: a path can’t run next to a cell it already went through, so you can’t fold one colour back and forth to fill a gap. You can still draw it, but the offending cells get an X until you fix them.',
+        'Pas de demi-tour : un chemin ne peut pas passer à côté d’une case qu’il a déjà traversée. Impossible donc de replier une couleur en zigzag pour combler un trou. Le tracé reste possible, mais les cases fautives sont marquées d’un X tant qu’elles ne sont pas corrigées.',
       ),
       L('Clear erases every path.', 'Effacer supprime tous les chemins.'),
     ],
@@ -84,7 +84,21 @@ export const connect: PuzzleDef = {
         svg.append(s('circle', { cx: (i % n) + 0.5, cy: Math.floor(i / n) + 0.5, r: 0.3, style: `fill:${PALETTE[c]}` }));
       }
     });
+    // X marks on cells where a line runs alongside itself; drawn over the lines.
+    const marks = s('g', { class: 'connect-bad' });
+    svg.append(marks);
     grid.append(svg);
+
+    /** Cells that step next to an earlier cell of their own line (the U-turn), not counting the cell just before. */
+    const badCells = () => {
+      const bad: number[] = [];
+      paths.forEach((p, c) =>
+        p.forEach((v, i) => {
+          if (nbrs(v, n, n).some((x) => owner[x] === c && p.indexOf(x) < i - 1)) bad.push(v);
+        }),
+      );
+      return bad;
+    };
 
     let finished = false;
     const render = () => {
@@ -98,10 +112,18 @@ export const connect: PuzzleDef = {
         if (owner[i] >= 0) filled++;
       });
       lines.forEach((l, c) => l.setAttribute('points', pts(paths[c], n)));
+      const bad = badCells();
+      marks.replaceChildren(
+        ...bad.map((i) => {
+          const x = i % n,
+            y = Math.floor(i / n);
+          return s('path', { d: `M${x + 0.28} ${y + 0.28}L${x + 0.72} ${y + 0.72}M${x + 0.72} ${y + 0.28}L${x + 0.28} ${y + 0.72}` });
+        }),
+      );
       const linked = paths.filter((_, c) => complete(c)).length;
       const pct = Math.round((filled / N) * 100);
       ctx.status(L(`${linked}/${k} linked · ${pct}% filled`, `${linked}/${k} reliées · ${pct} % rempli`));
-      return linked === k && filled === N;
+      return linked === k && filled === N && !bad.length;
     };
     const check = () => {
       if (render() && !finished) {
@@ -113,7 +135,7 @@ export const connect: PuzzleDef = {
 
     // ---- drawing ----
     let active = -1;
-    /** Would stepping onto `j` put line `c` beside one of its own earlier cells (a U-turn)? */
+    /** Would stepping onto `j` put line `c` beside one of its own earlier cells (a U-turn)? Allowed, but marked with an X. */
     const doublesBack = (c: number, j: number) => {
       const p = paths[c];
       return nbrs(j, n, n).some((x) => owner[x] === c && x !== p[p.length - 1]);
@@ -123,7 +145,6 @@ export const connect: PuzzleDef = {
       if (complete(c)) return false;
       if (dot[j] >= 0 && dot[j] !== c) return false;
       if (!adjacent(p[p.length - 1], j, n)) return false;
-      if (doublesBack(c, j)) return false;
       const o = owner[j];
       if (o >= 0 && o !== c) {
         // cut the other colour's path just before this cell
@@ -145,7 +166,9 @@ export const connect: PuzzleDef = {
           recompute();
           break;
         }
-        if (!stepsToward(last, j, n).some((x) => tryAdd(active, x))) break;
+        // Prefer a step that keeps the line legal; a U-turn is still allowed, just marked.
+        const steps = stepsToward(last, j, n).sort((a, b) => +doublesBack(active, a) - +doublesBack(active, b));
+        if (!steps.some((x) => tryAdd(active, x))) break;
         recompute();
       }
       check();
@@ -207,7 +230,7 @@ export const connect: PuzzleDef = {
             (i === 0 || adjacent(p[i - 1], v, n)) &&
             (i === 0 || dot[v] < 0 || (dot[v] === c && i === p.length - 1)),
         );
-        if (!ok || touchesSelf(p as number[], n)) return;
+        if (!ok) return;
         p.forEach((v: number) => used.add(v));
         paths[c] = [...p];
       });
