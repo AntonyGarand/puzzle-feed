@@ -141,9 +141,10 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
       h('div', { class: 'days' }, ...days),
       ...dailySection,
       h('h3', null, L('By game', 'Par jeu')),
+      // Pinned header row and game column: the table scrolls inside its own box.
       h(
         'div',
-        { class: 'table-wrap' },
+        { class: 'table-wrap pinned' },
         h(
           'table',
           null,

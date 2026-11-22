@@ -5,6 +5,13 @@ let open: HTMLDialogElement | null = null;
 
 export const sheetOpen = () => !!open;
 
+/** Close the open sheet, if any. True when there was one. */
+export function closeSheet(): boolean {
+  if (!open?.open) return false;
+  open.close();
+  return true;
+}
+
 /**
  * Modal sheet (bottom sheet on phones, centred dialog on wider screens) in the game's tone.
  * Returns a `close()` function.
