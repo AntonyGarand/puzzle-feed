@@ -90,6 +90,11 @@ export class Card {
     return encodeCode({ id: this.def.id, level: this.level, seed: this.seed, locale: this.def.localized ? wordLocale() : undefined });
   }
 
+  /** Seed of the puzzle on this card (with `level`, enough to deal the same puzzle again). */
+  get puzzleSeed() {
+    return this.seed;
+  }
+
   /** Where this card's progress is saved, and under which key. */
   private get slot(): Slot {
     return this.opts.daily ? 'daily' : this.shared ? 'shared' : 'own';

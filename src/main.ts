@@ -18,6 +18,7 @@ import { resolveCode } from './core/share';
 import { PUZZLES } from './puzzles';
 import { setupUpdates } from './core/update';
 import { closeSheet } from './core/sheet';
+import { isReload, sessionGet, sessionSet } from './core/session';
 
 const app = document.getElementById('app')!;
 telemetry.track('app.open', {
@@ -149,6 +150,7 @@ function route() {
   if (view === 'settings') renderSettings(page, PUZZLES);
   if (!page.hidden) page.scrollTop = 0;
   updateStreak();
+  sessionSet('route', location.hash);
 }
 
 /** Open puzzle `index` of today's `level` list in the lab view. False when there's no such puzzle. */
@@ -186,5 +188,8 @@ window.addEventListener('hashchange', route);
 // otherwise the WebView goes back through the visited pages, and leaves the app from the first one.
 (window as unknown as { __onBack: () => boolean }).__onBack = closeSheet;
 applyTheme();
+// A reload that dropped the #/route (e.g. the app reloading its start page) goes back to it.
+const lastRoute = isReload && !location.hash ? sessionGet<string>('route') : undefined;
+if (lastRoute) history.replaceState(null, '', lastRoute);
 route();
 setupUpdates();
