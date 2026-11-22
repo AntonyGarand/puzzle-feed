@@ -1,21 +1,34 @@
 # Adding a game
 
-Each game is a `PuzzleDef` (see `src/core/types.ts`) in its own file, `src/puzzles/<id>.ts`. Any top-level module in `src/puzzles/` that exports a `PuzzleDef` is registered automatically, so there's no index to edit. Put helpers in a subfolder (`src/puzzles/<group>/…`) or in a module that doesn't export a `PuzzleDef`.
+Each game is a `PuzzleDef` (see `src/core/types.ts`) in its own folder: `src/games/<id>/index.ts`. Any `index.ts` there that exports a `PuzzleDef` is registered automatically, so there's no list to edit.
+
+## Where code goes
+
+```
+src/games/<id>/index.ts   the PuzzleDef: create(), rendering, input, text
+src/games/<id>/style.css  the game's styles (scoped, see below)
+src/games/<id>/*.ts       this game's pure logic: gen.ts (generator), rules.ts (rules, check/hint reasoning,
+                          save parsing), solve.ts… No DOM and no ctx, so tests can call it directly.
+src/kits/<name>/          engines shared by two or more games (sudoku, latin, logic, grid, path, move, push,
+                          card, chess, word, sweep, …). Code used by one game belongs in that game's folder.
+```
+
+Keep `create()` about the board: when it grows past a few hundred lines, move the rules into `rules.ts` (see `week`, `arrange`, `logic-grid`, `capture-chess`) and test them in `test/<id>.test.ts`. Lint enforces the boundaries: a game imports only from `src/core`, `src/ui`, `src/kits` and its own folder (never another game, `src/app` or `src/pages`), and files stay under 600 lines of code.
 
 Read these first:
 
 - `src/core/types.ts`: `PuzzleDef`, `PuzzleCtx`, `PuzzleInstance`, `byLevel`
-- `src/core/ui.ts`: `h` / `s` (DOM/SVG builders), `board()`, `btn()`, `pad()`, `shake()`, `PALETTE`
+- `src/ui/dom.ts`: `h` / `s` (DOM/SVG builders), `board()`, `btn()`, `pad()`, `shake()`, `PALETTE`
 - `src/core/categories.ts`: category ids
-- `src/styles.css`: shared classes (`.grid`, `.cell` and its states, `.pad`, `.key`, `.btn`, `.big`, `.dots`, `.input`) and tokens
-- Example games: `sudoku.ts` (board, number pad, selection, keyboard), `pipes.ts` (SVG inside cells), `nonogram.ts` (drag painting with pointer events), `maze.ts` (canvas, drag/swipe), `codebreaker.ts` (rows of pegs, palette), `target.ts` (chips, undo/reset controls)
+- `src/styles/`: tokens (`tokens.css`) and shared classes (`controls.css`: `.grid`, `.cell` and its states, `.pad`, `.key`, `.btn`, `.big`, `.dots`, `.input`)
+- Example games (`src/games/…`): `sudoku` (board, number pad, selection, keyboard), `pipes` (SVG inside cells), `nonogram` (drag painting with pointer events), `maze` (canvas, drag/swipe), `codebreaker` (rows of pegs, palette), `target` (chips, undo/reset controls), `capture-chess` (pure `rules.ts` with its own tests)
 
 ## Contract
 
 - `create(ctx)` builds the game inside `ctx.root` and may return a `PuzzleInstance`.
 - Call `ctx.touch()` on the first interaction. Call `ctx.mistake()` only for a genuinely wrong move. Call `ctx.solved()` or `ctx.failed()` once. Use `ctx.status(text)` for a short footer line (moves left, counts, …) and `ctx.controls(...buttons)` for extra footer buttons (Undo, mode toggles, …).
 - **All randomness must come from `ctx.rng`.** Resuming re-creates the game from the same seed, so `Math.random` breaks resume.
-- **Implement `snapshot()`** returning JSON-serialisable progress, and restore it defensively from `ctx.saved`. After a resume, the visible board (classes, text, inline styles) must be identical, including the current selection. `test/resume.test.ts` checks this automatically by clicking random buttons.
+- **Implement `snapshot()`** returning JSON-serialisable progress, and restore it defensively from `ctx.saved`. After a resume, the visible board (every element, attribute and text, apart from the input pad's mode and short-lived animations) must be identical, including the current selection. `test/resume.test.ts` checks this automatically by clicking random buttons.
 - **Undo:** for perfect-information games (no hidden tiles, lives, random spawns or scores), set `undo: true` instead of building an Undo button. Build your own with `undoBtn()` only when undo follows game rules the snapshots can't express (Flood and Slide give back the spent move; Flood's dead-end hint points at the button). The card then shows Undo (and handles Ctrl/Cmd+Z), stepping back through `snapshot()` states by re-creating the game from `ctx.saved`. Top-level `sel` / `cur` count as selection, not moves. `test/undo.test.ts` checks that restoring is exact.
 - A new puzzle must never start already solved.
 - Validate by the rules, not by comparing with a stored solution, unless the generator guarantees a unique solution.
@@ -29,7 +42,7 @@ Read these first:
 - Use `board(cols, rows, extraClass)` and `.cell` for grids. Its width is `var(--board)`, so the game fits any screen. Keep total height within about `var(--board)` plus 120 px for pads and palettes.
 - Reuse `.cell.on`, `.sel`, `.given`, `.err`, `.miss`, `.hint`, `.x`, plus `btn()`, `undoBtn()` / `restartBtn()` / `clearBtn()`, `pad()`, `.key.swatch` with `--c:${PALETTE[i]}`, `.dots`, `.big` and `.input`. Don't invent new button or tile styles.
 - Tokens: `--ink` (borders and shadows), `--bw` (border width), `--sh` (shadow offset), `--cell` / `--cell-alt` (surfaces), `--fg`, `--muted`, `--accent` (the game's tone), `--accent-soft`, `--on-tone` (text on bright fills), `--good`, `--bad`, `--p1`…`--p8` (palette), `--r`, `--r-cell`.
-- For extra CSS, create `src/puzzles/<id>.css`, import it from the module (`import './<id>.css';`), and scope every rule under `[data-puzzle='<id>']`. Set the game's tone there: `[data-puzzle='<id>'] { --accent: var(--pN); }`.
+- For extra CSS, create `src/games/<id>/style.css`, import it from the module (`import './style.css';`), and scope every rule under `[data-puzzle='<id>']`. Set the game's tone there: `[data-puzzle='<id>'] { --accent: var(--pN); }`.
 - For drag interactions, use pointer events with `touch-action: none` on the drag surface. Don't use HTML5 drag-and-drop. The feed scrolls vertically, so swipes inside a game must not leak into it.
 - Light and dark themes both come from the tokens. Never hard-code black or white; use `--ink`, `--cell` and `--on-tone`.
 - Physical objects that must look the same in both themes (card faces, chess pieces, black/white pearls) use `--paper`, `--paper-alt` and `--coal`. Never use these for UI surfaces.
@@ -42,9 +55,9 @@ Every game follows the same rules, so a player who knows one game knows how all 
 
 **Actions**
 
-- Footer buttons come only from `undoBtn()`, `restartBtn()` and `clearBtn()` (all ghost, in `src/core/ui.ts`), plus at most one `btn(…, 'primary')` for a commit action (Check, Guess, Finish). Order: the primary action, then Undo, then Restart or Clear; the card's own Undo (`undo: true`) sits before them. Never write the labels by hand.
+- Footer buttons come only from `undoBtn()`, `restartBtn()` and `clearBtn()` (all ghost, in `src/ui/dom.ts`), plus at most one `btn(…, 'primary')` for a commit action (Check, Guess, Finish). Order: the primary action, then Undo, then Restart or Clear; the card's own Undo (`undo: true`) sits before them. Never write the labels by hand.
 - Every game has a way back to the start. Games with a move history offer **Undo** and **Restart**. Games where the player marks or draws the answer offer **Clear**. Restart and Clear can themselves be undone when the game has Undo.
-- Keys: `Z` / `Backspace` undo, `R` restart, arrows / WASD move (`keyDir` in `movekit/kit.ts`; an arrow moves the thing you control in that direction). Don't bind `R` to anything else.
+- Keys: `Z` / `Backspace` undo, `R` restart, arrows / WASD move (`keyDir` in `src/kits/move/kit.ts`; an arrow moves the thing you control in that direction). Don't bind `R` to anything else.
 - Key rows are built with `pad()`. Never hand-build `.key` buttons.
 - Tap cycles put the main mark first, then the secondary mark (✕ or dot), then empty. Secondary marks also go on long-press. Modes such as notes or rule-out are a `.key.sel` toggle inside the pad, never a footer button that swaps variants.
 
@@ -71,9 +84,9 @@ Every game follows the same rules, so a player who knows one game knows how all 
 
 - Use tokens, never literal colours. Fills: `--accent`, `--good`, `--bad`, `--p1`…`--p8`. Text, thin lines and ✓ ✗ marks on a surface use `--accent-ink`, `--good-ink` or `--bad-ink`, which hold 4.5:1 in both themes. Text on a bright fill is `--on-tone`.
 - Dimmed text (placeholders, empty slots, a satisfied clue) is `color: var(--faint)`, never `opacity`. `--faint` still holds 4.5:1.
-- Region tints come from `tint(i, pct)` in `logickit/kit.ts`. It is pastel in light mode and a deep jewel tone in dark mode.
+- Region tints come from `tint(i, pct)` in `src/kits/logic/kit.ts`. It is pastel in light mode and a deep jewel tone in dark mode.
 - Shaded ("black") cells use `background: var(--shade) var(--shade-hatch); border-color: var(--shade)`.
-- Colour is never the only cue. When pieces must be matched by colour, add `mark(k)` / `svgMark(k, …)` from `core/symbols.ts` (the "Colour symbols" setting), or a pattern (Word Guess stripes its "wrong place" tiles).
+- Colour is never the only cue. When pieces must be matched by colour, add `mark(k)` / `svgMark(k, …)` from `src/ui/symbols.ts` (the "Colour symbols" setting), or a pattern (Word Guess stripes its "wrong place" tiles).
 - Thin coloured lines on the board get an ink casing underneath (Connect, Arrows, Tether, Worms).
 - `npm run e2e:a11y` (needs `npm run dev`) checks contrast, names and target sizes in every game, in light and dark. It must report 0 problems. Add an exception to its `IGNORE` list only with a reason.
 

@@ -19,10 +19,11 @@ npm run check         # everything CI runs: fmt:check, lint, typecheck, knip, te
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run dev` / `build` / `preview` | Vite dev server, production build into `dist/`, preview of the build                                                                           |
 | `npm run fmt` / `fmt:check`         | Format with [oxfmt](https://oxc.rs)                                                                                                            |
-| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs) (warnings fail)                                                                                             |
+| `npm run lint` / `lint:fix`         | Lint with [oxlint](https://oxc.rs), including type-aware rules (warnings fail)                                                                 |
 | `npm run typecheck`                 | Type-check with [tsrs](https://github.com/oxc-project/tsrs), a Rust port of the TypeScript 7 compiler                                          |
 | `npm run knip`                      | Unused files, exports and dependencies                                                                                                         |
 | `npm test` / `test:watch`           | Vitest: generation speed, resume round-trip, i18n, auto-levelling, consistency rules; then the hint-button suites (`test/hints*`) on their own |
+| `npm run test:coverage`             | The same suites minus the hint buttons, with v8 coverage of `src/` (HTML report in `coverage/`)                                                |
 | `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                                                           |
 | `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)                                           |
 | `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                                                         |
@@ -30,21 +31,25 @@ npm run check         # everything CI runs: fmt:check, lint, typecheck, knip, te
 
 The same commands are available as mise tasks (`mise run check`, `mise run fix`, …).
 
-**CI and deploy:** pull requests run `npm run check` and a build (`.github/workflows/ci.yml`). Pushes to `main` run the same check, then deploy `dist/` to GitHub Pages (`deploy.yml`). The custom domain is set by `public/CNAME`. `puzzles.garand.dev` redirects here from the separate [puzzles-redirect](https://github.com/AntonyGarand/puzzles-redirect) repo.
+**CI and deploy:** pull requests run `npm run check` and a build (`.github/workflows/ci.yml`), plus a coverage report on the run summary. Pushes to `main` run the same check, then deploy `dist/` to GitHub Pages (`deploy.yml`). The custom domain is set by `public/CNAME`. `puzzles.garand.dev` redirects here from the separate [puzzles-redirect](https://github.com/AntonyGarand/puzzles-redirect) repo.
 
 ## Layout
 
 ```
 src/
   main.ts            app shell: tabs, path routing (/, /daily, /daily/<level>/<n>, /games, /game/<id>, /play/<id>, /s/<share code>, /stats, /settings; old #/ links redirect)
-  styles.css         design tokens + shared components (neo-brutalist)
-  core/              feed, card, store (profile/stats/auto-levelling), saves, i18n, help dialog, ui helpers
-  pages/             Games, single-game view, Profile, Settings
-  puzzles/<id>.ts    one game per file, auto-registered (see docs/ADDING_GAMES.md)
-  puzzles/*kit/      shared engines (sudokukit, latinkit, logickit, gridkit, pathkit, movekit, pushkit, playkit, cardkit, chesskit, wordkit, …)
-test/                vitest suites (happy-dom)
+  core/              logic and storage, no rendering: types, rng, i18n, store (profile/stats/auto-levelling), saves, daily, xp, share codes
+  ui/                DOM building blocks: h/s/btn/pad (dom.ts), sheets, help dialog, win/lost panels, confetti, hint overlay, share widget
+  app/               the shell: feed, path routing (nav.ts), update banner, and card/ (one puzzle card: clock, undo history, hint popup, settings sheet, result)
+  pages/             Games, single-game view, Daily, Profile, Settings
+  games/<id>/        one game per folder: index.ts (auto-registered, see docs/ADDING_GAMES.md), style.css, and its own pure logic (gen.ts, rules.ts…)
+  kits/<name>/       engines shared by two or more games (sudoku, latin, logic, grid, path, move, push, card, chess, word, sweep, …)
+  styles/            design tokens and shared components (neo-brutalist), imported in cascade order by index.css
+test/                vitest suites (happy-dom); test/support/ has the shared game mount, board view and resume check
 scripts/             Playwright audit + screenshot tools (use your installed Chrome)
 ```
+
+Lint enforces the layers: `core` never imports `ui`, `app`, `games` or `kits`; `ui` never imports `app`, `games` or `kits`; kits never import games or the app; a game never imports another game or the app. Files stay under 600 lines of code.
 
 ## Games
 
@@ -82,4 +87,4 @@ If you pick a level yourself (on the card or in Settings), it's locked and auto-
 
 ## Adding a game
 
-See [docs/ADDING_GAMES.md](docs/ADDING_GAMES.md). Any `src/puzzles/<id>.ts` that exports a `PuzzleDef` is registered automatically. Generate everything from `ctx.rng`, implement `snapshot()`/`ctx.saved` for resume, use the shared UI building blocks, and write every string with `L(en, fr)`.
+See [docs/ADDING_GAMES.md](docs/ADDING_GAMES.md). Any `src/games/<id>/index.ts` that exports a `PuzzleDef` is registered automatically. Generate everything from `ctx.rng`, implement `snapshot()`/`ctx.saved` for resume, use the shared UI building blocks, and write every string with `L(en, fr)`.

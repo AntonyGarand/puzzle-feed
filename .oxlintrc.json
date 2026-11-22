@@ -1,12 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "import",
-    "vitest"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "vitest"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -25,10 +19,7 @@
         "caughtErrors": "none"
       }
     ],
-    "eqeqeq": [
-      "error",
-      "smart"
-    ],
+    "eqeqeq": ["error", "smart"],
     "prefer-const": "error",
     "no-var": "error",
     "import/no-cycle": "error",
@@ -46,10 +37,7 @@
     "import/no-unassigned-import": [
       "warn",
       {
-        "allow": [
-          "**/*.css",
-          "@fontsource-variable/*"
-        ]
+        "allow": ["**/*.css", "@fontsource-variable/*"]
       }
     ],
     "no-unused-expressions": [
@@ -67,9 +55,7 @@
     "no-implicit-coercion": [
       "error",
       {
-        "allow": [
-          "!!"
-        ]
+        "allow": ["!!"]
       }
     ],
     "typescript/ban-ts-comment": "error",
@@ -94,10 +80,7 @@
     "vitest/expect-expect": [
       "error",
       {
-        "assertFunctionNames": [
-          "expect",
-          "expectResumes"
-        ]
+        "assertFunctionNames": ["expect", "expectResumes"]
       }
     ],
     "vitest/no-disabled-tests": "error",
@@ -125,38 +108,25 @@
   },
   "overrides": [
     {
-      "files": [
-        "src/**/*.ts"
-      ],
+      "files": ["src/**/*.ts"],
       "rules": {
         "no-console": [
           "error",
           {
-            "allow": [
-              "warn",
-              "error"
-            ]
+            "allow": ["warn", "error"]
           }
         ]
       }
     },
     {
-      "files": [
-        "src/core/**"
-      ],
+      "files": ["src/core/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "**/ui/**",
-                  "**/app/**",
-                  "**/pages/**",
-                  "**/games/**",
-                  "**/kits/**"
-                ],
+                "group": ["**/ui/**", "**/app/**", "**/pages/**", "**/games/**", "**/kits/**"],
                 "message": "src/core is logic and storage only: it must not depend on UI, the app shell or games (see README, Layout)."
               }
             ]
@@ -165,21 +135,14 @@
       }
     },
     {
-      "files": [
-        "src/ui/**"
-      ],
+      "files": ["src/ui/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "**/app/**",
-                  "**/pages/**",
-                  "**/games/**",
-                  "**/kits/**"
-                ],
+                "group": ["**/app/**", "**/pages/**", "**/games/**", "**/kits/**"],
                 "message": "src/ui holds generic building blocks: it must not depend on the app shell or on games."
               }
             ]
@@ -188,20 +151,14 @@
       }
     },
     {
-      "files": [
-        "src/kits/**"
-      ],
+      "files": ["src/kits/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "**/app/**",
-                  "**/pages/**",
-                  "**/games/**"
-                ],
+                "group": ["**/app/**", "**/pages/**", "**/games/**"],
                 "message": "A kit is shared by several games: it must not depend on a game or on the app shell."
               }
             ]
@@ -210,19 +167,14 @@
       }
     },
     {
-      "files": [
-        "src/games/*/**"
-      ],
+      "files": ["src/games/*/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "**/app/**",
-                  "**/pages/**"
-                ],
+                "group": ["**/app/**", "**/pages/**"],
                 "message": "Games only talk to the card through PuzzleCtx: no app shell or page imports."
               },
               {
@@ -235,10 +187,7 @@
       }
     },
     {
-      "files": [
-        "scripts/**",
-        "src/kits/word/*.mjs"
-      ],
+      "files": ["scripts/**", "src/kits/word/*.mjs"],
       "env": {
         "node": true,
         "browser": false
@@ -248,9 +197,7 @@
       }
     },
     {
-      "files": [
-        "test/**"
-      ],
+      "files": ["test/**"],
       "rules": {
         "typescript/no-explicit-any": "off",
         "vitest/valid-expect": [
@@ -262,19 +209,12 @@
       }
     },
     {
-      "files": [
-        "**/*.mjs"
-      ],
+      "files": ["**/*.mjs"],
       "rules": {
         "typescript/require-array-sort-compare": "off",
         "typescript/restrict-template-expressions": "off"
       }
     }
   ],
-  "ignorePatterns": [
-    "dist/**",
-    "shots*/**",
-    "src/kits/word/dict*.txt",
-    ".claude/**"
-  ]
+  "ignorePatterns": ["dist/**", "shots*/**", "src/kits/word/dict*.txt", ".claude/**"]
 }
