@@ -65,7 +65,7 @@ Every game follows the same rules, so a player who knows one game knows how all 
 
 - **Illegal move** (the game refuses it: a blocked step, a bad drop, a rule the game enforces): `shake()` the board or the piece. It isn't a mistake. A drop that snaps back shakes too.
 - **Mistake** (`ctx.mistake()`): a committed move that is wrong.
-  - An entry or placement that breaks a visible rule. Use `ruleBreaks(board, ctx.mistake)` and call it after rendering each player move.
+  - An entry or placement that breaks a visible rule. Use `ruleBreaks(board, ctx.mistake)` and call it after rendering each player move (`false` for moves that never count: marks, clear, restore). Never call `ctx.mistake()` for these yourself: `ruleBreaks` only judges once the board has been left alone for `SETTLE_MS` (1 s), hiding new `.err` marks until then, so cycling through a wrong state on the way to the right one is neither shown nor counted. Write `.err` styles as `.err:not([data-hold])`. Red marks that never count (lines, loops) still get the same delay with `ruleBreaks(board, () => {})`.
   - An answer the game rejects as wrong, such as a word, a pair, a check, or a move that isn't mate.
   - A lost life.
   - These never count: drawing or erasing lines, marks (✕, flags, dots), exploratory moves in move and card games, and attempts in guess-limited games (each guess is information).

@@ -7,7 +7,7 @@
 :is([data-puzzle='skyscrapers'], [data-puzzle='math-cages']) .lk-num .cell.sel:not(.given) {
   color: var(--on-tone);
 }
-:is([data-puzzle='skyscrapers'], [data-puzzle='math-cages']) .lk-num .cell.given:not(.sel, .same, .peer, .err) {
+:is([data-puzzle='skyscrapers'], [data-puzzle='math-cages']) .lk-num .cell.given:not(.sel, .same, .peer, .err:not([data-hold])) {
   background: var(--cell-alt);
 }
 :is([data-puzzle='skyscrapers'], [data-puzzle='math-cages']) .lk-num .cell.given.peer {

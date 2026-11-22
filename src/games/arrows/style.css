@@ -60,10 +60,10 @@
 [data-puzzle='arrows'] .ar.gone {
   pointer-events: none;
 }
-[data-puzzle='arrows'] .ar.err .ar-body {
+[data-puzzle='arrows'] .ar.err:not([data-hold]) .ar-body {
   stroke: var(--bad);
 }
-[data-puzzle='arrows'] .ar.err .ar-tip {
+[data-puzzle='arrows'] .ar.err:not([data-hold]) .ar-tip {
   fill: var(--bad);
 }
 [data-puzzle='arrows'] .ar.bumped {

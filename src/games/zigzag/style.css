@@ -31,7 +31,7 @@
 [data-puzzle='zigzag'] .zz-grid .cell.on {
   background: color-mix(in srgb, var(--c) 30%, transparent);
 }
-[data-puzzle='zigzag'] .zz-grid .cell.err {
+[data-puzzle='zigzag'] .zz-grid .cell.err:not([data-hold]) {
   background: color-mix(in srgb, var(--bad) 55%, transparent);
 }
 [data-puzzle='zigzag'] .zz-n {

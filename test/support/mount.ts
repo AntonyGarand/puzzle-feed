@@ -98,7 +98,11 @@ export function boardView(root: HTMLElement): string {
   return [...root.querySelectorAll('*')]
     .filter((e) => !e.closest('.pad'))
     .map((e) => {
-      const attrs = [...e.attributes].map((a) => attrText(e, a)).join(' ');
+      // data-hold: a rule break waiting for the player to pause, which a remount judges at once.
+      const attrs = [...e.attributes]
+        .filter((a) => a.name !== 'data-hold')
+        .map((a) => attrText(e, a))
+        .join(' ');
       const text = hiddenTally(e)
         ? ''
         : [...e.childNodes]

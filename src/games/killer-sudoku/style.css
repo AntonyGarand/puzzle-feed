@@ -39,7 +39,7 @@
   font-weight: 700;
 }
 [data-puzzle='killer-sudoku'] .killer .cell.sel .sum,
-[data-puzzle='killer-sudoku'] .killer .cell.err .sum {
+[data-puzzle='killer-sudoku'] .killer .cell.err:not([data-hold]) .sum {
   color: var(--on-tone);
 }
 [data-puzzle='killer-sudoku'] .killer .cell .v {

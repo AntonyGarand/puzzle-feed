@@ -250,7 +250,7 @@ button.cell:active {
   background: var(--accent);
   color: var(--on-tone);
 }
-.cell.err {
+.cell.err:not([data-hold]) {
   background: var(--bad) !important;
   color: var(--on-tone) !important;
 }

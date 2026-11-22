@@ -1,6 +1,6 @@
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { clearBtn, h, s } from '../../ui/dom';
+import { clearBtn, h, ruleBreaks, s } from '../../ui/dom';
 import { broken, deductions, genPearls, isSolved, pearlOk, pearlOptions, type Kind, type Move } from './gen';
 import { loopFault } from '../../kits/grid/loopcheck';
 import { capture, stepsToward } from '../../kits/path/grid';
@@ -293,6 +293,8 @@ export const pearls: PuzzleDef = {
     );
     root.append(wrap);
     render();
+    // Not counted as mistakes, but red marks wait until the player pauses, like the counted ones.
+    ruleBreaks(wrap, () => {});
 
     // ---- Guide: pearl rules first, then what each cell allows, then a short what-if. ----
     const text = (mv: Move): string => {

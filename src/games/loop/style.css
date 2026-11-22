@@ -41,7 +41,7 @@
 [data-puzzle='loop'] .lo-svg .vx {
   fill: var(--ink);
 }
-[data-puzzle='loop'] .lo-svg .vx.err {
+[data-puzzle='loop'] .lo-svg .vx.err:not([data-hold]) {
   fill: var(--bad-ink);
   r: 0.12px;
 }
@@ -57,6 +57,6 @@
   /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
   fill: var(--faint);
 }
-[data-puzzle='loop'] .lo-svg .lo-n.err {
+[data-puzzle='loop'] .lo-svg .lo-n.err:not([data-hold]) {
   fill: var(--bad-ink);
 }

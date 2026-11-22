@@ -86,10 +86,10 @@
     0 0 0 2px var(--cell),
     0 0 0 4px color-mix(in srgb, var(--ink) 40%, transparent);
 }
-:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err {
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err:not([data-hold]) {
   border-color: var(--ink);
 }
-:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err::after {
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err:not([data-hold])::after {
   box-shadow:
     0 0 0 2px var(--bad),
     0 0 0 4px var(--ink);

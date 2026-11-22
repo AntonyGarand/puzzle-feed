@@ -31,7 +31,7 @@
 [data-puzzle='pearls'] .pe-svg .dot.on {
   opacity: 0;
 }
-[data-puzzle='pearls'] .pe-svg .dot.err {
+[data-puzzle='pearls'] .pe-svg .dot.err:not([data-hold]) {
   fill: var(--bad-ink);
   opacity: 1;
   r: 0.14px;
@@ -47,7 +47,7 @@
 [data-puzzle='pearls'] .pe-svg .pl.w {
   fill: var(--paper);
 }
-[data-puzzle='pearls'] .pe-svg .pl.err {
+[data-puzzle='pearls'] .pe-svg .pl.err:not([data-hold]) {
   stroke: var(--bad-ink);
   stroke-width: 0.1;
 }

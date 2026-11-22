@@ -45,6 +45,6 @@
   outline-offset: 1px;
   z-index: 1;
 }
-[data-puzzle='eclipse'] .ecl .cell.err .disc {
+[data-puzzle='eclipse'] .ecl .cell.err:not([data-hold]) .disc {
   fill: var(--cell);
 }

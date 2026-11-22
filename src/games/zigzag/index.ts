@@ -2,7 +2,7 @@
 // collections; this implementation and every puzzle are generated here.
 import { L } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { board, clearBtn, h, PALETTE, s } from '../../ui/dom';
+import { board, clearBtn, h, PALETTE, ruleBreaks, s } from '../../ui/dom';
 import { adjacent, capture, cellAt, pts, stepsToward } from '../../kits/path/grid';
 import { genZigzag, turnsOf, numberLines, twistError } from './gen';
 import './style.css';
@@ -210,6 +210,8 @@ export const zigzag: PuzzleDef = {
     }
     root.append(grid);
     render();
+    // Not counted as mistakes, but red marks wait until the player pauses, like the counted ones.
+    ruleBreaks(grid, () => {});
 
     // ---- guide: forced lines and starts, cells only one number reaches ----
     const all = nums.map((c) => numberLines(n, n, clue, c));

@@ -37,7 +37,7 @@
   box-shadow: var(--csh) var(--csh) 0 var(--ink);
   pointer-events: none;
 }
-[data-puzzle='dominoes'] .do-tile.err {
+[data-puzzle='dominoes'] .do-tile.err:not([data-hold]) {
   background: var(--bad);
 }
 /* the dividing line of a domino */

@@ -272,16 +272,108 @@ export const restartBtn = (onclick: () => void) => confirmBtn(L('Restart', 'Repa
 /** Clear/Effacer (ghost, tap twice): wipe every mark the player drew. */
 export const clearBtn = (onclick: () => void) => confirmBtn(L('Clear', 'Effacer'), L('Clear?', 'Effacer ?'), onclick);
 
+/** How long a new rule break waits before it shows and counts: the player may still be tapping through it. */
+export const SETTLE_MS = 1000;
+
+/** Marks a rule break that isn't judged yet: every `.err` style is written `.err:not([data-hold])`. */
+const HOLD = 'data-hold';
+
+/** Rule-break watchers with a judgment pending, so tests (or a final tally) can settle them now. */
+const unsettled = new Set<() => void>();
+
+/** Judge every pending rule break right away, as if the player had paused. */
+export function settleRuleBreaks() {
+  for (const settle of unsettled) settle();
+}
+
+/** What identifies a redrawn element (a game that rebuilds its tiles each render): tag, classes, style. */
+const sig = (e: Element) =>
+  `${e.tagName}|${[...e.classList]
+    .filter((c) => c !== 'err')
+    .sort()
+    .join('.')}|${e.getAttribute('style') ?? ''}`;
+
 /**
  * Counts a mistake when a player's move breaks a visible rule: call the returned function right after
- * rendering a move, and it calls `onMistake` when the board shows more `.err` elements than before. Pass
- * `false` to resync without counting (restore, undo, hint replays that go through other paths).
+ * rendering a move. A rule break isn't judged at once: new `.err` elements stay hidden (`data-hold`) until
+ * the board has been left alone for `SETTLE_MS`, so tapping through a wrong state on the way to the right
+ * one (sun → moon, star → ✕), or dragging over it, is never shown nor counted. If they are still there
+ * then, they show, and `onMistake` is called once if a move since the last judgment counted. Pass `false`
+ * to resync without counting (restore, clear, hint replays that go through other paths).
  */
 export function ruleBreaks(boardEl: Element, onMistake: () => void): (count?: boolean) => void {
-  let last = boardEl.querySelectorAll('.err').length;
+  /** The `.err` elements at the last judgment, every element then, and the signatures of those errors. */
+  let shown = new WeakSet<Element>();
+  let known = new WeakSet<Element>();
+  let shownSigs = new Map<string, number>();
+  let timer = 0;
+  /** A counted move happened since the last judgment. */
+  let counting = false;
+
+  /** A judged error that stops being one, even for a moment, is a new one if it comes back. */
+  const forget = (recs: MutationRecord[]) => {
+    for (const r of recs) {
+      const t = r.target as Element;
+      if (r.type === 'attributes' && shown.has(t) && !` ${r.oldValue ?? ''} `.includes(' err ')) shown.delete(t);
+    }
+  };
+  /** Rule breaks that appeared since the last judgment. */
+  const fresh = () => {
+    forget(mo.takeRecords());
+    const left = new Map(shownSigs);
+    return [...boardEl.querySelectorAll('.err')].filter((e) => {
+      if (known.has(e)) return !shown.has(e);
+      const k = sig(e);
+      const n = left.get(k) ?? 0;
+      if (n) left.set(k, n - 1);
+      return !n;
+    });
+  };
+  /** Hide the new rule breaks and (re)start the wait before judging them. */
+  const wait = (errs: Element[]) => {
+    for (const e of errs) if (!e.hasAttribute(HOLD)) e.setAttribute(HOLD, '');
+    window.clearTimeout(timer);
+    timer = window.setTimeout(settle, SETTLE_MS);
+    unsettled.add(settle);
+  };
+  const judge = (count: boolean) => {
+    window.clearTimeout(timer);
+    timer = 0;
+    unsettled.delete(settle);
+    if (count && fresh().length) onMistake();
+    counting = false;
+    const errs = [...boardEl.querySelectorAll('.err')];
+    shown = new WeakSet(errs);
+    known = new WeakSet(boardEl.querySelectorAll('*'));
+    shownSigs = new Map();
+    for (const e of errs) shownSigs.set(sig(e), (shownSigs.get(sig(e)) ?? 0) + 1);
+    for (const e of boardEl.querySelectorAll(`[${HOLD}]`)) e.removeAttribute(HOLD);
+    mo.takeRecords();
+  };
+  const settle = () => judge(counting);
+
+  // Renders between moves (a drag in progress, a cursor move) hold new rule breaks too.
+  const mo = new MutationObserver((recs) => {
+    forget(recs);
+    const errs = fresh();
+    if (errs.length) wait(errs);
+  });
+  // Observing starts with the player's first touch or move: boards that are only generated (thumbnails,
+  // previews) never get an observer.
+  let observing = false;
+  const observe = () => {
+    if (observing) return;
+    observing = true;
+    mo.observe(boardEl, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+  };
+  for (const type of ['pointerdown', 'keydown']) boardEl.addEventListener(type, observe, { capture: true, once: true });
+
+  judge(false);
   return (count = true) => {
-    const n = boardEl.querySelectorAll('.err').length;
-    if (count && n > last) onMistake();
-    last = n;
+    observe();
+    const errs = fresh();
+    if (!errs.length || (!count && !timer)) return judge(false);
+    counting ||= count;
+    wait(errs);
   };
 }
