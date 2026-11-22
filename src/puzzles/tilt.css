@@ -94,9 +94,6 @@
     color-mix(in srgb, var(--muted) 30%, var(--cell));
   box-shadow: var(--lift) var(--lift) 0 var(--ink);
 }
-[data-puzzle='tilt'] .tilt-pad {
-  width: min(var(--board), 300px);
-}
 @media (prefers-reduced-motion: reduce) {
   [data-puzzle='tilt'] .tilt-pc {
     transition: none;

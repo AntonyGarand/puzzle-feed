@@ -282,6 +282,3 @@
   stroke: var(--ink);
   stroke-width: max(2px, var(--cbw));
 }
-:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-pad {
-  width: min(var(--board), 300px);
-}

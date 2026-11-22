@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, pad, shake } from '../core/ui';
+import { arrowIcon, board, btn, h, pad, shake } from '../core/ui';
 import { anim } from './movekit/kit';
 import { DIRS8, MINE, ROCK, genGems, slide, solveGems } from './pathkit/gems-gen';
 import { capture, cellAt } from './pathkit/grid';
@@ -252,7 +252,7 @@ export const gems: PuzzleDef = {
     grid.addEventListener('pointercancel', () => (down = false));
 
     const keys = pad(
-      PAD.filter((v) => v >= 0).map((v) => ({ label: ARROWS[v], value: String(v) })),
+      PAD.filter((v) => v >= 0).map((v) => ({ label: arrowIcon(v * 45), value: String(v), aria: L(DIR_EN[v], DIR_FR[v]) })),
       (v) => move(Number(v)),
     );
     keys.classList.add('gems-pad');
@@ -411,7 +411,7 @@ export const gems: PuzzleDef = {
           cells[end],
           ...picks.filter((x) => x !== end).map((x) => cells[x]),
           // the matching pad key, so the guide also shows where to press
-          ...[...keys.querySelectorAll('button')].filter((b) => b.textContent === ARROWS[dir]),
+          ...[...keys.querySelectorAll('button')].filter((b) => b.getAttribute('aria-label') === L(DIR_EN[dir], DIR_FR[dir])),
         ],
         play: () => move(dir),
       };

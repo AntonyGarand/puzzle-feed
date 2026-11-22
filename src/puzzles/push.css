@@ -135,6 +135,3 @@
   stroke: var(--ink);
   stroke-width: max(2px, var(--cbw));
 }
-[data-puzzle='push'] .push-pad {
-  width: min(var(--board), 300px);
-}
