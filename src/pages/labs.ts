@@ -179,7 +179,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         h('p', { class: 'rules' }, d.rules),
         h('p', { class: 'lab-meta' }, ...chips.filter(Boolean).map((c) => (typeof c === 'string' ? h('span', null, c) : c))),
       ),
-      h('span', { class: 'tile-go', 'aria-hidden': 'true' }, save ? '↻' : '▶'),
+      h('span', { class: 'tile-go', 'aria-hidden': 'true' }, '▶'),
     );
   };
 
