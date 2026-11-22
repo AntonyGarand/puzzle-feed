@@ -61,7 +61,7 @@ export default defineConfig(({ mode }) => {
       pagesFallback(),
       // Installable app that works fully offline: every built file (JS, CSS, fonts, both dictionaries,
       // icons) is precached by a Workbox service worker. A new version downloads in the background and
-      // src/core/update.ts shows a "new version" banner; reloading activates it.
+      // src/app/update.ts shows a "new version" banner; reloading activates it.
       VitePWA({
         // Still resolves virtual:pwa-register, but emits no service worker or manifest.
         disable: android,
@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
           globIgnores: ['404.html', 'og.png', ...SHELL_ROUTES.map((r) => `${r}.html`)],
           // The dictionaries are lazy chunks of a few hundred KB; precache them too so word games work offline.
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          // Path routing (src/core/nav.ts): every navigation is the app shell.
+          // Path routing (src/app/nav.ts): every navigation is the app shell.
           navigateFallback: '/index.html',
           cleanupOutdatedCaches: true,
         },

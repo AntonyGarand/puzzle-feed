@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty, Hint, PuzzleDef } from '../src/core/types';
-import { isWord, whenDict } from '../src/puzzles/wordkit/lexicon';
+import { isWord, whenDict } from '../src/kits/word/lexicon';
 import { mountGame, puzzle } from './support/mount';
 
 function make(p: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {

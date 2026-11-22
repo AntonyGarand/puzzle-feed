@@ -25,7 +25,7 @@
     "test:coverage": "vitest run --dir test --coverage --exclude \"**/hints*.test.ts\"",
     "test:watch": "vitest",
     "check": "npm run fmt:check && npm run lint && npm run typecheck && npm run knip && npm run test",
-    "dict": "node src/puzzles/wordkit/build-dict.mjs",
+    "dict": "node src/kits/word/build-dict.mjs",
     "e2e:audit": "node scripts/audit.mjs",
     "e2e:a11y": "node scripts/a11y.mjs",
     "e2e:shots": "node scripts/shots.mjs",

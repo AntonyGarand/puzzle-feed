@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '../src/core/categories';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 
 describe('registry', () => {
   it('has unique ids and known categories', () => {

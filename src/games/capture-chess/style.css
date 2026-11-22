@@ -1,0 +1,45 @@
+[data-puzzle='capture-chess'] {
+  --accent: var(--p8);
+  /* Board tones (see kits/chess/board.css): a mossy green-brown, independent of the accent. */
+  --sq-d: color-mix(in srgb, color-mix(in srgb, var(--p3) 71%, var(--p1)) 70%, var(--coal));
+  --sq-last: color-mix(in srgb, var(--sq-hi) 55%, var(--sq-l));
+  --sq-last-dk: color-mix(in srgb, var(--sq-hi) 50%, var(--sq-d));
+  --pc-size: 0.7;
+  --co-size: 0.16;
+}
+[data-puzzle='capture-chess'] .grid.cc-board {
+  touch-action: none;
+}
+/* Capture targets: a thick ring around the piece. */
+[data-puzzle='capture-chess'] .cc-board .cell.tgt::after {
+  content: '';
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  border: 4px solid var(--sq-ink);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* A piece with no capture left fades a little: it can only be taken now. */
+[data-puzzle='capture-chess'] .cc-board .cell.spent .pc {
+  color: color-mix(in srgb, var(--paper-alt) 81%, var(--coal));
+}
+/* Captures left: small dots at the top-right of the square. */
+[data-puzzle='capture-chess'] .cc-board .pips {
+  position: absolute;
+  top: 6%;
+  right: 6%;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+}
+[data-puzzle='capture-chess'] .cc-board .pips i {
+  width: max(6px, calc(var(--board) / var(--cols) * 0.12));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1.5px solid var(--sq-ink);
+  background: var(--sq-l);
+}
+[data-puzzle='capture-chess'] .cc-board .pips i.on {
+  background: var(--sq-hi);
+}

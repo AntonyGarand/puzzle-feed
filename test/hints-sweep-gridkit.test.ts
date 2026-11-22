@@ -7,15 +7,15 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty, PuzzleDef } from '../src/core/types';
-import { dominoes } from '../src/puzzles/dominoes';
-import { lightUp } from '../src/puzzles/light-up';
-import { loop } from '../src/puzzles/loop';
-import { mines } from '../src/puzzles/mines';
-import { mosaic } from '../src/puzzles/mosaic';
-import { mow } from '../src/puzzles/mow';
-import { pearls } from '../src/puzzles/pearls';
-import { shapeMines } from '../src/puzzles/shape-mines';
-import { sightlines } from '../src/puzzles/sightlines';
+import { dominoes } from '../src/games/dominoes/index';
+import { lightUp } from '../src/games/light-up/index';
+import { loop } from '../src/games/loop/index';
+import { mines } from '../src/games/mines/index';
+import { mosaic } from '../src/games/mosaic/index';
+import { mow } from '../src/games/mow/index';
+import { pearls } from '../src/games/pearls/index';
+import { shapeMines } from '../src/games/shape-mines/index';
+import { sightlines } from '../src/games/sightlines/index';
 import { mountGame } from './support/mount';
 
 function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {

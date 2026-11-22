@@ -1,13 +1,13 @@
 import { dailyStats } from '../core/daily';
 import { L, localeTag } from '../core/i18n';
 import { clearAllSaves } from '../core/saves';
-import { confirmSheet, noticeSheet } from '../core/sheet';
+import { confirmSheet, noticeSheet } from '../ui/sheet';
 import { dayStreak, exportProfile, getProfile, importProfile, prefs, resetProfile, stats, totalXp, update } from '../core/store';
 import { xpLevel } from '../core/xp';
 import { xpProgress } from './xp-progress';
 import { LEVELS, LEVEL_NAMES } from '../core/types';
 import type { PuzzleDef } from '../core/types';
-import { btn, fmtTime, h } from '../core/ui';
+import { btn, fmtTime, h } from '../ui/dom';
 
 export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
   const p = getProfile();

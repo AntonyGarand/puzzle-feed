@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty } from '../src/core/types';
-import { genConnect, touchesSelf } from '../src/puzzles/pathkit/connect-gen';
-import { adjacent } from '../src/puzzles/pathkit/grid';
+import { genConnect, touchesSelf } from '../src/games/connect/gen';
+import { adjacent } from '../src/kits/path/grid';
 
 describe('connect', () => {
   it('flags lines that double back alongside themselves', () => {

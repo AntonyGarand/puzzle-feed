@@ -66,7 +66,7 @@
           }).catch(function () {});
         }
         pageview();
-        // Path routing: in-app navigations are history.pushState calls (src/core/nav.ts).
+        // Path routing: in-app navigations are history.pushState calls (src/app/nav.ts).
         var push = history.pushState;
         history.pushState = function () {
           push.apply(history, arguments);

@@ -2,8 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty } from '../src/core/types';
-import { countSolutions, genSightlines, rays, sees } from '../src/puzzles/gridkit/sightlines';
-import { sightlines } from '../src/puzzles/sightlines';
+import { countSolutions, genSightlines, rays, sees } from '../src/games/sightlines/gen';
+import { sightlines } from '../src/games/sightlines/index';
 import { mountGame } from './support/mount';
 
 describe('sightlines', () => {

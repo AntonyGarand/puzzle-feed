@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty, Hint, PuzzleDef } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 import { mountGame } from './support/mount';
 
 /**

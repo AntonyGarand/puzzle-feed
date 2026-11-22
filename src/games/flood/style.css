@@ -1,0 +1,72 @@
+[data-puzzle='flood'] {
+  --accent: var(--p6);
+}
+
+/* Base styles (moved from styles.css). */
+/* one framed board, no per-cell borders */
+[data-puzzle='flood'] .grid.flood {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+}
+[data-puzzle='flood'] .flood .cell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+[data-puzzle='flood'] .fl-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: var(--board);
+  margin-bottom: -6px;
+}
+/* Colours, border and the low state come from kits/moves-left/moves-left.css. */
+[data-puzzle='flood'] .fl-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+[data-puzzle='flood'] .fl-num {
+  display: inline-block;
+  font-size: 26px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+[data-puzzle='flood'] .fl-lbl {
+  font-size: 13px;
+  font-weight: 700;
+}
+[data-puzzle='flood'] .fl-bar {
+  flex: 1;
+  height: 12px;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+[data-puzzle='flood'] .fl-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition:
+    width 0.25s ease,
+    background 0.2s;
+}
+[data-puzzle='flood'] .fl-head.low .fl-fill {
+  background: var(--bad);
+}
+[data-puzzle='flood'] .fl-head.low .fl-num {
+  animation: fl-beat 0.35s ease-out;
+}
+@keyframes fl-beat {
+  50% {
+    transform: scale(1.25);
+  }
+}

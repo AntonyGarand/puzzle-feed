@@ -2,8 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { byLevel, LEVELS } from '../src/core/types';
-import { destsL, genL, LADDER_LEVELS, moveL, playLineL, solveL, type LState } from '../src/puzzles/cardkit/ladder';
-import { ladders } from '../src/puzzles/ladders';
+import { destsL, genL, LADDER_LEVELS, moveL, playLineL, solveL, type LState } from '../src/games/ladders/rules';
+import { ladders } from '../src/games/ladders/index';
 import { mountGame } from './support/mount';
 
 /** Card id: suit (0 ♠, 1 ♥, 2 ♦, 3 ♣) * 13 + rank - 1. */

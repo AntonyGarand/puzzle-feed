@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests } from '../src/core/i18n';
 import { LEVELS, type Difficulty, type PuzzleDef } from '../src/core/types';
-import { answers, commonOfLength, fold, isWord, letterKey, whenDict } from '../src/puzzles/wordkit/lexicon';
+import { answers, commonOfLength, fold, isWord, letterKey, whenDict } from '../src/kits/word/lexicon';
 import { mountGame, puzzle } from './support/mount';
 import { expectResumes } from './support/resume';
 

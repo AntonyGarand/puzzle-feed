@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { Difficulty, PuzzleDef } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 import { mountGame } from './support/mount';
 
 function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {

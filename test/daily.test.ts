@@ -4,7 +4,7 @@ import { DAILY_SIZE, dailyStats, dailyStreak, generateDaily, getDaily, isComplet
 import { _setLocaleForTests } from '../src/core/i18n';
 import { getProfile, prefs, record, recordDaily, resetProfile, stats } from '../src/core/store';
 import { LEVELS, type Difficulty } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 import { puzzle } from './support/mount';
 
 const solveAll = (date: string, level: Difficulty) => {

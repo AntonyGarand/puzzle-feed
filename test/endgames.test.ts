@@ -3,15 +3,15 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { LEVELS } from '../src/core/types';
-import { outOfReach } from '../src/puzzles/flood';
-import { pairs } from '../src/puzzles/pairs';
-import { genGems, ROCK, slide, solveGems } from '../src/puzzles/pathkit/gems-gen';
-import { stranded } from '../src/puzzles/playkit/collapse-gen';
-import { solvePush } from '../src/puzzles/movekit/push-hint';
-import { generateRoom, stepper, stuckCrates } from '../src/puzzles/movekit/pushgen';
-import { target } from '../src/puzzles/target';
-import { tower } from '../src/puzzles/tower';
-import { trail } from '../src/puzzles/trail';
+import { outOfReach } from '../src/games/flood/index';
+import { pairs } from '../src/games/pairs/index';
+import { genGems, ROCK, slide, solveGems } from '../src/games/gems/gen';
+import { stranded } from '../src/games/collapse/gen';
+import { solvePush } from '../src/games/push/hint';
+import { generateRoom, stepper, stuckCrates } from '../src/kits/move/pushgen';
+import { target } from '../src/games/target/index';
+import { tower } from '../src/games/tower/index';
+import { trail } from '../src/games/trail/index';
 import { mountGame } from './support/mount';
 
 describe('flood', () => {

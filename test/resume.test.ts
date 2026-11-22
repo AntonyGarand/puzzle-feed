@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it } from 'vitest';
 import type { Difficulty } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 import { expectResumes } from './support/resume';
 
 // Memory deliberately restarts its reveal on resume (same board, same seed).

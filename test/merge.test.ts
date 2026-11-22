@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { merge } from '../src/puzzles/merge';
+import { merge } from '../src/games/merge/index';
 import { mountGame } from './support/mount';
 
 function run(saved: unknown) {

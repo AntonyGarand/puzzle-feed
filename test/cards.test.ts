@@ -2,11 +2,11 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { byLevel, LEVELS, type Difficulty } from '../src/core/types';
-import { genF, solveF } from '../src/puzzles/cardkit/freecell';
-import { genK, greedyK, hasProgress, type KRules, type KState } from '../src/puzzles/cardkit/klondike';
-import { deadP, genP, solveP, type PState } from '../src/puzzles/cardkit/pyramid';
-import { genS, hasMoveS, playLineS, progressS, type SState } from '../src/puzzles/cardkit/spider';
-import { pyramid } from '../src/puzzles/pyramid';
+import { genF, solveF } from '../src/games/freecell/rules';
+import { genK, greedyK, hasProgress, type KRules, type KState } from '../src/games/solitaire/rules';
+import { deadP, genP, solveP, type PState } from '../src/games/pyramid/rules';
+import { genS, hasMoveS, playLineS, progressS, type SState } from '../src/games/spider/rules';
+import { pyramid } from '../src/games/pyramid/index';
 import { mountGame } from './support/mount';
 
 const SEEDS = 12;

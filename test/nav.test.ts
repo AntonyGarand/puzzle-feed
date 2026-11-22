@@ -2,7 +2,7 @@
 // Path routing: in-app links and navigate() change the URL without a reload and notify the router once;
 // old hash links (#/game/…) are upgraded to paths.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { navigate, onNavigate, setPath, upgradeHashRoute } from '../src/core/nav';
+import { navigate, onNavigate, setPath, upgradeHashRoute } from '../src/app/nav';
 
 const routed = vi.fn<() => void>();
 onNavigate(routed);

@@ -6,13 +6,13 @@ import {
   track as echoTrack,
   walk as echoWalk,
   type GenOpts,
-} from '../src/puzzles/echokit/gen';
-import { genArrows, rounds } from '../src/puzzles/arrowkit/arrows';
-import { genBridges } from '../src/puzzles/logickit/bridgesgen';
-import { genPearls, isSolved } from '../src/puzzles/gridkit/pearls';
-import { genMines, solvableByLogic } from '../src/puzzles/logickit/minesgen';
-import { drawPiece, PIECES } from '../src/puzzles/movekit/pieces';
-import { applyMove, genTether, legalMoves, solveTether } from '../src/puzzles/movekit/tethergen';
+} from '../src/games/echo/gen';
+import { genArrows, rounds } from '../src/games/arrows/gen';
+import { genBridges } from '../src/games/bridges/gen';
+import { genPearls, isSolved } from '../src/games/pearls/gen';
+import { genMines, solvableByLogic } from '../src/games/mines/gen';
+import { drawPiece, PIECES } from '../src/games/blocks/pieces';
+import { applyMove, genTether, legalMoves, solveTether } from '../src/games/tether/gen';
 
 describe('bridges', () => {
   it('spreads islands to all four edges of the grid', () => {

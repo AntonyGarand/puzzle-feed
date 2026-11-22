@@ -1,6 +1,6 @@
 import { L, type Locale } from './i18n';
 import { LEVELS, type Difficulty } from './types';
-import { h } from './ui';
+import { h } from '../ui/dom';
 
 /**
  * Share codes: `<game id>-<level>-<seed in base 36>`, plus `-<locale>` for word games (their puzzles come

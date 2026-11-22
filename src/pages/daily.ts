@@ -3,7 +3,7 @@ import { L, localeTag, P } from '../core/i18n';
 import { dailySaveKey, getSave } from '../core/saves';
 import { getProfile } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
-import { fmtTime, h } from '../core/ui';
+import { fmtTime, h } from '../ui/dom';
 
 let selected: Difficulty | null = null;
 

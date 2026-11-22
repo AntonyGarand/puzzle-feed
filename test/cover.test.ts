@@ -4,9 +4,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests } from '../src/core/i18n';
 import { Rng } from '../src/core/rng';
 import { LEVELS } from '../src/core/types';
-import { cover } from '../src/puzzles/cover';
-import { makeCover } from '../src/puzzles/wordkit/cover-gen';
-import { answers } from '../src/puzzles/wordkit/lexicon';
+import { cover } from '../src/games/cover/index';
+import { makeCover } from '../src/games/cover/gen';
+import { answers } from '../src/kits/word/lexicon';
 import { mountGame } from './support/mount';
 
 afterAll(() => _setLocaleForTests('en'));

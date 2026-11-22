@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { LEVELS } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-import { WORDS } from '../src/puzzles/words';
+import { PUZZLES } from '../src/games';
+import { WORDS } from '../src/kits/word/words';
 import { mountGame } from './support/mount';
 
 /** Generation budget per board. Coverage instrumentation slows everything down, so it isn't timed then. */

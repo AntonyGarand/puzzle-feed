@@ -111,7 +111,7 @@
       }
     },
     {
-      "files": ["scripts/**", "src/puzzles/wordkit/*.mjs"],
+      "files": ["scripts/**", "src/kits/word/*.mjs"],
       "env": {
         "node": true,
         "browser": false
@@ -140,5 +140,5 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/**", "shots*/**", "src/puzzles/wordkit/dict*.txt", ".claude/**"]
+  "ignorePatterns": ["dist/**", "shots*/**", "src/kits/word/dict*.txt", ".claude/**"]
 }

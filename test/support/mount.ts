@@ -1,6 +1,6 @@
 import { Rng } from '../../src/core/rng';
 import type { Difficulty, PuzzleCtx, PuzzleDef, PuzzleInstance } from '../../src/core/types';
-import { PUZZLES } from '../../src/puzzles';
+import { PUZZLES } from '../../src/games';
 
 /** What a game reported through its ctx: `reached` is a solve that keeps playing (endless games). */
 type GameEvent = 'solved' | 'reached' | 'failed' | 'mistake';

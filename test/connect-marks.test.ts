@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { connect } from '../src/puzzles/connect';
+import { connect } from '../src/games/connect/index';
 import { mountGame } from './support/mount';
 
 function make(seed: number, saved?: unknown) {
