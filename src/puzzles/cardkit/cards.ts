@@ -1,7 +1,7 @@
 import './cards.css';
 import type { Rng } from '../../core/rng';
 import { L, locale } from '../../core/i18n';
-import { h } from '../../core/ui';
+import { h, s as svg } from '../../core/ui';
 
 /** A playing card: suit * 13 + (rank - 1). Suits: 0 ♠, 1 ♥, 2 ♦, 3 ♣. */
 export type Card = number;
@@ -42,6 +42,36 @@ function pos(x: number, y: number, dx = 0): string {
   return st;
 }
 
+/** Court-card icon (24×24, filled with currentColor = suit colour): 11 jack sword, 12 queen five-point crown, 13 king crown + cross. */
+function faceIcon(r: number): SVGSVGElement {
+  const parts: SVGElement[] =
+    r === 13
+      ? [
+          svg('path', { d: 'M10.9 1h2.2v2h2v2h-2v2h-2.2V5h-2V3h2z' }),
+          svg('path', { d: 'M2.5 8.5 8 12.5 12 7.5l4 5 5.5-4-2.3 10.5H4.8z' }),
+          svg('rect', { x: 4.8, y: 20, width: 14.4, height: 2.6, rx: 0.6 }),
+        ]
+      : r === 12
+        ? [
+            svg('path', { d: 'M2.5 9 5.5 13 7 5.5l2.6 6.5L12 3.5l2.4 8.5L17 5.5l1.5 7.5 3-4-2.3 10H4.8z' }),
+            ...[
+              [2.5, 9],
+              [7, 5.5],
+              [12, 3.5],
+              [17, 5.5],
+              [21.5, 9],
+            ].map(([cx, cy]) => svg('circle', { cx, cy, r: 1.5 })),
+            svg('rect', { x: 4.8, y: 20, width: 14.4, height: 2.6, rx: 0.6 }),
+          ]
+        : [
+            svg('path', { d: 'M12 1l1.4 2.6.3 11.4h-3.4l.3-11.4z' }),
+            svg('rect', { x: 6, y: 15, width: 12, height: 2.2, rx: 1.1 }),
+            svg('rect', { x: 10.9, y: 17, width: 2.2, height: 4 }),
+            svg('circle', { cx: 12, cy: 21.6, r: 1.6 }),
+          ];
+  return svg('svg', { viewBox: '0 0 24 24', class: 'pc-face', 'aria-hidden': 'true' }, ...parts);
+}
+
 /** A card element. `p` = pile id, `i` = index in that pile (drives tap / drag). */
 export function cardEl(c: Card, up: boolean, p: string, i: number, style = '', extra = ''): HTMLButtonElement {
   if (!up) {
@@ -55,6 +85,7 @@ export function cardEl(c: Card, up: boolean, p: string, i: number, style = '', e
     });
   }
   const s = SUITS[suit(c)];
+  const r = rank(c);
   return h(
     'button',
     {
@@ -65,8 +96,8 @@ export function cardEl(c: Card, up: boolean, p: string, i: number, style = '', e
       style: style || null,
       'aria-label': label(c),
     },
-    h('span', { class: 'pc-r' }, rankName(rank(c)), h('i', null, s)),
-    h('span', { class: 'pc-s' }, s),
+    h('span', { class: 'pc-r' }, rankName(r), h('i', null, s)),
+    h('span', { class: 'pc-s' }, r > 10 ? faceIcon(r) : s),
   );
 }
 
