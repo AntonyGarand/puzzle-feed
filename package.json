@@ -55,6 +55,6 @@
     "wordlist-english": "^1.2.1"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   }
 }

@@ -6,7 +6,7 @@ An endless, scroll-snapping feed of short puzzles: 80 games in English and Québ
 
 ## Development
 
-The toolchain is pinned in [`mise.toml`](mise.toml) (Node 24).
+The toolchain is pinned in [`mise.toml`](mise.toml) (Node 26).
 
 ```sh
 mise install          # once: installs the pinned Node
