@@ -5,6 +5,7 @@ import { anim } from '../../kits/move/kit';
 import {
   bestPut,
   cellsAt as cellsOf,
+  culprit,
   ext,
   finishFrom,
   fits as fitsAt,
@@ -214,9 +215,10 @@ export const week: PuzzleDef = {
       anim(slots[k], [{ transform: 'scale(0.85)' }, { transform: 'scale(1)' }], 160);
     };
 
-    const rotate = () => {
+    const rotate = (record = true) => {
       if (over || sel < 0) return;
       ctx.touch();
+      if (record) save();
       rot[sel] = (rot[sel] + 1) % 4;
       render();
       anim(slots[sel], [{ transform: 'rotate(-90deg)' }, { transform: 'rotate(0)' }], 160);
@@ -376,11 +378,11 @@ export const week: PuzzleDef = {
     // ---- Guide ----
     const offPlan = () => offPlanOf(w, lay());
     /** How to finish from here, kept until the board changes (check() then hint() search once). */
-    let memo: { key: string; rest: Put[] | null | 'capped' } | null = null;
+    let memo: { key: string; rest: Put[] | null | 'capped'; blame?: number | null } | null = null;
     const finish = () => {
       const key = owners().join(',');
       if (memo?.key !== key) memo = { key, rest: finishFrom(w, lay()) };
-      return memo.rest;
+      return memo;
     };
     /**
      * A placed task that puts the target out of reach (proved by the search, not just "off the guide's
@@ -388,9 +390,13 @@ export const week: PuzzleDef = {
      */
     const check = (): Hint | null => {
       if (over || drag?.active) return null;
-      const off = offPlan();
-      if (!off.length || finish() !== null) return null;
-      const k = off[0];
+      if (!offPlan().length) return null;
+      const m = finish();
+      if (m.rest !== null) return null;
+      // Blame the task whose removal makes the target reachable again, not just the first off-plan one.
+      if (m.blame === undefined) m.blame = culprit(w, lay());
+      const k = m.blame;
+      if (k == null) return null;
       const cs = cellsAt(k, pos[k]);
       const gap = strandedOf(w, lay(), k);
       return {
@@ -417,7 +423,7 @@ export const week: PuzzleDef = {
     const hint = (): Hint | null => {
       if (over || drag?.active) return null;
       const own = owners();
-      const rest = finish();
+      const { rest } = finish();
       if (!Array.isArray(rest) || !rest.length) {
         // The search gave up: take back a task the built plan has no room for (the plan finishes from there).
         const k = offPlan()[0];
@@ -440,8 +446,11 @@ export const week: PuzzleDef = {
       const play = () => {
         suppressClick = false; // a pending end-of-drag click must not swallow the hint's taps
         if (sel !== k) tapSlot(k);
-        for (let q = 0; q < 4; q++) if (sel === k && rot[k] !== r) rotate();
-        place(k, top);
+        if (sel !== k) return;
+        // One undo step for the whole move: the turns and the drop.
+        save();
+        for (let q = 0; q < 4; q++) if (rot[k] !== r) rotate(false);
+        if (!place(k, top, false)) hist.pop();
       };
       const text =
         nb > 0
