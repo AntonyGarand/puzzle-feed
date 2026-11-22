@@ -1,7 +1,7 @@
 {
   "packageId": "dev.garand.puzzle",
   "host": "puzzle.garand.dev",
-  "name": "puzzle feed",
+  "name": "Puzzle Feed",
   "launcherName": "puzzles",
   "display": "standalone",
   "orientation": "portrait",

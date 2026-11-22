@@ -24,7 +24,7 @@ def twaManifest = [
     applicationId: 'dev.garand.puzzle',
     hostName: 'puzzle.garand.dev', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
-    name: 'puzzle feed', // The application name.
+    name: 'Puzzle Feed', // The application name.
     launcherName: 'puzzles', // The name shown on the Android Launcher.
     themeColor: '#FFF6E5', // The color used for the status bar.
     themeColorDark: '#FFF6E5', // The color used for the dark status bar.
