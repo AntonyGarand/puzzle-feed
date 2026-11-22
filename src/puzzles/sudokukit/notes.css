@@ -24,7 +24,7 @@
 }
 /* a candidate that can't fit anymore */
 [data-puzzle] .cell .nt > span.bad {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 /* number pad as a keypad block mirroring the note spots, ✎ over ✕ in a column on the right */
 [data-puzzle] .pad.npad {

@@ -1,6 +1,7 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, clearBtn, h, PALETTE, s } from '../core/ui';
+import { svgMark } from '../core/symbols';
 import { genConnect } from './pathkit/connect-gen';
 import { adjacent, capture, cellAt, nbrs, pts, stepsToward } from './pathkit/grid';
 import './connect.css';
@@ -78,11 +79,15 @@ export const connect: PuzzleDef = {
       return el;
     });
     const svg = s('svg', { class: 'connect-lines', viewBox: `0 0 ${n} ${n}`, 'aria-hidden': 'true' });
+    // Each line is drawn twice: an ink casing, then the colour on top, so pale colours hold 3:1 on the board.
+    const casings = sol.map(() => s('polyline', { class: 'case' }));
     const lines = sol.map((_, c) => s('polyline', { style: `stroke:${PALETTE[c]}` }));
-    svg.append(...lines);
+    svg.append(...casings, ...lines);
     sol.forEach((p, c) => {
       for (const i of [p[0], p[p.length - 1]]) {
-        svg.append(s('circle', { cx: (i % n) + 0.5, cy: Math.floor(i / n) + 0.5, r: 0.3, style: `fill:${PALETTE[c]}` }));
+        const cx = (i % n) + 0.5,
+          cy = Math.floor(i / n) + 0.5;
+        svg.append(s('circle', { cx, cy, r: 0.3, style: `fill:${PALETTE[c]}` }), svgMark(c, cx, cy, 0.2));
       }
     });
     // X marks on cells where a line runs alongside itself; drawn over the lines.
@@ -113,6 +118,7 @@ export const connect: PuzzleDef = {
         if (owner[i] >= 0) filled++;
       });
       lines.forEach((l, c) => l.setAttribute('points', pts(paths[c], n)));
+      casings.forEach((l, c) => l.setAttribute('points', pts(paths[c], n)));
       const bad = badCells();
       marks.replaceChildren(
         ...bad.map((i) => {

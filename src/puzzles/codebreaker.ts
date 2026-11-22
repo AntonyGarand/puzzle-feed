@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, h, pad, PALETTE, shake } from '../core/ui';
+import { mark } from '../core/symbols';
 import './playkit/code-board.css';
 import './codebreaker.css';
 
@@ -103,9 +104,10 @@ export const codebreaker: PuzzleDef = {
       ],
       (v) => (v === 'del' ? back() : add(Number(v))),
     );
+    palette.querySelectorAll('.swatch').forEach((el, c) => el.append(mark(c)));
 
     const peg = (c: number | undefined) =>
-      h('span', { class: `peg ${c == null ? 'empty' : ''}`, style: c == null ? '' : `--c:${PALETTE[c]}` });
+      h('span', { class: `peg ${c == null ? 'empty' : ''}`, style: c == null ? '' : `--c:${PALETTE[c]}` }, c == null ? null : mark(c));
     const render = () => {
       const rows: HTMLElement[] = [];
       for (let r = 0; r < maxGuesses; r++) {

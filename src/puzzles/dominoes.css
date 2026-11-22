@@ -86,7 +86,7 @@
   border-left: 1.5px solid color-mix(in srgb, var(--ink) 45%, transparent);
 }
 [data-puzzle='dominoes'] .do-chip.used {
-  opacity: 0.3;
+  opacity: 0.35;
   background: var(--cell-alt);
 }
 [data-puzzle='dominoes'] .do-chip.dup {

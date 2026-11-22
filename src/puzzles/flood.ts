@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, pad, PALETTE, restartBtn, shake, undoBtn } from '../core/ui';
+import { mark, setMark } from '../core/symbols';
 import './flood.css';
 import './playkit/moves-left.css';
 
@@ -183,7 +184,7 @@ export const floodPuzzle: PuzzleDef = {
 
     const grid = board(n, n, 'flood');
     const cells = g.map((_, i) => {
-      const el = h('div', { class: 'cell', onclick: () => choose(g[i]) });
+      const el = h('div', { class: 'cell', onclick: () => choose(g[i]) }, mark(g[i]));
       grid.append(el);
       return el;
     });
@@ -197,6 +198,7 @@ export const floodPuzzle: PuzzleDef = {
       })),
       (v) => choose(Number(v)),
     );
+    palette.querySelectorAll('.swatch').forEach((el, c) => el.append(mark(c)));
 
     // Moves-left counter above the board: big number + a draining bar, red when 2 or fewer remain.
     const leftNum = h('b', { class: 'fl-num' });
@@ -210,7 +212,10 @@ export const floodPuzzle: PuzzleDef = {
     );
 
     const render = () => {
-      cells.forEach((el, i) => (el.style.background = PALETTE[g[i]]));
+      cells.forEach((el, i) => {
+        el.style.background = PALETTE[g[i]];
+        setMark(el.firstElementChild as HTMLElement, g[i]);
+      });
       const left = Math.max(0, limit - moves);
       leftNum.textContent = String(left);
       leftLbl.textContent = L(left === 1 ? 'move left' : 'moves left', left < 2 ? 'coup restant' : 'coups restants');

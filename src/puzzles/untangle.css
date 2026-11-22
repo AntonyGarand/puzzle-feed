@@ -24,7 +24,7 @@
   stroke-linecap: round;
 }
 [data-puzzle='untangle'] .untangle line.bad {
-  stroke: var(--bad);
+  stroke: var(--bad-ink);
   stroke-width: 1.1;
 }
 [data-puzzle='untangle'] .untangle .v {

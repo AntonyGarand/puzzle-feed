@@ -7,12 +7,13 @@
   user-select: none;
 }
 [data-puzzle='light-up'] .lu-grid .cell.blk {
-  background: var(--shade);
+  background: var(--shade) var(--shade-hatch);
+  border-color: var(--shade);
   color: var(--on-shade);
   cursor: default;
 }
 [data-puzzle='light-up'] .lu-grid .cell.blk.done {
-  color: color-mix(in srgb, var(--on-shade) 40%, var(--shade));
+  color: color-mix(in srgb, var(--on-shade) 55%, var(--shade));
 }
 [data-puzzle='light-up'] .lu-grid .cell.glow {
   background: color-mix(in srgb, var(--accent) 36%, var(--cell));

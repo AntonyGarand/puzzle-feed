@@ -20,10 +20,10 @@
   font-weight: 700;
 }
 [data-puzzle='hidden-rule'] .yes {
-  color: var(--good);
+  color: var(--good-ink);
 }
 [data-puzzle='hidden-rule'] .no {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 [data-puzzle='hidden-rule'] .hr-specs {
   flex: 1;
@@ -95,10 +95,10 @@
   height: 52px;
 }
 [data-puzzle='hidden-rule'] .key.hr-yes {
-  color: var(--good);
+  color: var(--good-ink);
 }
 [data-puzzle='hidden-rule'] .key.hr-no {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 [data-puzzle='hidden-rule'] .hr-hist {
   --cbw: 1.5px;
@@ -131,7 +131,7 @@
   opacity: 1;
 }
 [data-puzzle='hidden-rule'] .hr-slot.err .hr-spec {
-  border-color: var(--bad);
+  border-color: var(--bad-ink);
   box-shadow: var(--csh) var(--csh) 0 var(--bad);
 }
 /* The true mark of an answered pattern, under its thumbnail. */

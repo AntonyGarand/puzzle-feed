@@ -28,6 +28,13 @@ for (const vp of vps)
   for (const theme of themes) {
     const ctx = await browser.newContext({ viewport: viewports[vp], deviceScaleFactor: 2, colorScheme: theme });
     // LOCALE=fr screenshots the French UI; HELP=1 opens the how-to-play dialog before each shot.
+    // SYMBOLS=1 turns the colour-symbol setting on.
+    if (process.env.SYMBOLS)
+      await ctx.addInitScript(() => {
+        const k = 'puzzle-feed:v1';
+        const p = JSON.parse(localStorage.getItem(k) ?? '{"v":1}');
+        localStorage.setItem(k, JSON.stringify({ ...p, symbols: true }));
+      });
     if (process.env.LOCALE) await ctx.addInitScript((l) => localStorage.setItem('puzzle-feed:locale', l), process.env.LOCALE);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => console.log('PAGEERROR', e.message));

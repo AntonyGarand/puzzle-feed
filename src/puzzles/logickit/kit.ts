@@ -1,8 +1,9 @@
 // Shared helpers for the logic-grid games (stars, tents, tiles, mines, bridges).
 import './kit.css';
 
-/** Pastel tint of palette colour `i` (0-based, wraps at 8). */
-export const tint = (i: number, pct = 40) => `color-mix(in srgb, var(--p${(((i % 8) + 8) % 8) + 1}) ${pct}%, var(--cell))`;
+/** Region tint `i` (0–7) at `pct`% over the cell; the theme picks the tone and scales the strength (see --tN in styles.css). */
+export const tint = (i: number, pct = 40) =>
+  `color-mix(in srgb, var(--t${(((i % 8) + 8) % 8) + 1}) min(100%, calc(${pct}% * var(--tint-gain))), var(--cell))`;
 
 /** Orthogonal neighbours of cell `i` on a cols×rows grid. */
 export function nb4(i: number, cols: number, rows: number): number[] {

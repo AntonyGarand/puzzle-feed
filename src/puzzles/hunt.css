@@ -106,7 +106,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: 50%;
   background: var(--cell);
-  color: color-mix(in srgb, var(--fg) 30%, var(--cell));
+  color: var(--faint);
   z-index: 1;
 }
 [data-puzzle='hunt'] .hunt-star:last-of-type {

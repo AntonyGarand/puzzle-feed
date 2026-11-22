@@ -31,8 +31,9 @@
   background: var(--good);
   color: var(--on-tone);
 }
+/* "wrong place" is striped as well as yellow, so it never relies on telling yellow from green */
 [data-puzzle='word-guess'] .wg .cell.wg-near {
-  background: var(--p4);
+  background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--on-tone) 16%, transparent) 5px 8px), var(--p4);
   color: var(--on-tone);
 }
 [data-puzzle='word-guess'] .wg .cell.wg-out {

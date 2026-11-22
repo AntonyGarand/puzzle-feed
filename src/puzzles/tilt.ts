@@ -1,9 +1,13 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, dpad, h, restartBtn, shake, undoBtn } from '../core/ui';
+import { mark } from '../core/symbols';
 import { keyDir, onSwipe, type Dir } from './movekit/kit';
 import { BLOCK, fullMask, generate, solve, tilt as tiltBoard, type State } from './tiltkit/engine';
 import './tilt.css';
+
+/** Colour-symbol index of each marble colour (--tilt-c0..2 are --p7, --p2, --p4). */
+const SYM = [6, 1, 3];
 
 const DIR_EN = ['up', 'right', 'down', 'left'];
 const DIR_FR = ['vers le haut', 'vers la droite', 'vers le bas', 'vers la gauche'];
@@ -108,14 +112,14 @@ export const tilt: PuzzleDef = {
     // Board: floor, walls and holes as cells; pieces float above and slide with CSS transitions.
     const grid = board(n, n, 'tilt-grid');
     const cells = Array.from({ length: n * n }, (_, i) => {
-      const el = h('div', { class: 'cell' });
+      const el = h('div', { class: 'cell' }, mark(lay.hole[i] >= 0 ? SYM[lay.hole[i]] : -1));
       if (lay.hole[i] >= 0) el.setAttribute('style', `--c:var(--tilt-c${lay.hole[i]})`);
       grid.append(el);
       return el;
     });
     const layer = h('div', { class: 'tilt-layer', 'aria-hidden': 'true' });
     const pieces = kinds.map((k) => {
-      const el = h('div', { class: k === BLOCK ? 'tilt-pc bk' : 'tilt-pc mb' });
+      const el = h('div', { class: k === BLOCK ? 'tilt-pc bk' : 'tilt-pc mb' }, mark(k === BLOCK ? -1 : SYM[k]));
       if (k !== BLOCK) el.style.setProperty('--c', `var(--tilt-c${k})`);
       layer.append(el);
       return el;

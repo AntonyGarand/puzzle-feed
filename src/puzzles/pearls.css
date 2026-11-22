@@ -26,14 +26,13 @@
   stroke-width: 0.025;
 }
 [data-puzzle='pearls'] .pe-svg .dot {
-  fill: var(--muted);
-  opacity: 0.6;
+  fill: var(--faint);
 }
 [data-puzzle='pearls'] .pe-svg .dot.on {
   opacity: 0;
 }
 [data-puzzle='pearls'] .pe-svg .dot.err {
-  fill: var(--bad);
+  fill: var(--bad-ink);
   opacity: 1;
   r: 0.14px;
 }
@@ -49,7 +48,7 @@
   fill: var(--paper);
 }
 [data-puzzle='pearls'] .pe-svg .pl.err {
-  stroke: var(--bad);
+  stroke: var(--bad-ink);
   stroke-width: 0.1;
 }
 [data-puzzle='pearls'] .pe-svg .edge .ln {

@@ -68,6 +68,8 @@ export interface Profile {
   created: number;
   theme: Theme;
   autoAdvance: boolean;
+  /** Shape symbols on colour-coded pieces (see core/symbols.ts). */
+  symbols?: boolean;
   startLevel: Difficulty;
   types: Record<string, TypePrefs>;
   stats: Record<string, TypeStats>;
@@ -154,7 +156,7 @@ function save() {
 
 export const getProfile = () => profile;
 
-export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'autoAdvance' | 'startLevel'>>) {
+export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'autoAdvance' | 'symbols' | 'startLevel'>>) {
   Object.assign(profile, patch);
   save();
   emit('profile');

@@ -10,13 +10,14 @@
   height: 100%;
   transition: transform 0.14s ease;
 }
+/* unlit pipes stay readable (--faint holds 3:1+); lit ones turn ink on the accent */
 [data-puzzle='pipes'] .pipe line {
-  stroke: color-mix(in srgb, var(--fg) 30%, var(--cell));
+  stroke: var(--faint);
   stroke-width: 18;
   stroke-linecap: square;
 }
 [data-puzzle='pipes'] .pipe circle {
-  fill: color-mix(in srgb, var(--fg) 30%, var(--cell));
+  fill: var(--faint);
 }
 [data-puzzle='pipes'] .lit {
   background: var(--accent) !important;

@@ -65,7 +65,7 @@
   opacity: 0.75;
 }
 [data-puzzle='factory'] .fx-v.bad {
-  color: var(--bad);
+  color: var(--bad-ink);
   opacity: 1;
 }
 [data-puzzle='factory'] .fx-tray .key {

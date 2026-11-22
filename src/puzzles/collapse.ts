@@ -1,6 +1,7 @@
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, PALETTE, restartBtn, shake, undoBtn } from '../core/ui';
+import { mark, setMark } from '../core/symbols';
 import { anim } from './movekit/kit';
 import {
   collapseSolver,
@@ -85,7 +86,7 @@ export const collapse: PuzzleDef = {
 
     const grid = board(W, H, 'collapse-grid');
     const cells = Array.from({ length: W * H }, (_, i) => {
-      const el = h('div', { class: 'cell', 'data-i': i, onclick: () => tapCell(i) });
+      const el = h('div', { class: 'cell', 'data-i': i, onclick: () => tapCell(i) }, mark(-1));
       grid.append(el);
       return el;
     });
@@ -100,9 +101,11 @@ export const collapse: PuzzleDef = {
         if (c == null) {
           el.className = 'cell empty';
           el.removeAttribute('style');
+          setMark(el.firstElementChild as HTMLElement, -1);
         } else {
           el.className = 'cell block';
           el.setAttribute('style', `--c:${PALETTE[TONES[c]]}`);
+          setMark(el.firstElementChild as HTMLElement, TONES[c]);
         }
       });
       const n = left();

@@ -178,7 +178,7 @@
   display: none;
 }
 [data-puzzle='push-wall'] .pk-grid .cell.warn:not(.wall) {
-  border-color: var(--bad);
+  border-color: var(--bad-ink);
   border-style: solid;
   background:
     repeating-linear-gradient(-45deg, color-mix(in srgb, var(--bad) 28%, transparent) 0 5px, transparent 5px 11px), var(--cell-alt);

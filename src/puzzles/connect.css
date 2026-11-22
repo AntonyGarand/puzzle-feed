@@ -44,13 +44,17 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+[data-puzzle='connect'] .connect-lines polyline.case {
+  stroke: var(--ink);
+  stroke-width: 0.46;
+}
 [data-puzzle='connect'] .connect-lines circle {
   stroke: var(--ink);
   stroke-width: 0.07;
 }
 [data-puzzle='connect'] .connect-bad path {
   fill: none;
-  stroke: var(--bad);
+  stroke: var(--bad-ink);
   stroke-width: 0.1;
   stroke-linecap: round;
 }
