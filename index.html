@@ -6,9 +6,40 @@
     <meta name="theme-color" content="#fff6e5" />
     <meta
       name="description"
-      content="An endless feed of procedurally generated puzzles: 59 logic, word, number and card games. Free, no account, progress saved in your browser."
+      content="An endless feed of bite-sized puzzles: logic, word, number, card games and more. Free, no account, no ads, no limit.&#10;Un fil sans fin de petits casse-têtes : logique, mots, chiffres, cartes et plus encore. Gratuit, sans compte, sans pub, sans limite."
     />
-    <title>puzzle feed</title>
+    <title>Puzzle Feed</title>
+    <link rel="canonical" href="https://puzzle.garand.dev/" />
+    <!-- Link previews (Discord, Slack, iMessage, X, ...). The image is rendered by scripts/og-image.mjs. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Puzzle Feed" />
+    <meta property="og:title" content="Puzzle Feed" />
+    <meta
+      property="og:description"
+      content="An endless feed of bite-sized puzzles: logic, word, number, card games and more. Free, no account, no ads, no limit.&#10;Un fil sans fin de petits casse-têtes : logique, mots, chiffres, cartes et plus encore. Gratuit, sans compte, sans pub, sans limite."
+    />
+    <meta property="og:url" content="https://puzzle.garand.dev/" />
+    <meta property="og:image" content="https://puzzle.garand.dev/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Puzzle Feed: an endless feed of bite-sized logic, word, number and card puzzles / un fil sans fin de petits casse-têtes"
+    />
+    <meta property="og:locale" content="en_CA" />
+    <meta property="og:locale:alternate" content="fr_CA" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Puzzle Feed" />
+    <meta
+      name="twitter:description"
+      content="An endless feed of bite-sized puzzles: logic, word, number, card games and more. Free, no account, no ads, no limit.&#10;Un fil sans fin de petits casse-têtes : logique, mots, chiffres, cartes et plus encore. Gratuit, sans compte, sans pub, sans limite."
+    />
+    <meta name="twitter:image" content="https://puzzle.garand.dev/og.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Puzzle Feed: an endless feed of bite-sized logic, word, number and card puzzles / un fil sans fin de petits casse-têtes"
+    />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -35,7 +66,12 @@
           }).catch(function () {});
         }
         pageview();
-        addEventListener('hashchange', pageview);
+        // Path routing: in-app navigations are history.pushState calls (src/core/nav.ts).
+        var push = history.pushState;
+        history.pushState = function () {
+          push.apply(history, arguments);
+          pageview();
+        };
         addEventListener('popstate', pageview);
       })();
     </script>

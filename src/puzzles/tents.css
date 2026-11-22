@@ -15,9 +15,6 @@
 [data-puzzle='tents'] .lk-tents .lk-clue.done {
   opacity: 0.3;
 }
-[data-puzzle='tents'] .lk-tents .lk-clue.over {
-  color: var(--bad);
-}
 [data-puzzle='tents'] .lk-tents .cell {
   overflow: hidden;
 }

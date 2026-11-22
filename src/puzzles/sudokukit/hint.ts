@@ -1,5 +1,6 @@
 import { L } from '../../core/i18n';
 import type { Hint, PuzzleInstance } from '../../core/types';
+import { directPlace } from './notes';
 
 /**
  * Step-by-step guide for the number-entry grids (sudoku family, cross sums, latin squares).
@@ -386,6 +387,8 @@ export function makeHint(o: HintOpts): () => Hint | null {
 
 /** Fill a cell through an entry-grid instance: tap the cell, then type the digit. */
 export const entryPlace = (inst: PuzzleInstance, cells: Element[]) => (i: number, v: number) => {
+  const direct = directPlace.get(inst);
+  if (direct) return direct(i, v);
   (cells[i] as HTMLElement).click();
   inst.onKey?.(new KeyboardEvent('keydown', { key: String(v) }));
 };

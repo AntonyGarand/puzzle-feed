@@ -1,6 +1,6 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, h, s } from '../core/ui';
+import { board, countClue, h, s, setCountClue } from '../core/ui';
 import { nb4, nb8 } from './logickit/kit';
 import { genTents, tentsMatch } from './logickit/tentsgen';
 import './tents.css';
@@ -69,8 +69,8 @@ export const tents: PuzzleDef = {
     // 0 empty, 1 grass, 2 tent
     const st = new Array<number>(n * n).fill(0);
     const grid = board(n + 1, n + 1, 'lk-tents');
-    const colEls = p.cols.map((v) => h('div', { class: 'lk-clue' }, v));
-    const rowEls = p.rows.map((v) => h('div', { class: 'lk-clue' }, v));
+    const colEls = p.cols.map((v) => countClue('lk-clue', v));
+    const rowEls = p.rows.map((v) => countClue('lk-clue', v));
     grid.append(h('div', { class: 'lk-clue corner' }), ...colEls);
     const cells: HTMLElement[] = [];
     for (let r = 0; r < n; r++) {
@@ -103,9 +103,7 @@ export const tents: PuzzleDef = {
       });
       let ok = true;
       const clue = (el: HTMLElement, have: number, want: number) => {
-        el.classList.toggle('done', have === want);
-        el.classList.toggle('over', have > want);
-        ok &&= have === want;
+        ok = setCountClue(el, have, want) && ok;
       };
       colEls.forEach((el, c) => clue(el, cols[c], p.cols[c]));
       rowEls.forEach((el, r) => clue(el, rows[r], p.rows[r]));

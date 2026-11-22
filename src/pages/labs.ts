@@ -2,10 +2,15 @@ import { helpButton } from '../core/help';
 import { L, locale, P } from '../core/i18n';
 import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
+import { navigate } from '../core/nav';
 import { encodeCode, resolveCode } from '../core/share';
-import { prefs, stats } from '../core/store';
+import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { fmtTime, h } from '../core/ui';
+import { cogIcon, fmtTime, h, segmented } from '../core/ui';
+import { openSheet } from '../core/sheet';
+import { destroyThumbs, thumb } from '../core/thumb';
+import { levelHex } from '../core/win';
+import { xpLevel } from '../core/xp';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -16,83 +21,165 @@ const ago = (t: number) => {
 };
 
 let filter: CategoryId | 'all' = 'all';
+let query = '';
 
-/** Games tab: every game grouped by category; resume the unfinished one or start new at a chosen level. */
+/** Lower-case, accents stripped: "élim" and "Elim" both match "Élimination". */
+const fold = (str: string) => str.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+const weights = (): { label: string; value: Weight }[] => [
+  { label: L('Off', 'Jamais'), value: 0 },
+  { label: L('Less', 'Moins'), value: 1 },
+  { label: L('Normal', 'Normal'), value: 2 },
+  { label: L('More', 'Plus'), value: 3 },
+];
+
+/**
+ * Games tab: every game grouped by category, with search. Each row resumes the unfinished game or
+ * starts a new one; its cog holds the game's level and how often it shows up in the feed.
+ */
 export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { input: string; error: string }) {
   // Saves of word games made in the other language can't be resumed here.
   const saves = Object.fromEntries(
     Object.entries(allSaves()).filter(([id, sv]) => !defs.find((d) => d.id === id)?.localized || (sv.locale ?? 'en') === locale()),
   );
+  destroyThumbs();
   const rerender = () => renderLabs(el, defs);
+  const catName = (d: PuzzleDef) => CATEGORIES.find((c) => c.id === d.category)?.name ?? '';
 
+  /** Level, feed frequency and save management, behind the tile's cog. */
+  const openTileSettings = (d: PuzzleDef, save: Save | undefined) => {
+    const pr = prefs(d.id);
+    // The picker always shows the current level; Auto is a separate switch. Picking a level turns Auto off.
+    const levelBox = h('div', { class: 'level-box' });
+    const drawLevel = () => {
+      const p = prefs(d.id);
+      levelBox.replaceChildren(
+        segmented(
+          LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l })),
+          p.level,
+          (v) => {
+            setLevel(d.id, v);
+            drawLevel();
+          },
+          { class: 'seg wrap', 'aria-label': L('Difficulty', 'Difficulté') },
+        ),
+        h('h3', null, L('Auto-level', 'Niveau auto')),
+        h(
+          'p',
+          { class: 'muted small auto-hint' },
+          L('Raises the level when you solve quickly and cleanly.', 'Monte le niveau quand vous résolvez vite et sans faute.'),
+        ),
+        segmented(
+          [
+            { label: L('Off', 'Non'), value: 0 },
+            { label: L('On', 'Oui'), value: 1 },
+          ],
+          p.manual ? 0 : 1,
+          (v) => {
+            setLevel(d.id, v ? 'auto' : prefs(d.id).level);
+            drawLevel();
+          },
+          { 'aria-label': L('Auto-level', 'Niveau auto') },
+        ),
+      );
+    };
+    drawLevel();
+    const close = openSheet({
+      title: d.name,
+      puzzle: d.id,
+      className: 'game-settings',
+      body: [
+        h('p', { class: 'muted small' }, d.rules),
+        h('h3', null, L('Difficulty', 'Difficulté')),
+        levelBox,
+        h('h3', null, L('In the feed', 'Dans le fil')),
+        segmented(weights(), pr.weight, (v) => setWeight(d.id, v)),
+        save
+          ? h(
+              'p',
+              { class: 'small' },
+              `${L('Unfinished', 'En cours')} : ${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
+              h(
+                'button',
+                {
+                  type: 'button',
+                  class: 'linkish',
+                  onclick: () => {
+                    clearSave(d.id);
+                    close();
+                  },
+                },
+                L('discard', 'abandonner'),
+              ),
+            )
+          : null,
+      ],
+      onClose: () => {
+        if (location.pathname.startsWith('/games')) rerender();
+      },
+    });
+  };
+
+  /**
+   * One row per game: preview, name, rules and stats. The whole row starts the game (or resumes the
+   * unfinished one); "?" and the cog are separate buttons layered above the row's link.
+   */
   const tile = (d: PuzzleDef, save: Save | undefined) => {
     const st = stats(d.id);
     const pr = prefs(d.id);
-    const levelSel = h(
-      'select',
-      { class: 'select', 'aria-label': `${d.name} — ${L('level', 'niveau')}` },
-      ...LEVELS.map((l) => h('option', { value: String(l) }, LEVEL_NAMES[l])),
-    );
-    levelSel.value = String(save?.level ?? pr.level);
+    const href = save ? `/game/${d.id}` : `/game/${d.id}/new/${pr.level}`;
     const best = st.best[pr.level];
-    const startNew = () => (location.hash = `#/game/${d.id}/new/${levelSel.value}`);
-
+    const lvl = levelHex(xpLevel(st.xp!).level, 'sm');
+    const chips = save
+      ? [
+          lvl,
+          h('span', { class: 'resume-pill' }, `${L('Resume', 'Reprendre')} · ${fmtTime(save.elapsed)}`),
+          LEVEL_NAMES[save.level],
+          ago(save.at),
+        ]
+      : [
+          lvl,
+          `${pr.manual ? '' : 'Auto · '}${LEVEL_NAMES[pr.level]}`,
+          st.solved ? P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']) : null,
+          best != null ? `${L('best', 'record')} ${fmtTime(best)}` : null,
+        ];
+    const cog = h(
+      'button',
+      {
+        type: 'button',
+        class: 'icon-btn cog-btn',
+        title: L('Options', 'Options'),
+        'aria-label': `${d.name} — ${L('options', 'options')}`,
+        onclick: () => openTileSettings(d, save),
+      },
+      cogIcon(),
+    );
     return h(
       'article',
-      { class: `lab-tile ${save ? 'has-save' : ''}`, 'data-puzzle': d.id },
-      h(
-        'header',
-        null,
-        h('div', { class: 'title-row' }, h('h2', null, d.name), helpButton(d)),
-        save ? h('span', { class: 'badge' }, L('In progress', 'En cours')) : null,
-      ),
-      h('p', { class: 'rules' }, d.rules),
-      save
-        ? h(
-            'p',
-            { class: 'lab-meta' },
-            `${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
-            h(
-              'button',
-              {
-                type: 'button',
-                class: 'linkish',
-                onclick: () => {
-                  clearSave(d.id);
-                  rerender();
-                },
-              },
-              L('discard', 'abandonner'),
-            ),
-          )
-        : h(
-            'p',
-            { class: 'lab-meta' },
-            P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']),
-            best != null ? ` · ${L('best', 'record')} ${fmtTime(best)}` : '',
-            ` · ${pr.manual ? '' : 'auto '}${LEVEL_NAMES[pr.level]}`,
-          ),
+      {
+        class: `lab-tile ${save ? 'has-save' : ''} ${pr.weight === 0 ? 'off' : ''}`,
+        'data-puzzle': d.id,
+        'data-search': fold(`${d.name} ${d.id} ${d.rules} ${catName(d)}`),
+      },
+      thumb(d, 'tile-art'),
       h(
         'div',
-        { class: 'lab-new' },
-        save ? h('a', { class: 'btn primary', href: `#/game/${d.id}` }, L('Resume', 'Reprendre')) : null,
-        levelSel,
+        { class: 'tile-main' },
         h(
-          'button',
-          { type: 'button', class: `btn ${save ? '' : 'primary'}`, onclick: startNew },
-          save ? L('New', 'Nouvelle') : L('Play', 'Jouer'),
+          'header',
+          null,
+          h(
+            'h2',
+            null,
+            h('a', { class: 'tile-link', href, 'aria-label': `${save ? L('Resume', 'Reprendre') : L('Play', 'Jouer')} ${d.name}` }, d.name),
+          ),
+          helpButton(d, { quiet: true }),
+          cog,
         ),
-        h(
-          'a',
-          {
-            class: 'btn ghost endless',
-            href: `#/play/${d.id}`,
-            title: L(`Endless feed of ${d.name}`, `Fil sans fin : ${d.name}`),
-            'aria-label': L(`Endless feed of ${d.name}`, `Fil sans fin : ${d.name}`),
-          },
-          '∞',
-        ),
+        h('p', { class: 'rules' }, d.rules),
+        h('p', { class: 'lab-meta' }, ...chips.filter(Boolean).map((c) => (typeof c === 'string' ? h('span', null, c) : c))),
       ),
+      h('span', { class: 'tile-go', 'aria-hidden': 'true' }, save ? '↻' : '▶'),
     );
   };
 
@@ -132,7 +219,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           codeInput.focus();
           return;
         }
-        location.hash = `#/s/${encodeCode(res.code)}`;
+        navigate(`/s/${encodeCode(res.code)}`);
       },
     },
     h('h3', null, L('Play a shared puzzle', 'Jouer une partie partagée')),
@@ -150,6 +237,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
       {
         type: 'button',
         class: `chip-filter ${filter === id ? 'on' : ''}`,
+        'aria-pressed': String(filter === id),
         onclick: () => {
           filter = id;
           rerender();
@@ -159,26 +247,89 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
       h('span', null, n),
     );
 
+  // Search hides tiles in place, so typing never rebuilds the page or loses focus.
+  const noMatch = h('p', { class: 'muted no-match', hidden: true });
+  const search = h('input', {
+    class: 'input search',
+    type: 'search',
+    name: 'q',
+    value: query,
+    placeholder: L('Search games', 'Chercher un jeu'),
+    autocomplete: 'off',
+    spellcheck: 'false',
+    enterkeyhint: 'search',
+    'aria-label': L('Search games', 'Chercher un jeu'),
+  });
+  const applySearch = () => {
+    const words = fold(query).split(/\s+/).filter(Boolean);
+    let any = false;
+    for (const sec of el.querySelectorAll<HTMLElement>('section.cat')) {
+      let n = 0;
+      for (const t of sec.querySelectorAll<HTMLElement>('.lab-tile')) {
+        const hit = words.every((w) => t.dataset.search!.includes(w));
+        t.hidden = !hit;
+        if (hit) n++;
+      }
+      sec.hidden = !n;
+      any ||= n > 0;
+    }
+    noMatch.hidden = any;
+    noMatch.textContent = L(`No game matches “${query.trim()}”.`, `Aucun jeu ne correspond à « ${query.trim()} ».`);
+  };
+  search.addEventListener('input', () => {
+    query = search.value;
+    applySearch();
+  });
+
+  /** Category heading, with a switch for all of its games in the feed. */
+  const catHead = (c: (typeof cats)[number]) => {
+    const allOff = c.games.every((d) => prefs(d.id).weight === 0);
+    return h(
+      'h3',
+      null,
+      c.name,
+      h('span', { class: 'cat-blurb' }, c.blurb),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'linkish cat-toggle',
+          onclick: () => {
+            c.games.forEach((d) => setWeight(d.id, allOff ? 2 : 0));
+            rerender();
+          },
+        },
+        allOff ? L('Put all in the feed', 'Tout remettre dans le fil') : L('Hide all from the feed', 'Tout retirer du fil'),
+      ),
+    );
+  };
+
   el.replaceChildren(
     h(
       'div',
-      { class: 'page wide' },
+      { class: 'page wide games' },
       h('h1', null, L('Games', 'Jeux')),
       h(
         'p',
         { class: 'muted' },
         L(
-          `${defs.length} games. Pick any game and level — unfinished ones are saved automatically.`,
-          `${defs.length} jeux. Choisissez un jeu et un niveau — les parties en cours sont sauvegardées automatiquement.`,
+          `${defs.length} games. Tap one to play — unfinished games are saved automatically. The cog sets its level and how often it shows up in the Feed tab.`,
+          `${defs.length} jeux. Touchez un jeu pour jouer — les parties en cours sont sauvegardées automatiquement. La roue dentée règle son niveau et sa fréquence dans l’onglet Fil.`,
         ),
       ),
       codeForm,
       h(
         'div',
-        { class: 'filters', role: 'toolbar', 'aria-label': L('Categories', 'Catégories') },
-        chip('all', L('All', 'Tous'), defs.length),
-        ...cats.map((c) => chip(c.id, c.name, c.games.length)),
+        { class: 'games-bar' },
+        search,
+        h(
+          'div',
+          { class: 'filters', role: 'toolbar', 'aria-label': L('Categories', 'Catégories') },
+          chip('all', L('All', 'Tous'), defs.length),
+          ...cats.map((c) => chip(c.id, c.name, c.games.length)),
+        ),
       ),
+      noMatch,
       inProgress.length && filter === 'all'
         ? h(
             'section',
@@ -191,10 +342,11 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         h(
           'section',
           { class: 'cat', id: `cat-${c.id}` },
-          h('h3', null, c.name, h('span', { class: 'cat-blurb' }, c.blurb)),
+          catHead(c),
           h('div', { class: 'lab-grid' }, ...c.games.map((d) => tile(d, saves[d.id]))),
         ),
       ),
     ),
   );
+  applySearch();
 }

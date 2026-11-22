@@ -48,3 +48,9 @@
   stroke: var(--ink);
   stroke-width: 0.07;
 }
+.connect-bad path {
+  fill: none;
+  stroke: var(--bad);
+  stroke-width: 0.1;
+  stroke-linecap: round;
+}

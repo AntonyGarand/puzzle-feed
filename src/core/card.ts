@@ -7,9 +7,11 @@ import { Rng } from './rng';
 import { clearSave, dailySaveKey, putSave, type Save, type Slot } from './saves';
 import { encodeCode, shareSection } from './share';
 import { openSheet } from './sheet';
-import { prefs, record, recordDaily, setLevel, setWeight, getProfile, type RecordOutcome, type Weight } from './store';
+import { prefs, record, recordDaily, setLevel, setWeight, getProfile, stats, type RecordOutcome, type Weight } from './store';
 import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from './types';
 import { btn, bulbIcon, cogIcon, fmtTime, h, s as svg } from './ui';
+import { levelHex, winCard } from './win';
+import { xpLevel } from './xp';
 
 export interface CardOptions {
   /** Labs mode: fixed levels (doesn't touch feed prefs), no auto-advance, "New puzzle" instead of "Next". */
@@ -81,6 +83,7 @@ export class Card {
   /** Opened from a share code (until the player starts another puzzle on this card). */
   shared = false;
   private saveTimer = 0;
+  private advanceTimer = 0;
   private launch: Launch | null;
 
   constructor(
@@ -97,6 +100,11 @@ export class Card {
   /** Share code of the current puzzle: game, level, seed (and locale for word games). */
   get code() {
     return encodeCode({ id: this.def.id, level: this.level, seed: this.seed, locale: this.def.localized ? wordLocale() : undefined });
+  }
+
+  /** Seed of the puzzle on this card (with `level`, enough to deal the same puzzle again). */
+  get puzzleSeed() {
+    return this.seed;
   }
 
   /** Where this card's progress is saved, and under which key. */
@@ -253,19 +261,16 @@ export class Card {
     const resume = this.pauseWhile();
     const p = prefs(this.def.id);
     const daily = !!this.opts.daily;
-    const options: { label: string; value: Difficulty | 'auto' }[] = [
-      ...(this.opts.lab ? [] : [{ label: L('Auto', 'Auto'), value: 'auto' as const }]),
-      ...LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l })),
-    ];
-    const current: Difficulty | 'auto' = this.opts.lab || p.manual ? this.level : 'auto';
+    // The picker always shows the level being played; Auto is a separate switch (feed only).
+    const options = LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l }));
     let close = () => {};
-    const pickLevel = (v: Difficulty | 'auto') => {
+    const pickLevel = (v: Difficulty) => {
       close();
       if (this.opts.lab) {
-        this.mount({ level: v === 'auto' ? this.level : v });
+        this.mount({ level: v });
         return;
       }
-      setLevel(this.def.id, v);
+      setLevel(this.def.id, v); // picking a level turns Auto off
       this.mount(); // the feed also regenerates untouched upcoming cards
     };
     const seg = <T>(name: string, items: { label: string; value: T }[], cur: T, onpick: (v: T) => void) =>
@@ -300,30 +305,42 @@ export class Card {
         b.setAttribute('aria-checked', String(weights[i].value === v));
       });
     });
+    const autoOpts = [
+      { label: L('Off', 'Non'), value: 0 },
+      { label: L('On', 'Oui'), value: 1 },
+    ];
+    const auto = seg('auto', autoOpts, p.manual ? 0 : 1, (v) => {
+      // The level stays where it is: On lets auto-levelling move it from here, Off locks it.
+      setLevel(this.def.id, v ? 'auto' : this.level);
+      auto.querySelectorAll('button').forEach((b, i) => {
+        b.classList.toggle('on', autoOpts[i].value === v);
+        b.setAttribute('aria-checked', String(autoOpts[i].value === v));
+      });
+    });
+    const showAuto = !daily && !this.opts.lab;
     close = openSheet({
       title: this.def.name,
       puzzle: this.def.id,
       className: 'game-settings',
       body: [
         daily ? null : h('h3', null, L('Difficulty', 'Difficulté')),
-        daily ? null : seg('level', options, current, pickLevel),
-        this.opts.lab
-          ? null
-          : h(
+        daily ? null : seg('level', options, this.level, pickLevel),
+        showAuto ? h('h3', null, L('Auto-level', 'Niveau auto')) : null,
+        showAuto
+          ? h(
               'p',
-              { class: 'muted small' },
-              L(
-                'Auto raises the level when you solve quickly and cleanly.',
-                'Auto monte le niveau quand vous résolvez vite et sans faute.',
-              ),
-            ),
+              { class: 'muted small auto-hint' },
+              L('Raises the level when you solve quickly and cleanly.', 'Monte le niveau quand vous résolvez vite et sans faute.'),
+            )
+          : null,
+        showAuto ? auto : null,
         this.opts.lab ? null : h('h3', null, L('In the feed', 'Dans le fil')),
         this.opts.lab ? null : freq,
         h('h3', null, L('Share this puzzle', 'Partager cette partie')),
         shareSection(this.code, this.def.name),
       ],
       footer: [
-        h('a', { class: 'btn ghost', href: '#/settings', onclick: () => close() }, L('All settings', 'Tous les réglages')),
+        h('a', { class: 'btn ghost', href: '/settings', onclick: () => close() }, L('All settings', 'Tous les réglages')),
         this.done
           ? null
           : btn(this.opts.lab ? L('Give up', 'Abandonner') : L('Skip', 'Passer'), () => {
@@ -385,7 +402,8 @@ export class Card {
         : auto
           ? ' · auto'
           : '';
-    this.levelEl.textContent = LEVEL_NAMES[this.level] + tag;
+    const xp = stats(this.def.id).xp!;
+    this.levelEl.replaceChildren(levelHex(xpLevel(xp).level, 'sm'), LEVEL_NAMES[this.level] + tag);
   }
 
   private syncMistakes() {
@@ -406,24 +424,36 @@ export class Card {
     const set = (f: number) => stage.style.setProperty('--fit', `${Math.max(120, Math.floor(f))}px`);
     let f = Math.min(W - 8, 600);
     set(f);
+    // Bracket the answer: `lo` is the largest size known to fit, `hi` the smallest known to overflow.
+    // Content height isn't always 1:1 with the board size (grids capped by width or per-cell maximums
+    // stop growing), so a bare secant step can overshoot to the minimum; keep every guess in the bracket.
+    let lo = 120;
+    let hi = Infinity;
     let prevF = 0;
     let prevOver = 0;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       const overH = root.getBoundingClientRect().height - H;
       const overW = root.scrollWidth - W;
       const over = Math.max(overH, overW);
-      if (over <= 0.5) break;
-      // Secant step once there are two samples: content height isn't always 1:1 with the board size.
-      const slope = prevF ? Math.max(0.3, (prevOver - over) / (prevF - f || 1)) : 1;
-      prevF = f;
-      prevOver = over;
-      f -= over / slope + 1;
-      if (f <= 120) {
-        set(120);
-        break;
+      if (over <= 0.5) {
+        lo = f;
+        if (hi === Infinity || hi - lo <= 2) break;
+        // Fits but a larger size overflowed earlier: try halfway back up.
+        f = (lo + hi) / 2;
+      } else {
+        hi = f;
+        // Secant step once there are two samples, bisection if it leaves the bracket.
+        const slope = prevF ? Math.max(0.3, (prevOver - over) / (prevF - f || 1)) : 1;
+        prevF = f;
+        prevOver = over;
+        f -= over / slope + 1;
+        if (f <= lo || f >= hi) f = (lo + hi) / 2;
+        if (hi - lo <= 2) f = lo;
       }
       set(f);
     }
+    // Out of steps while overflowing: fall back to the largest size known to fit.
+    if (Math.max(root.getBoundingClientRect().height - H, root.scrollWidth - W) > 0.5) set(lo);
   }
 
   mount(launch: Launch | null = this.launch) {
@@ -577,6 +607,7 @@ export class Card {
     if (this.reached) return;
     const ms = Math.round(this.time());
     this.reached = { ms, res: this.recordResult('solved', ms) };
+    this.syncLevelSel();
     this.queueSave();
     const res = this.reached.res!;
     if (res.best || res.prevBest == null) {
@@ -650,34 +681,48 @@ export class Card {
     clearSave(this.saveId, this.seed, this.slot);
     this.setActive(false);
     this.active = true; // still the visible card; just stop the clock
-    this.stage.inert = true;
+    for (const c of this.stage.children) (c as HTMLElement).inert = true;
     this.el.classList.add(`is-${o}`);
     this.tick();
 
     // A resumed run that had already reached its goal has no outcome in memory: skip the record line.
     const res: RecordOutcome = early ? (early.res ?? {}) : this.recordResult(o, ms);
+    this.syncLevelSel();
     const known = !early || !!early.res;
 
     const parts: (string | HTMLElement)[] = [];
-    if (o === 'solved') parts.push(h('strong', { class: 'good' }, L('Solved', 'Réussi')), ` ${L('in', 'en')} ${fmtTime(ms)}`);
+    if (o === 'solved') parts.push(h('strong', { class: 'good' }, L('Solved', 'Réussi')));
     else if (o === 'failed') parts.push(h('strong', { class: 'bad' }, L('Not this time', 'Pas cette fois')));
     else parts.push(h('strong', null, L('Skipped', 'Passé')));
-    if (this.mistakes && o !== 'skipped') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
-    if (this.hints && o !== 'skipped') parts.push(` · ${P(this.hints, ['hint', 'hints'], ['indice', 'indices'])}`);
-    if (o === 'solved' && known) {
-      if (res.best)
-        parts.push(
-          ' · ',
-          h('span', { class: 'record' }, `${L('New record!', 'Nouveau record!')} (${L('was', 'avant')} ${fmtTime(res.prevBest!)})`),
-        );
-      else if (res.prevBest == null) parts.push(' · ', h('span', { class: 'record' }, L('First clear!', 'Première réussite!')));
-      else parts.push(` · ${L('best', 'record')} ${fmtTime(res.prevBest)}`);
-      if (!early && (res.best || res.prevBest == null)) {
-        const r = this.stage.getBoundingClientRect();
-        if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
-      }
+    if (this.mistakes && o === 'failed') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
+    if (this.hints && o === 'failed') parts.push(` · ${P(this.hints, ['hint', 'hints'], ['indice', 'indices'])}`);
+    if (o === 'solved' && known && !early && (res.best || res.prevBest == null)) {
+      const r = this.stage.getBoundingClientRect();
+      if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
     }
-    if (res.levelChange) {
+    const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
+    const advanceMs = res.best || res.prevBest == null || res.levelChange ? 3200 : 2400;
+    if (o === 'solved') {
+      const win = winCard({
+        name: this.def.name,
+        level: LEVEL_NAMES[this.level],
+        daily: !!this.opts.daily,
+        ms,
+        mistakes: this.mistakes,
+        hints: this.hints,
+        parMs: this.def.par(this.level) * 1000,
+        solved: stats(this.def.id).solved,
+        res: known ? res : null,
+        levelUp: res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] },
+        advanceMs: advance ? advanceMs : undefined,
+      });
+      // Tap the panel to peek at the finished board (tap again to bring it back); this stops auto-advance.
+      win.addEventListener('click', () => {
+        win.classList.toggle('peek');
+        clearTimeout(this.advanceTimer);
+      });
+      this.stage.append(win);
+    } else if (res.levelChange) {
       const up = res.levelChange.to > res.levelChange.from;
       parts.push(
         h(
@@ -706,9 +751,9 @@ export class Card {
     );
 
     if (this.opts.lab) return;
-    if (o === 'solved' && getProfile().autoAdvance) {
+    if (advance) {
       const gen = this.gen;
-      setTimeout(() => gen === this.gen && this.onNext(this), res.best || res.prevBest == null ? 2400 : 1400);
+      this.advanceTimer = window.setTimeout(() => gen === this.gen && this.onNext(this), advanceMs);
     } else if (o === 'skipped') {
       this.onNext(this);
     }

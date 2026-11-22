@@ -1,6 +1,6 @@
 {
   "appId": "dev.garand.puzzle.foss",
-  "appName": "puzzle feed",
+  "appName": "Puzzle Feed",
   "webDir": "dist",
   "android": {
     "path": "android-foss"

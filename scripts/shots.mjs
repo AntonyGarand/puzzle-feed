@@ -16,7 +16,10 @@ const vps = (process.env.VP ?? 'mobile').split(',');
 /** Pick a level (1–5 or 'auto') through the card's cog sheet. */
 async function pickLevel(page, lv, card = page.locator('.card').first()) {
   await card.locator('[data-action="settings"]').click();
-  await page.locator(`dialog.sheet [data-setting="level"] [data-value="${lv}"]`).click();
+  // Auto is its own On/Off switch; a level pick turns it off.
+  const sel = lv === 'auto' ? '[data-setting="auto"] [data-value="1"]' : `[data-setting="level"] [data-value="${lv}"]`;
+  await page.locator(`dialog.sheet ${sel}`).click();
+  if (lv === 'auto') await page.keyboard.press('Escape'); // the switch doesn't close the sheet
   await page.waitForTimeout(150);
 }
 
@@ -34,7 +37,7 @@ for (const vp of vps)
     }
     for (const id of ids) {
       for (const lv of levels) {
-        await page.goto(`${base}#/play/${id}`);
+        await page.goto(`${base}play/${id}`);
         await page.waitForSelector('.card .puzzle');
         await pickLevel(page, lv);
         await page.waitForTimeout(lv === '5' ? 900 : 400);
@@ -47,16 +50,16 @@ for (const vp of vps)
       }
     }
     // Pages
-    await page.goto(`${base}#/stats`);
+    await page.goto(`${base}stats`);
     await page.waitForTimeout(300);
     await page.screenshot({ path: join(out, `${vp}-${theme}-zz-stats.png`), fullPage: true });
-    await page.goto(`${base}#/labs`);
+    await page.goto(`${base}labs`);
     await page.waitForTimeout(300);
     await page.screenshot({ path: join(out, `${vp}-${theme}-zz-labs.png`) });
-    await page.goto(`${base}#/lab/pipes/new/3`);
+    await page.goto(`${base}lab/pipes/new/3`);
     await page.waitForTimeout(400);
     await page.screenshot({ path: join(out, `${vp}-${theme}-zz-lab-view.png`) });
-    await page.goto(`${base}#/settings`);
+    await page.goto(`${base}settings`);
     await page.waitForTimeout(300);
     await page.screenshot({ path: join(out, `${vp}-${theme}-zz-settings.png`) });
     await ctx.close();

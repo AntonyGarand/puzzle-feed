@@ -21,8 +21,3 @@
 [data-puzzle='skyscrapers'] .sky .sky-clue.ok {
   opacity: 0.35;
 }
-[data-puzzle='skyscrapers'] .sky .sky-clue.bad {
-  background: var(--bad);
-  color: var(--on-tone);
-  border: var(--cbw) solid var(--ink);
-}

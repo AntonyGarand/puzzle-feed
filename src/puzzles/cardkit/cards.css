@@ -50,10 +50,12 @@
   --fg: #111111;
   --accent-soft: color-mix(in srgb, var(--accent) 32%, var(--cell));
   --pc-red: color-mix(in srgb, var(--bad) 78%, var(--fg));
-  border: 2px solid var(--ink);
+  /* The edge is pinned dark too: the theme --ink turns cream in dark mode and overlapping faces would merge. */
+  --edge: #111111;
+  border: 2px solid var(--edge);
   background: var(--cell);
   color: var(--fg);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--edge);
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -128,7 +130,7 @@
   outline: 3px solid var(--accent);
   outline-offset: -1px;
   transform: translate(-1px, -2px);
-  box-shadow: 3px 4px 0 var(--ink);
+  box-shadow: 3px 4px 0 var(--edge);
 }
 .ctable .pc.hint {
   background: var(--accent-soft);
@@ -146,11 +148,11 @@
   z-index: 50;
   pointer-events: none;
   transition: none;
-  box-shadow: 4px 5px 0 var(--ink);
+  box-shadow: 4px 5px 0 var(--edge);
 }
 .ctable .pc:active:not(.down):not(.lift) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--ink);
+  box-shadow: 1px 1px 0 var(--edge);
 }
 .ctable .pc.stock {
   cursor: pointer;

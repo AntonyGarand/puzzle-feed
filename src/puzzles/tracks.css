@@ -35,11 +35,12 @@
     opacity 0.2s,
     color 0.2s;
 }
+/* room for the live tally pill beside each row target */
+[data-puzzle='tracks'] .rows .clue {
+  min-width: 2.4em;
+}
 [data-puzzle='tracks'] .clue.done {
   opacity: 0.3;
-}
-[data-puzzle='tracks'] .clue.over {
-  color: var(--bad);
 }
 
 [data-puzzle='tracks'] .tracks-grid {

@@ -41,9 +41,6 @@
 }
 [data-puzzle='haunted'] .hn-clue.err {
   opacity: 1;
-  background: var(--bad);
-  color: var(--on-tone);
-  border-color: var(--ink);
 }
 
 /* mirrors */
