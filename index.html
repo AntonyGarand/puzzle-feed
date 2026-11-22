@@ -16,11 +16,12 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <script>
       // Plausible pageviews -> stats.garand.dev (own site + "garand.dev" rollup).
-      // Opt out: localStorage.plausible_ignore = "true".
+      // Opt out: Settings > Anonymous stats (puzzle-feed:analytics-off), or localStorage.plausible_ignore = "true".
       (function () {
         if (!/(^|\.)garand\.dev$/.test(location.hostname)) return;
         try {
           if (localStorage.getItem('plausible_ignore') === 'true') return;
+          if (localStorage.getItem('puzzle-feed:analytics-off') === '1') return;
         } catch (e) {}
         var last;
         function pageview() {

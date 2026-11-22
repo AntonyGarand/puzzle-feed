@@ -4,6 +4,7 @@ import { btn, h } from '../core/ui';
 import { CATEGORIES } from '../core/categories';
 import { helpButton } from '../core/help';
 import { L, LOCALES, locale, setLocale, type Locale } from '../core/i18n';
+import { analyticsEnabled, setAnalyticsEnabled } from '../core/analytics';
 
 function segmented<T extends string | number>(options: { label: string; value: T }[], current: T, onpick: (v: T) => void) {
   const el = h('div', { class: 'seg', role: 'radiogroup' });
@@ -208,11 +209,28 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         ),
       ),
       h(
-        'p',
-        { class: 'muted small' },
-        L(
-          'Anonymous play stats (game, level, time, result) are shared to help tune the puzzles. Your name never leaves this device.',
-          'Des statistiques de jeu anonymes (jeu, niveau, temps, résultat) sont partagées pour ajuster les casse-têtes. Votre nom ne quitte jamais cet appareil.',
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
+          h('div', null, L('Anonymous stats', 'Statistiques anonymes')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'Shares play stats (game, level, time, result) and page visits to help tune the puzzles. Your name never leaves this device.',
+              'Partage des statistiques de jeu (jeu, niveau, temps, résultat) et les pages visitées pour ajuster les casse-têtes. Votre nom ne quitte jamais cet appareil.',
+            ),
+          ),
+        ),
+        segmented(
+          [
+            { label: L('On', 'Oui'), value: 1 },
+            { label: L('Off', 'Non'), value: 0 },
+          ],
+          analyticsEnabled() ? 1 : 0,
+          (v) => setAnalyticsEnabled(v === 1),
         ),
       ),
       h('p', { class: 'muted small app-version' }, `puzzle feed · ${__APP_VERSION__}`),

@@ -9,6 +9,7 @@
     "src/puzzles/wordkit/dict*.txt",
     "src/puzzles/wordkit/common*.ts",
     "package-lock.json",
-    "android/**"
+    "android/**",
+    "android-foss/**"
   ]
 }

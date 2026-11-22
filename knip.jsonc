@@ -8,5 +8,8 @@
     "wordlist-english",
     "@zxcvbn-ts/language-fr",
     "french-badwords-list",
+    // Loaded by the Capacitor CLI and the Gradle project in android-foss/, not imported from src/.
+    "@capacitor/android",
+    "@capacitor/core",
   ],
 }
