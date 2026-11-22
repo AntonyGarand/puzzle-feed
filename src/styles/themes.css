@@ -90,7 +90,9 @@
   }
 }
 
-/* ---------- Newsprint: the puzzle page of a paper — serif type, fine rules, square corners ---------- */
+/* ---------- Newsprint: the puzzle page of a paper — serif type, fine rules, square corners ----------
+   Near-monochrome chrome: one grey accent for every game (instead of each game's tone) and a grey
+   highlight. The game palette (--p*, --t*) stays as is: those colours carry meaning on the board. */
 :root:where([data-style='newsprint']) {
   --bg: #f2eee3;
   --cell: #fbf9f3;
@@ -101,7 +103,7 @@
   --faint: #6f695f;
   --good-ink: #0c6b34;
   --bad-ink: #b3262c;
-  --hi: #f1dc85;
+  --hi: #d9d0bb;
   --bw: 1.5px;
   --drop: transparent;
   --r: 3px;
@@ -128,6 +130,11 @@
     --muted: #b2aa99;
     --faint: #948c7d;
   }
+}
+
+/* Every game wears the same grey instead of its own tone (beats each game's [data-puzzle='…'] rule). */
+:root[data-style='newsprint'] [data-puzzle] {
+  --accent: #b3ab9c;
 }
 
 /* Flat styles have no shadow to press into: shell buttons dip slightly instead of jumping diagonally. */
