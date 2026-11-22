@@ -54,6 +54,14 @@
 .btn.ghost:active {
   transform: translate(1px, 1px);
 }
+/* Armed two-tap button (restartBtn/clearBtn): must beat .btn.ghost's transparent fill, or the
+   "Restart?" prompt renders as dark text on the dark page and the first tap looks dead. */
+.btn.ghost.danger {
+  background: var(--bad);
+  color: var(--on-tone);
+  border-color: var(--ink);
+  text-decoration: none;
+}
 
 .input {
   font-size: 30px;
