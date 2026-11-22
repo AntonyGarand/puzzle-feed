@@ -132,7 +132,7 @@ function makeCages(n: number, sol: number[], maxSize: number, singles: number, o
       }
       let w = rng.next() * choices.reduce((s, c) => s + c[2], 0);
       const [op, target] = choices.find((c) => (w -= c[2]) < 0) ?? choices[0];
-      return { cells: [...cells].sort((a, b) => a - b), op, target };
+      return { cells: cells.toSorted((a, b) => a - b), op, target };
     });
 }
 
@@ -231,7 +231,7 @@ export const mathCages: PuzzleDef = {
     const label = (c: Cage) => L(`The “${c.target}${c.op}” cage`, `La cage « ${c.target}${c.op} »`);
     /** "1 + 3", "3 − 1", "2 × 2 × 3"… */
     const show = (c: Cage, vs: number[]) => {
-      const sorted = [...vs].sort((a, b) => (c.op === '−' || c.op === '÷' ? b - a : a - b));
+      const sorted = vs.toSorted((a, b) => (c.op === '−' || c.op === '÷' ? b - a : a - b));
       return sorted.join(` ${c.op} `);
     };
     /** A cage that misses its target, or can no longer reach it with the numbers already in it. */

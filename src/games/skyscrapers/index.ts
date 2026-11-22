@@ -46,7 +46,7 @@ function perms(n: number): Perms {
   const p: Perms = {
     flat: Uint8Array.from(out.flat()),
     fwd: Uint8Array.from(out, (q) => visible(q)),
-    back: Uint8Array.from(out, (q) => visible([...q].reverse())),
+    back: Uint8Array.from(out, (q) => visible(q.toReversed())),
   };
   PERMS.set(n, p);
   return p;

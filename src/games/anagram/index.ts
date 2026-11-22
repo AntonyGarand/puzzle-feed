@@ -119,7 +119,7 @@ export const anagram: PuzzleDef = {
     };
     ctx.controls(btn(L('Shuffle', 'Mélanger'), reshuffle, 'ghost'));
     const sv = ctx.saved as { letters?: string[]; picked?: number[] } | undefined;
-    if (Array.isArray(sv?.letters) && [...sv.letters].sort().join('') === [...word].sort().join('')) {
+    if (Array.isArray(sv?.letters) && sv.letters.toSorted().join('') === [...word].sort().join('')) {
       letters = sv.letters;
       const saved = Array.isArray(sv.picked) ? sv.picked : [];
       picked = saved.filter((i, k) => Number.isInteger(i) && i >= 0 && i < len && saved.indexOf(i) === k);

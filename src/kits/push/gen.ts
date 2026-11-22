@@ -58,7 +58,7 @@ function makeFloor(rng: Rng, w: number, h: number, wallP: number, wrap: boolean)
   return floor.map((f, i) => f && comp[i] === best);
 }
 
-const setKey = (b: number[]) => [...b].sort((x, y) => x - y).reduce((k, x) => k * 64 + x, 0);
+const setKey = (b: number[]) => b.toSorted((x, y) => x - y).reduce((k, x) => k * 64 + x, 0);
 
 interface Found {
   targets: number[];
@@ -112,7 +112,7 @@ function explore(B: Board, R: Rules, start: St, cap: number, o: GenOpts): { foun
     if (o.wantWrap) score += 3 * Math.min(wraps[n], 2);
     if (R.every) score += 0.25 * moves;
     const pc = Array.from(per.subarray(n * nB, n * nB + nB));
-    found.push({ targets: [...b].sort((x, y) => x - y), moves, pushes: pushes[n], per: pc, score, wraps: wraps[n] });
+    found.push({ targets: b.toSorted((x, y) => x - y), moves, pushes: pushes[n], per: pc, score, wraps: wraps[n] });
   }
   found.sort((a, b) => b.score - a.score);
   return { found, used: states.length };

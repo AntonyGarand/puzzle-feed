@@ -329,11 +329,7 @@ export interface Put {
   cells: number[];
 }
 
-const sortKey = (cs: number[]) =>
-  cs
-    .slice()
-    .sort((a, b) => a - b)
-    .join(',');
+const sortKey = (cs: number[]) => cs.toSorted((a, b) => a - b).join(',');
 
 /**
  * Placed tasks that aren't on a slot of the built plan. A slot is a colour plus a set of cells: any

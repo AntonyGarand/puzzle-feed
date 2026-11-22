@@ -247,7 +247,7 @@ export const connect: PuzzleDef = {
       if (finished) return null;
       const el = (i: number) => cells[i];
       // Each colour's solution, oriented from the dot its drawn line starts at.
-      const route = (c: number) => (paths[c].length && paths[c][0] !== sol[c][0] ? [...sol[c]].reverse() : sol[c]);
+      const route = (c: number) => (paths[c].length && paths[c][0] !== sol[c][0] ? sol[c].toReversed() : sol[c]);
       // A drawn line that strays from the solution: cut it back.
       for (let c = 0; c < k; c++) {
         const p = paths[c],
@@ -287,7 +287,7 @@ export const connect: PuzzleDef = {
           opts.push({ c, head, target: r[r.length - 1], r, rest: r.slice(paths[c].length) });
         } else {
           // Not started: either dot can lead.
-          for (const r of [sol[c], [...sol[c]].reverse()]) opts.push({ c, head: r[0], target: r[r.length - 1], r, rest: r.slice(1) });
+          for (const r of [sol[c], sol[c].toReversed()]) opts.push({ c, head: r[0], target: r[r.length - 1], r, rest: r.slice(1) });
         }
       }
       const rules: Record<string, () => Hint | null> = {
@@ -403,7 +403,7 @@ export const connect: PuzzleDef = {
             .map((j) => comp[j])
             .filter((x) => x >= 0),
         );
-      const route = (c: number) => (paths[c].length && paths[c][0] !== sol[c][0] ? [...sol[c]].reverse() : sol[c]);
+      const route = (c: number) => (paths[c].length && paths[c][0] !== sol[c][0] ? sol[c].toReversed() : sol[c]);
       const ends = (c: number) => {
         const r = route(c);
         return { head: paths[c].length ? paths[c][paths[c].length - 1] : r[0], target: r[r.length - 1] };

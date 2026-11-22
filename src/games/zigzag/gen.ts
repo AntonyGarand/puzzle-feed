@@ -191,7 +191,7 @@ export function genZigzag(cols: number, rows: number, maxLen: number, rng: Rng, 
     const cover = randomCover(cols, rows, maxLen, rng, 3000);
     if (!cover) continue;
     for (let tries = 0; tries < 3; tries++) {
-      const lines = cover.map((p) => (rng.chance(0.5) ? p.slice() : [...p].reverse()));
+      const lines = cover.map((p) => (rng.chance(0.5) ? p.slice() : p.toReversed()));
       const clue = new Array<number>(N).fill(0);
       for (const p of lines) clue[p[0]] = p.length;
       if (countZigzag(cols, rows, clue, budget) === 1) return { cols, rows, clue, lines };

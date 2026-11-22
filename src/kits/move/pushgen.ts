@@ -118,7 +118,7 @@ function solvePushes(
   };
   if (isGoal(boxes)) return 0;
   if (boxes.some((b) => !live[b])) return -1;
-  const start = [...boxes].sort((a, b) => a - b);
+  const start = boxes.toSorted((a, b) => a - b);
   const seen = new Set<string>();
   let frontier: { bs: number[]; p: number }[] = [{ bs: start, p: player }];
   seen.add(`${start.join(',')}|${reach(start, player, tmp)}`);

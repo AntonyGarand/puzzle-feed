@@ -313,7 +313,7 @@ export const cover: PuzzleDef = {
           );
         },
         long: () => {
-          const k = [...left].sort((a, b) => words[b].length - words[a].length)[0];
+          const k = left.toSorted((a, b) => words[b].length - words[a].length)[0];
           if (words[k].length < 5) return null;
           return make(
             k,

@@ -214,7 +214,7 @@ export const slide: PuzzleDef = {
     };
 
     const isPerm = (v: unknown): v is number[] =>
-      Array.isArray(v) && v.length === tiles.length && [...v].sort((a, b) => a - b).every((t, i) => t === i);
+      Array.isArray(v) && v.length === tiles.length && v.toSorted((a, b) => a - b).every((t, i) => t === i);
     const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
     const sv = ctx.saved as { tiles?: unknown; moves?: unknown; hist?: unknown } | undefined;
     if (sv && isPerm(sv.tiles)) {
