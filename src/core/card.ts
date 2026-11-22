@@ -6,9 +6,11 @@ import { Rng } from './rng';
 import { clearSave, dailySaveKey, putSave, type Save, type Slot } from './saves';
 import { encodeCode, shareSection } from './share';
 import { openSheet } from './sheet';
-import { prefs, record, recordDaily, setLevel, setWeight, getProfile, type RecordOutcome, type Weight } from './store';
+import { prefs, record, recordDaily, setLevel, setWeight, getProfile, stats, type RecordOutcome, type Weight } from './store';
 import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type PuzzleDef, type PuzzleInstance } from './types';
 import { btn, cogIcon, fmtTime, h } from './ui';
+import { levelHex, winCard } from './win';
+import { xpLevel } from './xp';
 
 export interface CardOptions {
   /** Labs mode: fixed levels (doesn't touch feed prefs), no auto-advance, "New puzzle" instead of "Next". */
@@ -72,6 +74,7 @@ export class Card {
   /** Opened from a share code (until the player starts another puzzle on this card). */
   shared = false;
   private saveTimer = 0;
+  private advanceTimer = 0;
   private launch: Launch | null;
 
   constructor(
@@ -297,7 +300,8 @@ export class Card {
         : auto
           ? ' · auto'
           : '';
-    this.levelEl.textContent = LEVEL_NAMES[this.level] + tag;
+    const xp = stats(this.def.id).xp!;
+    this.levelEl.replaceChildren(levelHex(xpLevel(xp).level, 'sm'), LEVEL_NAMES[this.level] + tag);
   }
 
   private syncMistakes() {
@@ -496,6 +500,7 @@ export class Card {
     if (this.reached) return;
     const ms = Math.round(this.time());
     this.reached = { ms, res: this.recordResult('solved', ms) };
+    this.syncLevelSel();
     this.queueSave();
     const res = this.reached.res!;
     if (res.best || res.prevBest == null) {
@@ -559,33 +564,46 @@ export class Card {
     clearSave(this.saveId, this.seed, this.slot);
     this.setActive(false);
     this.active = true; // still the visible card; just stop the clock
-    this.stage.inert = true;
+    for (const c of this.stage.children) (c as HTMLElement).inert = true;
     this.el.classList.add(`is-${o}`);
     this.tick();
 
     // A resumed run that had already reached its goal has no outcome in memory: skip the record line.
     const res: RecordOutcome = early ? (early.res ?? {}) : this.recordResult(o, ms);
+    this.syncLevelSel();
     const known = !early || !!early.res;
 
     const parts: (string | HTMLElement)[] = [];
-    if (o === 'solved') parts.push(h('strong', { class: 'good' }, L('Solved', 'Réussi')), ` ${L('in', 'en')} ${fmtTime(ms)}`);
+    if (o === 'solved') parts.push(h('strong', { class: 'good' }, L('Solved', 'Réussi')));
     else if (o === 'failed') parts.push(h('strong', { class: 'bad' }, L('Not this time', 'Pas cette fois')));
     else parts.push(h('strong', null, L('Skipped', 'Passé')));
-    if (this.mistakes && o !== 'skipped') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
-    if (o === 'solved' && known) {
-      if (res.best)
-        parts.push(
-          ' · ',
-          h('span', { class: 'record' }, `${L('New record!', 'Nouveau record!')} (${L('was', 'avant')} ${fmtTime(res.prevBest!)})`),
-        );
-      else if (res.prevBest == null) parts.push(' · ', h('span', { class: 'record' }, L('First clear!', 'Première réussite!')));
-      else parts.push(` · ${L('best', 'record')} ${fmtTime(res.prevBest)}`);
-      if (!early && (res.best || res.prevBest == null)) {
-        const r = this.stage.getBoundingClientRect();
-        if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
-      }
+    if (this.mistakes && o === 'failed') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
+    if (o === 'solved' && known && !early && (res.best || res.prevBest == null)) {
+      const r = this.stage.getBoundingClientRect();
+      if (r.height) confetti(r.left + r.width / 2, r.top + r.height / 2, res.best ? 90 : 50);
     }
-    if (res.levelChange) {
+    const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
+    const advanceMs = res.best || res.prevBest == null || res.levelChange ? 3200 : 2400;
+    if (o === 'solved') {
+      const win = winCard({
+        name: this.def.name,
+        level: LEVEL_NAMES[this.level],
+        daily: !!this.opts.daily,
+        ms,
+        mistakes: this.mistakes,
+        parMs: this.def.par(this.level) * 1000,
+        solved: stats(this.def.id).solved,
+        res: known ? res : null,
+        levelUp: res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] },
+        advanceMs: advance ? advanceMs : undefined,
+      });
+      // Tap the panel to peek at the finished board (tap again to bring it back); this stops auto-advance.
+      win.addEventListener('click', () => {
+        win.classList.toggle('peek');
+        clearTimeout(this.advanceTimer);
+      });
+      this.stage.append(win);
+    } else if (res.levelChange) {
       const up = res.levelChange.to > res.levelChange.from;
       parts.push(
         h(
@@ -614,9 +632,9 @@ export class Card {
     );
 
     if (this.opts.lab) return;
-    if (o === 'solved' && getProfile().autoAdvance) {
+    if (advance) {
       const gen = this.gen;
-      setTimeout(() => gen === this.gen && this.onNext(this), res.best || res.prevBest == null ? 2400 : 1400);
+      this.advanceTimer = window.setTimeout(() => gen === this.gen && this.onNext(this), advanceMs);
     } else if (o === 'skipped') {
       this.onNext(this);
     }
