@@ -3,5 +3,12 @@
   "printWidth": 140,
   "singleQuote": true,
   "trailingComma": "all",
-  "ignorePatterns": ["dist/**", "shots*/**", "src/puzzles/wordkit/dict*.txt", "src/puzzles/wordkit/common*.ts", "package-lock.json"]
+  "ignorePatterns": [
+    "dist/**",
+    "shots*/**",
+    "src/puzzles/wordkit/dict*.txt",
+    "src/puzzles/wordkit/common*.ts",
+    "package-lock.json",
+    "android/**"
+  ]
 }

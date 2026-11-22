@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.garand.puzzle",
+      "sha256_cert_fingerprints": ["01:74:18:4D:22:6C:02:31:A4:15:49:7A:3C:CF:B8:0D:70:D1:96:5C:26:B0:C4:1C:B4:57:B4:E2:7F:72:2B:E8"]
+    }
+  }
+]
