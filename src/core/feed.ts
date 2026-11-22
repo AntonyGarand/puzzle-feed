@@ -1,12 +1,22 @@
 import { sheetOpen } from './sheet';
 import { L } from './i18n';
 import { Card } from './card';
+import { getSave } from './saves';
+import { isReload, sessionGet, sessionSet } from './session';
 import { onChange, prefs } from './store';
-import type { PuzzleDef } from './types';
+import type { Difficulty, PuzzleDef } from './types';
 import { h } from './ui';
 
 const WEIGHTS = [0, 1, 2.5, 5];
 const AHEAD = 3;
+
+/** The card on screen, remembered for the tab so a reload deals it again (resumed if started). */
+interface Spot {
+  only: string | null;
+  id: string;
+  seed: number;
+  level: Difficulty;
+}
 
 export class Feed {
   readonly el: HTMLElement;
@@ -19,6 +29,8 @@ export class Feed {
   private ratios = new Map<Card, number>();
   /** When set, the feed only deals this puzzle type (practice mode). */
   private only: string | null = null;
+  /** After a reload: the card to put back first. */
+  private restore = isReload ? sessionGet<Spot | null>('feed') : undefined;
 
   constructor(private readonly defs: PuzzleDef[]) {
     this.el = h('main', { class: 'feed' });
@@ -65,9 +77,13 @@ export class Feed {
     window.setInterval(() => this.active?.tick(), 250);
     document.addEventListener('visibilitychange', () => {
       this.active?.setActive(!document.hidden && this.visible());
+      if (document.hidden) this.remember();
     });
     document.addEventListener('keydown', (e) => this.onKey(e));
-    window.addEventListener('pagehide', () => this.active?.persist());
+    window.addEventListener('pagehide', () => {
+      this.active?.persist();
+      this.remember();
+    });
 
     this.fill();
   }
@@ -98,6 +114,25 @@ export class Feed {
     this.recentTypes = [];
     this.el.scrollTop = 0;
     this.fill();
+    this.restore = undefined;
+  }
+
+  /** Note the card on screen for this tab; a finished one isn't worth dealing again. */
+  private remember() {
+    const c = this.active;
+    sessionSet('feed', c && c.mounted && !c.done ? { only: this.only, id: c.def.id, seed: c.puzzleSeed, level: c.level } : null);
+  }
+
+  /** The card a reload should start on, if it still fits this feed. */
+  private restored(): Card | null {
+    const spot = this.restore;
+    if (!spot || spot.only !== this.only) return null;
+    this.restore = undefined;
+    const def = this.defs.find((d) => d.id === spot.id);
+    if (!def || !this.enabled(def)) return null;
+    const save = getSave(def.id);
+    const resume = save && save.seed === spot.seed && save.level === spot.level ? save : undefined;
+    return new Card(def, (c) => this.next(c), { level: spot.level, seed: spot.seed, resume });
   }
 
   private enabled(d: PuzzleDef) {
@@ -122,11 +157,12 @@ export class Feed {
   }
 
   private append(): boolean {
-    const def = this.pick();
+    const first = this.cards.length ? null : this.restored();
+    const def = first?.def ?? this.pick();
     if (!def) return false;
     this.recentTypes.push(def.id);
     if (this.recentTypes.length > 6) this.recentTypes.shift();
-    const card = new Card(def, (c) => this.next(c));
+    const card = first ?? new Card(def, (c) => this.next(c));
     this.cards.push(card);
     this.el.append(card.el);
     this.activeObs.observe(card.el);
