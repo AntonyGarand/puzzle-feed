@@ -1,0 +1,164 @@
+[data-puzzle='haunted'] {
+  --accent: var(--p1);
+  --hn-ghost: var(--p6);
+  --hn-vamp: var(--p5);
+  --hn-zomb: var(--p8);
+}
+
+/* edge numbers */
+[data-puzzle='haunted'] .hn-clue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  margin: 12%;
+  padding: 0;
+  border: var(--cbw) solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 800;
+  font-size: calc(var(--board) / var(--cols) * 0.42);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    background 0.12s;
+}
+[data-puzzle='haunted'] .hn-clue.off {
+  cursor: default;
+}
+[data-puzzle='haunted'] .hn-clue.ok {
+  opacity: 0.35;
+}
+[data-puzzle='haunted'] .hn-clue.on {
+  opacity: 1;
+  background: var(--accent-soft);
+  border-color: var(--ink);
+}
+[data-puzzle='haunted'] .hn-clue.err {
+  opacity: 1;
+  background: var(--bad);
+  color: var(--on-tone);
+  border-color: var(--ink);
+}
+
+/* mirrors */
+/* mirrors sit flat in the board: only the monster cells are tappable tiles */
+[data-puzzle='haunted'] .cell.hn-mir {
+  background: var(--cell-alt);
+  box-shadow: none;
+  transform: translate(calc(var(--csh) / 2), calc(var(--csh) / 2));
+  cursor: default;
+}
+[data-puzzle='haunted'] .hn-mirror {
+  width: 100%;
+  height: 100%;
+}
+[data-puzzle='haunted'] .hn-mirror line {
+  stroke-linecap: round;
+}
+[data-puzzle='haunted'] .hn-mirror .frame {
+  stroke: var(--ink);
+  stroke-width: 15;
+}
+[data-puzzle='haunted'] .hn-mirror .glass {
+  stroke: color-mix(in srgb, var(--p6) 55%, var(--cell));
+  stroke-width: 7;
+}
+
+/* monsters: one glyph per kind, shown by the cell's m1/m2/m3 class */
+[data-puzzle='haunted'] .hn-grid .hn-m {
+  display: none;
+  width: 82%;
+  height: 82%;
+}
+[data-puzzle='haunted'] .cell.m1 .hn-g,
+[data-puzzle='haunted'] .cell.m2 .hn-v,
+[data-puzzle='haunted'] .cell.m3 .hn-z {
+  display: block;
+}
+[data-puzzle='haunted'] .hn-m .body,
+[data-puzzle='haunted'] .hn-m .cape {
+  stroke: var(--ink);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+[data-puzzle='haunted'] .hn-g .body {
+  fill: var(--hn-ghost);
+}
+[data-puzzle='haunted'] .hn-v .body {
+  fill: color-mix(in srgb, var(--p7) 45%, var(--p4));
+}
+[data-puzzle='haunted'] .hn-v .cape {
+  fill: var(--hn-vamp);
+}
+[data-puzzle='haunted'] .hn-z .body {
+  fill: var(--hn-zomb);
+}
+/* features sit on bright fills: on-tone stays dark in both themes */
+[data-puzzle='haunted'] .hn-m .ink {
+  fill: var(--on-tone);
+}
+[data-puzzle='haunted'] .hn-m .fang,
+[data-puzzle='haunted'] .hn-m .line {
+  fill: none;
+  stroke: var(--on-tone);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='haunted'] .cell.given {
+  background: var(--cell-alt);
+}
+
+/* a lit sight line: direct part, then reflected part */
+[data-puzzle='haunted'] .cell.ray {
+  background: color-mix(in srgb, var(--hn-vamp) 30%, var(--cell));
+}
+[data-puzzle='haunted'] .cell.ray2 {
+  background: color-mix(in srgb, var(--hn-ghost) 34%, var(--cell));
+}
+[data-puzzle='haunted'] .cell.ray.ray2 {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--hn-vamp) 30%, var(--cell)) 50%,
+    color-mix(in srgb, var(--hn-ghost) 34%, var(--cell)) 50%
+  );
+}
+[data-puzzle='haunted'] .cell.sel {
+  background: var(--accent);
+}
+
+/* pad: glyph + left / total */
+[data-puzzle='haunted'] .hn-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+[data-puzzle='haunted'] .hn-key .hn-m {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+[data-puzzle='haunted'] .hn-n {
+  font-variant-numeric: tabular-nums;
+}
+[data-puzzle='haunted'] .hn-n small {
+  font-size: 0.7em;
+  color: var(--muted);
+}
+[data-puzzle='haunted'] .hn-key.done .hn-n {
+  opacity: 0.45;
+}
+[data-puzzle='haunted'] .hn-key.err {
+  background: var(--bad);
+  color: var(--on-tone);
+}
+[data-puzzle='haunted'] .hn-key.err .hn-n small {
+  color: inherit;
+}
