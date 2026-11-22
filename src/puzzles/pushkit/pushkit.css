@@ -1,0 +1,287 @@
+/* Shared look of the gimmick crate games (push-ice, push-count, push-wrap, push-wall). */
+[data-puzzle='push-ice'] {
+  --accent: var(--p6);
+  --pk-me: var(--p5);
+}
+[data-puzzle='push-count'] {
+  --accent: var(--p4);
+  --pk-me: var(--p2);
+}
+[data-puzzle='push-wrap'] {
+  --accent: var(--p5);
+  --pk-me: var(--p2);
+}
+[data-puzzle='push-wall'] {
+  --accent: var(--p7);
+  --pk-me: var(--p2);
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid {
+  position: relative;
+  touch-action: none;
+  --lift: max(2px, var(--csh));
+  --unit: calc(var(--board) / var(--cols));
+}
+/* walled rooms: a frame so the board's edge reads as a wall (crates stop there) */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wall']) .pk-grid {
+  outline: var(--bw) solid var(--ink);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+/* wall: a raised stone block */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.wall {
+  --lit: calc(var(--unit) * 0.07);
+  background:
+    linear-gradient(color-mix(in srgb, var(--ink) 30%, transparent), color-mix(in srgb, var(--ink) 30%, transparent)) 0 50% / 100%
+      max(1.5px, calc(var(--cbw) * 0.6)) no-repeat,
+    linear-gradient(color-mix(in srgb, var(--ink) 30%, transparent), color-mix(in srgb, var(--ink) 30%, transparent)) 50% 0 /
+      max(1.5px, calc(var(--cbw) * 0.6)) 50% no-repeat,
+    color-mix(in srgb, var(--muted) 62%, var(--cell));
+  box-shadow:
+    inset 0 var(--lit) 0 color-mix(in srgb, var(--cell) 45%, transparent),
+    inset 0 calc(var(--lit) * -1) 0 color-mix(in srgb, var(--ink) 18%, transparent),
+    var(--lift) var(--lift) 0 var(--ink);
+}
+/* floor: flat tiles with soft seams */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid .cell:not(.wall) {
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--cell-alt));
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall'])
+  .pk-grid
+  button.cell:active {
+  transform: none;
+}
+/* ice: pale blue with a diagonal sheen */
+[data-puzzle='push-ice'] .pk-grid .cell:not(.wall) {
+  background:
+    linear-gradient(
+      135deg,
+      transparent 30%,
+      color-mix(in srgb, var(--cell) 70%, transparent) 30% 38%,
+      transparent 38% 52%,
+      color-mix(in srgb, var(--cell) 55%, transparent) 52% 56%,
+      transparent 56%
+    ),
+    color-mix(in srgb, var(--p6) 26%, var(--cell));
+}
+/* target: a green pad with a bullseye */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid .cell.tg {
+  border-color: var(--ink);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--good) 30%, var(--cell));
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.tg::before {
+  content: '';
+  position: absolute;
+  width: 62%;
+  height: 62%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ink) 0 22%, var(--good) 23% 44%, var(--ink) 45% 56%, var(--good) 57%);
+}
+/* crate: a raised block in the game's tone */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid .cell.bx {
+  --lit: calc(var(--unit) * 0.07);
+  z-index: 4;
+  border-style: solid;
+  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--on-tone);
+  box-shadow:
+    inset 0 var(--lit) 0 color-mix(in srgb, var(--cell) 40%, transparent),
+    inset 0 calc(var(--lit) * -1) 0 color-mix(in srgb, var(--ink) 22%, transparent),
+    var(--lift) var(--lift) 0 var(--ink);
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.bx::after {
+  content: '';
+  width: 56%;
+  height: 56%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 3px;
+  background: linear-gradient(45deg, transparent 42%, var(--ink) 42% 58%, transparent 58%);
+  opacity: 0.6;
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.bx.tg::before {
+  display: none;
+}
+/* numbered crate: the pushes left, big and bold */
+[data-puzzle='push-count'] .pk-grid .cell.bx {
+  font-weight: 800;
+  font-size: calc(var(--unit) * 0.48);
+  line-height: 1;
+}
+/* out of pushes: greyed out with a hatched face */
+[data-puzzle='push-count'] .pk-grid .cell.bx.z:not(.on) {
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--ink) 22%, transparent) 0 3px, transparent 3px 8px),
+    color-mix(in srgb, var(--muted) 55%, var(--cell));
+  color: var(--fg);
+}
+/* crate on a target: done, green */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid .cell.bx.on {
+  background: var(--good);
+  color: var(--on-tone);
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.bx.on::after {
+  width: 24%;
+  height: 46%;
+  border: none;
+  border-right: max(3px, calc(var(--unit) * 0.11)) solid var(--ink);
+  border-bottom: max(3px, calc(var(--unit) * 0.11)) solid var(--ink);
+  border-radius: 1px;
+  background: none;
+  opacity: 1;
+  transform: translateY(-10%) rotate(45deg);
+}
+/* player: a ball you can grab and drag */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-grid .cell.me {
+  z-index: 4;
+  cursor: grab;
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .cell.me::after {
+  content: '';
+  position: relative;
+  width: 64%;
+  height: 64%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 50%;
+  background: var(--pk-me);
+  box-shadow: calc(var(--lift) * 0.8) calc(var(--lift) * 0.8) 0 var(--ink);
+}
+
+/* wrap-around: a ring of faded "ghost" cells mirrors the opposite edge */
+[data-puzzle='push-wrap'] .pk-grid .cell.ghost {
+  opacity: 0.38;
+  pointer-events: none;
+  z-index: 0;
+  border-style: dashed;
+}
+[data-puzzle='push-wrap'] .pk-grid .cell.ghost.wall {
+  box-shadow: none;
+}
+[data-puzzle='push-wrap'] .pk-grid .cell.ghost.bx {
+  box-shadow: none;
+}
+/* advancing wall: crushed columns are hazard stripes, the next one to go is tinted */
+[data-puzzle='push-wall'] .pk-grid .cell.doom,
+[data-puzzle='push-wall'] .pk-grid .cell.wall.doom {
+  border-color: var(--ink);
+  border-style: solid;
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 5px, var(--bad) 5px 11px);
+  box-shadow: none;
+}
+[data-puzzle='push-wall'] .pk-grid .cell.doom::before {
+  display: none;
+}
+[data-puzzle='push-wall'] .pk-grid .cell.warn:not(.wall) {
+  border-color: var(--bad);
+  border-style: solid;
+  background:
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--bad) 28%, transparent) 0 5px, transparent 5px 11px), var(--cell-alt);
+}
+[data-puzzle='push-wall'] .pk-grid .cell.warn.tg {
+  background:
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--bad) 28%, transparent) 0 5px, transparent 5px 11px),
+    color-mix(in srgb, var(--good) 30%, var(--cell));
+}
+[data-puzzle='push-wall'] .pk-grid .cell.warn.bx {
+  background: var(--accent);
+}
+[data-puzzle='push-wall'] .pk-grid .cell.warn.bx.on {
+  background: var(--good);
+}
+[data-puzzle='push-wall'] .pk-grid .cell.dead {
+  background: var(--bad);
+  z-index: 5;
+}
+/* where the wall comes from: a hazard strip along the board's left edge */
+[data-puzzle='push-wall'] .pk-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: var(--csh);
+  left: -11px;
+  width: 7px;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 4px, var(--bad) 4px 8px);
+}
+[data-puzzle='push-wall'] .pk-wallbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: var(--board);
+  margin: 0 auto 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+[data-puzzle='push-wall'] .pk-wallnum {
+  min-width: 2ch;
+  padding: 2px 8px;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell, 6px);
+  background: var(--cell);
+  color: var(--fg);
+  font-size: 18px;
+  text-align: center;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+[data-puzzle='push-wall'] .pk-wallbar.low .pk-wallnum,
+[data-puzzle='push-wall'] .pk-wallbar.dead .pk-wallnum {
+  background: var(--bad);
+  color: var(--on-tone);
+}
+[data-puzzle='push-wall'] .pk-walllbl {
+  flex: 1;
+}
+[data-puzzle='push-wall'] .pk-pips {
+  display: flex;
+  gap: 3px;
+}
+[data-puzzle='push-wall'] .pk-pips i {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--cell);
+}
+[data-puzzle='push-wall'] .pk-pips i.on {
+  background: var(--bad);
+}
+
+/* the path traced while dragging the ball */
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-trail polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-trail .under {
+  stroke: var(--ink);
+  stroke-width: calc(var(--unit) * 0.26);
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-trail .over {
+  stroke: var(--pk-me);
+  stroke-width: calc(var(--unit) * 0.16);
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-trail .start {
+  r: calc(var(--unit) * 0.16);
+  fill: var(--cell);
+  stroke: var(--ink);
+  stroke-width: max(2px, var(--cbw));
+}
+:is([data-puzzle='push-ice'], [data-puzzle='push-count'], [data-puzzle='push-wrap'], [data-puzzle='push-wall']) .pk-pad {
+  width: min(var(--board), 300px);
+}

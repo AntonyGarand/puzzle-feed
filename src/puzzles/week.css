@@ -1,0 +1,134 @@
+[data-puzzle='week'] {
+  --accent: var(--p5);
+}
+[data-puzzle='week'] .wk-grid .cell {
+  box-shadow: none;
+}
+[data-puzzle='week'] .wk-grid .cell.busy {
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--muted) 45%, var(--cell)) 0 4px, var(--cell) 4px 9px);
+  border-style: dashed;
+  border-color: var(--muted);
+}
+[data-puzzle='week'] .wk-grid .cell.fill {
+  background: var(--c);
+  touch-action: none;
+}
+[data-puzzle='week'] .wk-grid .cell.pv {
+  background: color-mix(in srgb, var(--c) 45%, var(--cell));
+  border-style: dashed;
+}
+/* Cells of one task are fused across the gap; same-colour neighbours get a dot (the bonus). */
+[data-puzzle='week'] .wk-grid .cell::before,
+[data-puzzle='week'] .wk-grid .cell::after {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+[data-puzzle='week'] .wk-grid .cell.jr::before {
+  content: '';
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--gap) + 2 * var(--cbw));
+  background: var(--c);
+}
+[data-puzzle='week'] .wk-grid .cell.jd::after {
+  content: '';
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--gap) + 2 * var(--cbw));
+  background: var(--c);
+}
+[data-puzzle='week'] .wk-grid .cell.br::before,
+[data-puzzle='week'] .wk-grid .cell.bd::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--cell);
+}
+[data-puzzle='week'] .wk-grid .cell.br::before {
+  top: 50%;
+  left: calc(100% + var(--cbw) + var(--gap) / 2);
+  transform: translate(-50%, -50%);
+}
+[data-puzzle='week'] .wk-grid .cell.bd::after {
+  left: 50%;
+  top: calc(100% + var(--cbw) + var(--gap) / 2);
+  transform: translate(-50%, -50%);
+}
+[data-puzzle='week'] .wk-tray {
+  display: grid;
+  grid-template-columns: repeat(var(--tc), 1fr);
+  gap: 8px;
+  width: var(--board);
+  touch-action: none;
+  --m: calc((var(--board) - (var(--tc) - 1) * 8px) / var(--tc) / 4.7);
+}
+[data-puzzle='week'] .wk-slot {
+  height: auto;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: none;
+}
+[data-puzzle='week'] .wk-slot.used {
+  opacity: 0.35;
+  box-shadow: none;
+  border-style: dashed;
+}
+[data-puzzle='week'] .wk-mini {
+  display: grid;
+  grid-template-columns: repeat(var(--w), var(--m));
+  grid-template-rows: repeat(var(--h), var(--m));
+  gap: 1px;
+  pointer-events: none;
+}
+[data-puzzle='week'] .wk-mini i,
+[data-puzzle='week'] .wk-ghost i {
+  background: var(--c);
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+}
+[data-puzzle='week'] .wk-ghost {
+  position: fixed;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(var(--w), var(--cs));
+  grid-template-rows: repeat(var(--h), var(--cs));
+  gap: var(--gap);
+  pointer-events: none;
+  opacity: 0.85;
+  filter: drop-shadow(3px 3px 0 var(--ink));
+}
+[data-puzzle='week'] .wk-ghost i {
+  border-width: var(--bw);
+  border-radius: var(--r-cell);
+}
+[data-puzzle='week'] .wk-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: var(--board);
+  margin-bottom: -8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+[data-puzzle='week'] .wk-pts {
+  font-size: 22px;
+  color: var(--fg);
+}
+[data-puzzle='week'] .wk-bar.won .wk-pts {
+  color: var(--good);
+}
+[data-puzzle='week'] .wk-bonus {
+  color: var(--fg);
+}
