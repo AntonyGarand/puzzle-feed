@@ -26,9 +26,15 @@ jobs:
       - uses: jdx/mise-action@v3
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v4
+      # Same as actions/upload-pages-artifact, minus its dotfile exclusion: the Android app's
+      # Digital Asset Links file lives at /.well-known/assetlinks.json.
+      - run: tar --dereference --hard-dereference --directory dist -cvf "$RUNNER_TEMP/artifact.tar" .
+      - uses: actions/upload-artifact@v4
         with:
-          path: dist
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: build

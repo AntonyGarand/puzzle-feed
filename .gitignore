@@ -5,3 +5,9 @@ shots*/
 .DS_Store
 .vite/
 coverage/
+# Android TWA build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/dist/
+android/local.properties
