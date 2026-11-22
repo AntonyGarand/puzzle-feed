@@ -134,3 +134,20 @@
 :root:is([data-style='minimal'], [data-style='newsprint']) :is(.btn:active, .lab-tile:has(.tile-link:active)) {
   transform: translateY(1px);
 }
+
+/* ---------- OLED (Settings > Light or dark): dark mode with pure-black surfaces ----------
+   main.ts sets data-theme='dark' plus data-oled, so every dark rule applies and only the surfaces go
+   black. Works with any style: each keeps its own text, ink, borders and font. Last in the file so it
+   wins over the style dark blocks it ties with (0,3,0). Open cells sit one small step above the black
+   page so shaded cells (--shade, pure black + hatch) still read darker than an open cell. Contrast:
+   --faint of every style stays above 3:1 on #1a1a1a. */
+:root[data-theme='dark'][data-oled] {
+  --bg: #000000;
+  --cell: #0e0e0e;
+  --cell-alt: #1a1a1a;
+  --shade: #000000;
+}
+/* Soft's black shadow would vanish on black: tint it with its lavender ink instead. */
+:root[data-theme='dark'][data-oled][data-style='soft'] {
+  --drop: rgb(196 187 230 / 0.28);
+}

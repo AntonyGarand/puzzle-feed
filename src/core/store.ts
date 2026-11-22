@@ -4,7 +4,7 @@ import { xpGains, type XpOutcome } from './xp';
 type Outcome = 'solved' | 'failed' | 'skipped';
 /** 0 = off, 1 = less, 2 = normal, 3 = more */
 export type Weight = 0 | 1 | 2 | 3;
-export type Theme = 'system' | 'light' | 'dark';
+export type Theme = 'system' | 'light' | 'dark' | 'oled';
 /** Look of the whole app (styles/themes.css), on top of light / dark. */
 export type Style = 'neo' | 'minimal' | 'soft' | 'newsprint';
 

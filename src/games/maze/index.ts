@@ -245,7 +245,7 @@ export const maze: PuzzleDef = {
     const mq = matchMedia('(prefers-color-scheme: dark)');
     mq.addEventListener('change', draw);
     const themeObs = new MutationObserver(draw);
-    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-style'] });
+    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-style', 'data-oled'] });
     // v3 = loops only where they make a real detour; paths saved on older mazes don't apply.
     const sv = ctx.saved as { v?: number; path?: number[] } | undefined;
     if (sv?.v === 3 && sv.path?.length && sv.path[0] === 0 && sv.path.every((v) => v >= 0 && v < n * n))

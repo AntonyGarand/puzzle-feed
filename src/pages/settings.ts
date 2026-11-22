@@ -64,6 +64,7 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
             { label: L('System', 'Système'), value: 'system' },
             { label: L('Light', 'Clair'), value: 'light' },
             { label: L('Dark', 'Sombre'), value: 'dark' },
+            { label: 'OLED', value: 'oled' },
           ],
           p.theme,
           (v) => update({ theme: v }),
