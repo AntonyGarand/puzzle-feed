@@ -1254,6 +1254,15 @@ td a:hover {
   font-size: 14px;
   flex: none;
 }
+/* Right side: frequency over difficulty, same width so every row lines up. */
+.pref-controls {
+  display: grid;
+  gap: 6px;
+  justify-items: stretch;
+}
+.pref-controls .select {
+  width: 100%;
+}
 .puzzle-pref .name {
   display: inline-flex;
   align-items: center;
@@ -1325,7 +1334,10 @@ td a:hover {
   background: var(--accent);
   color: var(--on-tone);
 }
-.puzzle-pref a.name:hover .play-link {
+.play-link {
+  text-decoration: none;
+}
+.play-link:hover {
   box-shadow: 2px 2px 0 var(--ink);
 }
 .streak:empty {

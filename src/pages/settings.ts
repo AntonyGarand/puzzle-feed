@@ -71,15 +71,15 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
             { class: 'name', href: `#/game/${d.id}`, title: `${L('Open', 'Ouvrir')} ${d.name}` },
             h('span', { class: 'swatchlet' }),
             d.name,
-            h('span', { class: 'play-link' }, L('play →', 'jouer →')),
           ),
           helpButton(d, { quiet: true }),
+          h('a', { class: 'play-link', href: `#/game/${d.id}` }, L('play →', 'jouer →')),
         ),
         h('div', { class: 'muted small' }, d.rules),
       ),
       h(
         'div',
-        { class: 'row' },
+        { class: 'pref-controls' },
         segmented(weights, prefs(d.id).weight, (v) => {
           setWeight(d.id, v);
           renderSettings(el, defs);
