@@ -1,3 +1,13 @@
 [data-puzzle='pyramid'] {
   --accent: var(--p1);
 }
+
+/* Covered cards: only the corner index matters. Hide the centre pip so it doesn't peek through the
+   gaps between the two cards below, and shade the face (instead of washing it out) so playable cards
+   stand out while the index stays readable. */
+[data-puzzle='pyramid'] .ctable .pc.lock[data-p^='p'] .pc-s {
+  visibility: hidden;
+}
+[data-puzzle='pyramid'] .ctable .pc.lock::after {
+  background: rgb(0 0 0 / 0.14);
+}
