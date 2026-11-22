@@ -51,8 +51,8 @@ export const tetrominoes: PuzzleDef = {
         'Une case avec un petit dessin fait partie d’une pièce de cette forme exacte, tournée exactement ainsi. Une pièce contient au plus un dessin.',
       ),
       L(
-        'Drag across four touching cells to place a piece. It replaces any piece it overlaps.',
-        'Glissez sur quatre cases voisines pour poser une pièce. Elle remplace celles qu’elle chevauche.',
+        'Drag across four touching cells, or tap them one by one, to place a piece. It replaces any piece it overlaps. A short drag stays selected: tap or drag on to finish it, tap a selected cell to drop it.',
+        'Glissez sur quatre cases voisines, ou touchez-les une à une, pour poser une pièce. Elle remplace celles qu’elle chevauche. Un glissé trop court reste sélectionné : touchez ou glissez pour le compléter, touchez une case choisie pour la retirer.',
       ),
       L(
         'Tap a piece to remove it. Pieces are coloured by shape; red marks a broken rule and counts as a mistake. Clear wipes the board.',
@@ -87,9 +87,13 @@ export const tetrominoes: PuzzleDef = {
 
     /** Pieces the player placed (cell lists). */
     let pieces: number[][] = [];
-    /** Cells of the piece being dragged. */
+    /** Cells selected for the next piece; stays between gestures so a piece can be tapped in. */
     let pending: number[] = [];
+    /** Cell the current pointer went down on (-1: no gesture). */
     let downAt = -1;
+    /** Selection before the current gesture, to resolve it as a tap. */
+    let before: number[] = [];
+    let moved = false;
     let done = false;
 
     const grid = board(cols, rows, 'tt-plate');
@@ -106,6 +110,7 @@ export const tetrominoes: PuzzleDef = {
       pieces.forEach((p, k) => p.forEach((i) => (owner[i] = k)));
       return owner;
     };
+    const touches = (sel: number[], j: number) => sel.some((x) => nb4(x, cols, rows).includes(j));
     const kindOf = (p: number[]) => TETROS[shapeOf(p, cols)].kind;
 
     /** Indices of pieces that break a rule. */
@@ -128,6 +133,8 @@ export const tetrominoes: PuzzleDef = {
       const owner = ownerMap();
       const bad = broken(owner);
       const edges = edgeClasses(cols, rows, (i) => owner[i]);
+      // A partial selection waiting for taps: outline the cells that can extend it.
+      const open = downAt < 0 && pending.length > 0 && pending.length < 4;
       cells.forEach((el, i) => {
         const o = owner[i];
         const cls = ['cell', edges[i]];
@@ -135,6 +142,7 @@ export const tetrominoes: PuzzleDef = {
         if (o >= 0) cls.push('on');
         if (o >= 0 && bad.has(o)) cls.push('err');
         if (pending.includes(i)) cls.push('pv');
+        else if (open && touches(pending, i)) cls.push('nx');
         const c = cls.filter(Boolean).join(' ');
         if (el.className !== c) el.className = c;
         const st = o >= 0 ? `--rc:${tint(TONE[kindOf(pieces[o])], 50)}` : '';
@@ -158,28 +166,67 @@ export const tetrominoes: PuzzleDef = {
         ctx.solved();
       }
     };
+    /** Whether `sel` is one orthogonally connected group. */
+    const connected = (sel: number[]) => {
+      if (!sel.length) return true;
+      const seen = new Set([sel[0]]);
+      const stack = [sel[0]];
+      while (stack.length)
+        for (const j of nb4(stack.pop()!, cols, rows))
+          if (sel.includes(j) && !seen.has(j)) {
+            seen.add(j);
+            stack.push(j);
+          }
+      return seen.size === sel.length;
+    };
+    /** Pointer down on cell i: continue the selection when i touches it, else start a new one. */
+    const begin = (i: number) => {
+      downAt = i;
+      moved = false;
+      before = pending.slice();
+      if (pending.includes(i)) return;
+      if (pending.length && pending.length < 4 && touches(pending, i)) pending.push(i);
+      else pending = [i];
+    };
+    /** Pointer dragged onto cell j. */
+    const extend = (j: number) => {
+      if (j < 0 || downAt < 0) return;
+      if (j !== downAt) moved = true;
+      // Crossing a selected cell is free, so shapes like T can be traced through their middle.
+      if (pending.includes(j)) return;
+      if (pending.length < 4) {
+        if (!touches(pending, j)) return;
+        pending.push(j);
+      } else {
+        // Full: a new touching cell swaps out the last one (fixes an overshoot at a corner).
+        const rest = pending.slice(0, -1);
+        if (!touches(rest, j) || !connected([...rest, j])) return;
+        pending = [...rest, j];
+      }
+      render();
+    };
+    /** Gesture over: place four cells, or resolve a tap. */
     const finish = () => {
       if (downAt < 0) return;
       const a = downAt;
       downAt = -1;
-      const p = pending;
-      pending = [];
-      if (p.length === 4) place(p);
-      else if (p.length === 1 && p[0] === a) {
+      if (!moved) {
         const owner = ownerMap();
-        if (owner[a] >= 0) pieces.splice(owner[a], 1);
+        if (before.includes(a)) {
+          // Tap on a selected cell: drop it (and anything it no longer links).
+          const rest = before.filter((x) => x !== a);
+          pending = connected(rest) ? rest : [];
+        } else if (owner[a] >= 0 && !(before.length && before.length < 4 && touches(before, a))) {
+          // Tap on a piece away from the selection: remove the piece, keep the selection.
+          pieces.splice(owner[a], 1);
+          pending = before.filter((x) => owner[x] !== owner[a]);
+        }
+      }
+      if (pending.length === 4) {
+        place(pending);
+        pending = [];
       }
       check();
-    };
-    const extend = (j: number) => {
-      if (j < 0 || downAt < 0) return;
-      const at = pending.indexOf(j);
-      if (at >= 0) {
-        // Back over the previous cell: undo the last step.
-        if (at === pending.length - 2) pending.pop();
-      } else if (pending.length < 4 && pending.some((x) => nb4(x, cols, rows).includes(j))) pending.push(j);
-      else return;
-      render();
     };
 
     grid.addEventListener('pointerdown', (e) => {
@@ -193,8 +240,7 @@ export const tetrominoes: PuzzleDef = {
       } catch {
         /* not capturable */
       }
-      downAt = i;
-      pending = [i];
+      begin(i);
       render();
     });
     grid.addEventListener('pointermove', (e) => {
@@ -207,7 +253,7 @@ export const tetrominoes: PuzzleDef = {
     });
     grid.addEventListener('pointercancel', () => {
       downAt = -1;
-      pending = [];
+      pending = before;
       render();
     });
     grid.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -228,7 +274,7 @@ export const tetrominoes: PuzzleDef = {
     watch(false);
     ctx.controls(
       clearBtn(() => {
-        if (done || !pieces.length) return;
+        if (done || (!pieces.length && !pending.length)) return;
         ctx.touch();
         pieces = [];
         pending = [];
@@ -248,11 +294,14 @@ export const tetrominoes: PuzzleDef = {
     const teach = (h0: Hint): Hint => {
       if (taught) return h0;
       taught = true;
-      return { ...h0, text: h0.text + L(' Drag across the four cells.', ' Glissez sur les quatre cases.') };
+      return {
+        ...h0,
+        text: h0.text + L(' Drag across the four cells, or tap them.', ' Glissez sur les quatre cases, ou touchez-les.'),
+      };
     };
     const draw = (p: number[]) => () => {
-      downAt = p[0];
-      pending = [p[0]];
+      pending = [];
+      begin(p[0]);
       // Walk the cells in an order where each one touches an earlier one.
       const left = p.slice(1);
       while (left.length) {
@@ -275,8 +324,8 @@ export const tetrominoes: PuzzleDef = {
         at: wrong.map((i) => cells[i]),
         action: L('Remove the piece', 'Enlever la pièce'),
         play: () => {
-          downAt = wrong[0];
-          pending = [wrong[0]];
+          pending = [];
+          begin(wrong[0]);
           finish();
         },
       });
