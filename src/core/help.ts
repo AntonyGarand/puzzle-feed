@@ -274,13 +274,16 @@ function openHelp(def: PuzzleDef, onClose?: () => void) {
   });
 }
 
-/** The round "?" icon button on cards and game tiles. Unseen games get a highlighted, pulsing button. */
-export function helpButton(def: PuzzleDef, opts: { onOpen?: () => void; onClose?: () => void } = {}) {
+/**
+ * The round "?" icon button on cards and game tiles. Unseen games get a highlighted, pulsing button
+ * unless `quiet` (long lists like Settings, where every row pulsing would be noise).
+ */
+export function helpButton(def: PuzzleDef, opts: { onOpen?: () => void; onClose?: () => void; quiet?: boolean } = {}) {
   const b = h(
     'button',
     {
       type: 'button',
-      class: `icon-btn help-btn ${helpSeen(def.id) ? '' : 'fresh'}`,
+      class: `icon-btn help-btn ${opts.quiet || helpSeen(def.id) ? '' : 'fresh'}`,
       title: L('How to play', 'Comment jouer'),
       'aria-label': `${L('How to play', 'Comment jouer')}: ${def.name}`,
       onclick: (e: MouseEvent) => {
