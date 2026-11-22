@@ -5,7 +5,7 @@ import { h, s, segmented } from '../ui/dom';
 import { xpLevel } from '../core/xp';
 
 const WEEKS = 26;
-type Range = 30 | 90 | 365;
+type Range = 7 | 30 | 90 | 365;
 
 /** Local days (`dayKey`) from `n - 1` days ago up to today, oldest first. */
 function lastDays(n: number): string[] {
@@ -196,6 +196,7 @@ export function xpProgress(defs: PuzzleDef[]): HTMLElement {
   });
   const ranges = segmented<Range>(
     [
+      { label: L('1 week', '1 semaine'), value: 7 },
       { label: L('30 days', '30 jours'), value: 30 },
       { label: L('90 days', '90 jours'), value: 90 },
       { label: L('1 year', '1 an'), value: 365 },
