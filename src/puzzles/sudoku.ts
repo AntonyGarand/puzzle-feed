@@ -3,6 +3,7 @@ import type { Rng } from '../core/rng';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { board, h, pad } from '../core/ui';
 import { lineHUnits, makeHint } from './sudokukit/hint';
+import { keyDigit, makeNotes, notesHelpStep } from './sudokukit/notes';
 
 interface Shape {
   n: number;
@@ -130,6 +131,7 @@ export const sudoku: PuzzleDef = {
         'Keyboard: arrow keys move, number keys fill, Backspace or 0 clears.',
         'Clavier : flèches pour se déplacer, chiffres pour remplir, Retour arrière ou 0 pour effacer.',
       ),
+      notesHelpStep(),
     ],
     tips: [
       L('Look for a cell where only one number can fit.', 'Cherchez une case où un seul chiffre peut aller.'),
@@ -148,11 +150,19 @@ export const sudoku: PuzzleDef = {
     const given = puzzle.map((v) => v > 0);
     const vals = [...puzzle];
     let sel = given.indexOf(false);
+    const saved = ctx.saved as { vals?: number[]; sel?: number; notes?: unknown } | undefined;
+    const notes = makeNotes(n, n * n, saved?.notes);
 
     const grid = board(n, n, 'sudoku');
+    const valEls: HTMLElement[] = [];
+    const baseCls: string[] = [];
     const cells = vals.map((_, i) => {
       const alt = (Math.floor(Math.floor(i / n) / s.br) + Math.floor((i % n) / s.bc)) % 2 === 1;
-      const el = h('button', { type: 'button', class: `cell ${given[i] ? 'given' : ''} ${alt ? 'alt' : ''}`, onclick: () => select(i) });
+      baseCls[i] = `cell${given[i] ? ' given' : ''}${alt ? ' alt' : ''}`;
+      const el = h('button', { type: 'button', class: baseCls[i], onclick: () => select(i) });
+      valEls[i] = h('span', { class: 'v' });
+      el.append(valEls[i]);
+      notes.mount(el, i);
       grid.append(el);
       return el;
     });
@@ -172,18 +182,22 @@ export const sudoku: PuzzleDef = {
       return bad;
     };
 
+    const peer = (i: number, j: number) => Math.floor(i / n) === Math.floor(j / n) || i % n === j % n || boxOf(s, i) === boxOf(s, j);
+    /** A note is stale once the digit sits in the cell's row, column or box. */
+    const blocked = (i: number, v: number) => vals.some((x, j) => x === v && j !== i && peer(i, j));
+
     const render = () => {
       const bad = conflicts();
       const sv = sel >= 0 ? vals[sel] : 0;
       cells.forEach((el, i) => {
-        el.textContent = vals[i] ? String(vals[i]) : '';
-        el.classList.toggle('sel', i === sel);
-        el.classList.toggle(
-          'peer',
-          sel >= 0 && i !== sel && (Math.floor(i / n) === Math.floor(sel / n) || i % n === sel % n || boxOf(s, i) === boxOf(s, sel)),
-        );
-        el.classList.toggle('same', !!sv && vals[i] === sv && i !== sel);
-        el.classList.toggle('err', bad.has(i) && !given[i]);
+        valEls[i].textContent = vals[i] ? String(vals[i]) : '';
+        notes.draw(i, vals[i] > 0, (v) => blocked(i, v));
+        let cls = baseCls[i];
+        if (i === sel) cls += ' sel';
+        else if (sel >= 0 && peer(i, sel)) cls += ' peer';
+        if (sv && vals[i] === sv && i !== sel) cls += ' same';
+        if (bad.has(i) && !given[i]) cls += ' err';
+        if (el.className !== cls) el.className = cls;
       });
       return bad;
     };
@@ -193,8 +207,15 @@ export const sudoku: PuzzleDef = {
       render();
     };
 
-    const input = (v: number) => {
+    const input = (v: number, note = notes.on) => {
       if (sel < 0 || given[sel]) return;
+      if (note) {
+        if (vals[sel]) return;
+        ctx.touch();
+        notes.toggle(sel, v);
+        render();
+        return;
+      }
       ctx.touch();
       const was = vals[sel];
       vals[sel] = vals[sel] === v ? 0 : v;
@@ -203,18 +224,26 @@ export const sudoku: PuzzleDef = {
       if (vals.every((x) => x) && bad.size === 0) ctx.solved();
     };
 
+    const erase = () => {
+      if (sel < 0 || given[sel]) return;
+      if (vals[sel]) input(vals[sel], false);
+      else if (notes.bits[sel]) {
+        ctx.touch();
+        notes.clear(sel);
+        render();
+      }
+    };
+
     const keys: { label: string; value: string; aria?: string }[] = Array.from({ length: n }, (_, i) => ({
       label: String(i + 1),
       value: String(i + 1),
     }));
-    keys.push({ label: '✕', value: '0', aria: L('Erase', 'Effacer') });
-    const saved = ctx.saved as { vals?: number[]; sel?: number } | undefined;
+    keys.push(notes.key, { label: '✕', value: '0', aria: L('Erase', 'Effacer') });
     if (saved?.vals?.length === vals.length) saved.vals.forEach((v, i) => !given[i] && (vals[i] = v));
     if (typeof saved?.sel === 'number' && saved.sel >= -1 && saved.sel < vals.length) sel = saved.sel;
-    root.append(
-      grid,
-      pad(keys, (v) => (v === '0' ? input(vals[sel] || 0) : input(Number(v)))),
-    );
+    const padEl = pad(keys, (v) => (v === 'n' ? notes.padKey() : v === '0' ? erase() : input(Number(v))));
+    notes.bindPad(padEl);
+    root.append(grid, padEl);
     render();
 
     const hint = makeHint({
@@ -233,22 +262,26 @@ export const sudoku: PuzzleDef = {
       vals: () => vals,
       place: (i, v) => {
         select(i);
-        input(v);
+        input(v, false);
       },
       scope: ['its row, column and box', 'sa rangée, sa colonne et son bloc'],
     });
 
     return {
-      snapshot: () => ({ vals, sel }),
+      snapshot: () => ({ vals, sel, notes: notes.bits }),
       hint,
       onKey(e) {
-        const k = Number(e.key);
-        if (k >= 1 && k <= n) {
-          input(k);
+        const dg = keyDigit(e, n);
+        if (dg) {
+          input(dg.v, dg.note !== notes.on);
+          return true;
+        }
+        if (e.key === 'n' || e.key === 'N') {
+          notes.flip();
           return true;
         }
         if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-          if (sel >= 0 && vals[sel]) input(vals[sel]);
+          erase();
           return true;
         }
         const mv: Record<string, number> = { ArrowUp: -n, ArrowDown: n, ArrowLeft: -1, ArrowRight: 1 };
