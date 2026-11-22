@@ -50,16 +50,16 @@
 [data-puzzle='bridges'] .lk-bsvg .isl.done text {
   fill: var(--on-tone);
 }
-[data-puzzle='bridges'] .lk-bsvg .isl.err circle {
+[data-puzzle='bridges'] .lk-bsvg .isl.err:not([data-hold]) circle {
   fill: var(--bad);
 }
-[data-puzzle='bridges'] .lk-bsvg .isl.err text {
+[data-puzzle='bridges'] .lk-bsvg .isl.err:not([data-hold]) text {
   fill: var(--on-tone);
 }
 [data-puzzle='bridges'] .lk-bsvg .isl.sel circle {
   stroke-width: 0.14;
   stroke-dasharray: 0.16 0.08;
 }
-[data-puzzle='bridges'] .lk-bsvg .isl.sel:not(.done):not(.err) circle {
+[data-puzzle='bridges'] .lk-bsvg .isl.sel:not(.done):not(.err:not([data-hold])) circle {
   fill: var(--accent-soft);
 }

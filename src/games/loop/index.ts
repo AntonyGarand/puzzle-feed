@@ -1,6 +1,6 @@
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { clearBtn, h, s } from '../../ui/dom';
+import { clearBtn, h, ruleBreaks, s } from '../../ui/dom';
 import { capture } from '../../kits/path/grid';
 import { loopFault } from '../../kits/grid/loopcheck';
 import { genLoop, isSingleLoop } from '../../kits/grid/slither';
@@ -286,6 +286,8 @@ export const loop: PuzzleDef = {
     );
     root.append(wrap);
     render();
+    // Not counted as mistakes, but red marks wait until the player pauses, like the counted ones.
+    ruleBreaks(wrap, () => {});
     // Guide: numbers first (0, two 3s, corners, full or settled counts), then what each dot allows.
     let lastKind = '';
     const hint = (): Hint | null => {

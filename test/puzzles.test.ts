@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LEVELS } from '../src/core/types';
 import { PUZZLES } from '../src/games';
 import { WORDS } from '../src/kits/word/words';
+import { settleRuleBreaks } from '../src/ui/dom';
 import { mountGame } from './support/mount';
 
 /** Generation budget per board. Coverage instrumentation slows everything down, so it isn't timed then. */
@@ -44,6 +45,7 @@ describe.each(PUZZLES.map((p) => [p.id, p] as const))('%s', (_id, def) => {
       hint.play();
     }
     expect(steps).toBeGreaterThan(0);
+    settleRuleBreaks(); // judge the last moves now rather than after the pause
     expect(events.filter((e) => e !== 'solved' && e !== 'reached')).toEqual([]);
     inst.destroy?.();
   });

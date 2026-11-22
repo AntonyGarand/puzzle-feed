@@ -41,7 +41,7 @@
   background: var(--accent-soft);
   border-color: var(--ink);
 }
-[data-puzzle='haunted'] .hn-clue.err {
+[data-puzzle='haunted'] .hn-clue.err:not([data-hold]) {
   opacity: 1;
 }
 
@@ -155,10 +155,10 @@
   /* satisfied clue: dimmed to --faint, which still holds 4.5:1 */
   color: var(--faint);
 }
-[data-puzzle='haunted'] .hn-key.err {
+[data-puzzle='haunted'] .hn-key.err:not([data-hold]) {
   background: var(--bad);
   color: var(--on-tone);
 }
-[data-puzzle='haunted'] .hn-key.err .hn-n small {
+[data-puzzle='haunted'] .hn-key.err:not([data-hold]) .hn-n small {
   color: inherit;
 }

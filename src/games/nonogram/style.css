@@ -72,6 +72,6 @@
   outline-offset: 1px;
   z-index: 1;
 }
-[data-puzzle='nonogram'] .clue.err {
+[data-puzzle='nonogram'] .clue.err:not([data-hold]) {
   color: var(--bad-ink);
 }

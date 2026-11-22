@@ -1,6 +1,6 @@
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { board, clearBtn, h, pad } from '../../ui/dom';
+import { board, clearBtn, h, pad, ruleBreaks } from '../../ui/dom';
 import { cellFromPointer, nb4, tint } from '../../kits/logic/kit';
 import { candidates, exits, genFill, groupReach, regions } from './gen';
 import './style.css';
@@ -133,10 +133,12 @@ export const fill: PuzzleDef = {
       ctx.status(P(left, ['cell left', 'cells left'], ['case à remplir', 'cases à remplir']));
     };
 
+    /** Counts a mistake when a group breaks the rule (judged once the player pauses). */
+    const watch = ruleBreaks(grid, ctx.mistake);
     /** After a change: count a mistake if a new broken group appeared, and check for the win. */
-    const settle = (before: Set<number>) => {
+    const settle = () => {
       render();
-      if ([...bad].some((i) => !before.has(i))) ctx.mistake();
+      watch();
       if (!done && bad.size === 0 && vals.every((v) => v > 0)) {
         done = true;
         ctx.solved();
@@ -151,16 +153,15 @@ export const fill: PuzzleDef = {
     const input = (v: number) => {
       if (done || sel < 0 || given[sel]) return;
       ctx.touch();
-      const before = bad;
       vals[sel] = vals[sel] === v ? 0 : v;
-      settle(before);
+      settle();
     };
 
     // Drag from a numbered cell over empty cells to copy its number.
     let dragV = 0,
       last = -1,
       dragged = false,
-      stroke: Set<number> | null = null;
+      stroke = false;
     const paint = (i: number) => {
       if (given[i] || vals[i] || !dragV) return false;
       vals[i] = dragV;
@@ -168,8 +169,8 @@ export const fill: PuzzleDef = {
       return true;
     };
     const endStroke = () => {
-      if (stroke) settle(stroke);
-      stroke = null;
+      if (stroke) settle();
+      stroke = false;
       dragV = 0;
       last = -1;
     };
@@ -188,7 +189,7 @@ export const fill: PuzzleDef = {
       last = i;
       if (!stroke) {
         ctx.touch();
-        stroke = bad;
+        stroke = true;
       }
       if (paint(i)) render();
     });
@@ -221,9 +222,11 @@ export const fill: PuzzleDef = {
       ctx.touch();
       vals.forEach((_, i) => !given[i] && (vals[i] = 0));
       render();
+      watch(false);
     };
     ctx.controls(clearBtn(clear));
     render();
+    watch(false);
 
     // ---------- guide ----------
     let lastKind = '';
@@ -236,7 +239,7 @@ export const fill: PuzzleDef = {
     /** Same path as a drag: copy `v` into the empty cells `to`. */
     const flood = (to: number[], v: number) => () => {
       dragV = v;
-      stroke = bad;
+      stroke = true;
       for (const i of to) paint(i);
       dragged = false;
       endStroke();

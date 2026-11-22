@@ -100,7 +100,7 @@
 [data-puzzle='logic-grid'] .lg-clue.ok {
   opacity: 0.5;
 }
-[data-puzzle='logic-grid'] .lg-clue.err {
+[data-puzzle='logic-grid'] .lg-clue.err:not([data-hold]) {
   color: var(--bad-ink);
   font-weight: 700;
 }

@@ -1,7 +1,7 @@
 import './kit.css';
 import { L, P } from '../../core/i18n';
 import type { PuzzleCtx, PuzzleInstance } from '../../core/types';
-import { board, clearBtn, h, pad } from '../../ui/dom';
+import { board, clearBtn, h, pad, ruleBreaks } from '../../ui/dom';
 import { directPlace, keyDigit, makeNotes, notesHelpStep } from './notes';
 import { conflicts, type Problem } from './solver';
 
@@ -109,7 +109,7 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     const was = vals[sel];
     vals[sel] = vals[sel] === v ? 0 : v;
     const bad = render();
-    if (vals[sel] && vals[sel] !== was && bad.has(sel)) ctx.mistake();
+    watch(vals[sel] > 0 && vals[sel] !== was);
     if (bad.size === 0 && vals.every((x, i) => !active(i) || x > 0)) {
       done = true;
       ctx.solved();
@@ -153,6 +153,7 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
     if (!any) return;
     ctx.touch();
     render();
+    watch(false);
   };
   ctx.controls(clearBtn(clear));
 
@@ -160,6 +161,8 @@ export function entryGame(o: EntryOpts): PuzzleInstance {
   notes.bindPad(padEl);
   ctx.root.append(grid, padEl);
   render();
+  /** Counts a mistake when an entry clashes (judged once the player pauses, so a quick fix doesn't count). */
+  const watch = ruleBreaks(grid, ctx.mistake);
 
   const step = (dr: number, dc: number) => {
     let r = sel < 0 ? 0 : Math.floor(sel / cols),

@@ -130,7 +130,7 @@
   border-color: var(--ink);
   opacity: 1;
 }
-[data-puzzle='hidden-rule'] .hr-slot.err .hr-spec {
+[data-puzzle='hidden-rule'] .hr-slot.err:not([data-hold]) .hr-spec {
   border-color: var(--bad-ink);
   box-shadow: var(--csh) var(--csh) 0 var(--bad);
 }

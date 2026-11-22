@@ -1,7 +1,7 @@
 import './style.css';
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { addTally, board, clearBtn, h, pad, s, setTally } from '../../ui/dom';
+import { addTally, board, clearBtn, h, pad, ruleBreaks, s, setTally } from '../../ui/dom';
 import { ALL, bit, genHaunted, GHOST, narrowLine, pathRange, propagate, seen, single, VAMPIRE, ZOMBIE } from './gen';
 
 const kindName = (v: number) => (v === GHOST ? L('ghost', 'fantôme') : v === VAMPIRE ? L('vampire', 'vampire') : L('zombie', 'zombie'));
@@ -227,11 +227,8 @@ export const haunted: PuzzleDef = {
       if (done || sel < 0 || givens[sel]) return;
       ctx.touch();
       vals[sel] = vals[sel] === v ? 0 : v;
-      const bad = render();
-      if (vals[sel]) {
-        const hit = paths.some((q, k) => bad[k] && q.cells.includes(sel));
-        if (hit || placed(v) > totals[v - 1]) ctx.mistake();
-      }
+      render();
+      watch(vals[sel] > 0);
       const ok =
         open.every((c) => vals[c]) &&
         [GHOST, VAMPIRE, ZOMBIE].every((k) => placed(k) === totals[k - 1]) &&
@@ -256,10 +253,13 @@ export const haunted: PuzzleDef = {
       ctx.touch();
       for (const c of open) if (!givens[c]) vals[c] = 0;
       render();
+      watch(false);
     };
     root.append(grid, padEl);
     ctx.controls(clearBtn(clear));
     render();
+    /** Counts a mistake when a monster breaks a sight line or overfills its kind (judged once the player pauses). */
+    const watch = ruleBreaks(root, ctx.mistake);
 
     // ---------- guide ----------
     const fillAll = (moves: [number, number][]) => () => {

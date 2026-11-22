@@ -1,9 +1,9 @@
 import './style.css';
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
-import { board, clearBtn, h, PALETTE, pad } from '../../ui/dom';
+import { board, clearBtn, h, PALETTE, pad, ruleBreaks } from '../../ui/dom';
 import { generateDeduct } from './gen';
-import { breaksRule, clueState, dupes, findFix, isSolved, itemIn, levelOf, nextStep, placed, restore } from './rules';
+import { clueState, dupes, findFix, isSolved, itemIn, levelOf, nextStep, placed, restore } from './rules';
 import { aFr, cap, clueTexts, MARK, pickGroups, plain, valOf, wordOf as wordIn } from './words';
 
 export const logicGrid: PuzzleDef = {
@@ -186,9 +186,8 @@ export const logicGrid: PuzzleDef = {
       }
       vals[i] = v;
       xs[i] &= ~(1 << v);
-      const broken = breaksRule(n, clues, vals, i);
       render();
-      if (broken) ctx.mistake();
+      watch();
       finish();
     };
     const press = (v: number) => {
@@ -208,10 +207,14 @@ export const logicGrid: PuzzleDef = {
       xs.fill(0);
       struck.fill(0);
       render();
+      watch(false);
     };
-    ctx.root.append(h('div', { class: 'lg-wrap', style: `--k:${K}` }, grid, clueBox, padSlot));
+    const wrap = h('div', { class: 'lg-wrap', style: `--k:${K}` }, grid, clueBox, padSlot);
+    ctx.root.append(wrap);
     ctx.controls(clearBtn(clear));
     render();
+    /** Counts a mistake when a placement doubles up or breaks a clue (judged once the player pauses). */
+    const watch = ruleBreaks(wrap, ctx.mistake);
 
     // ---- guide ----
     const hintFor = (f: { it: number; cell: number }, text: string, why: Element[]): Hint => ({

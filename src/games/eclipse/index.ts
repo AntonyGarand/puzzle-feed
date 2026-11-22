@@ -176,8 +176,8 @@ export const eclipse: PuzzleDef = {
         'Touchez une case pour la changer : soleil, lune, puis vide. Appuyez longuement (ou clic droit) pour l’effacer. Les cases pointillées sont données.',
       ),
       L(
-        'Keyboard: arrows move, Space cycles, 1 = sun, 2 = moon, Backspace clears. Cells breaking a rule turn red and count as a mistake once you move on. Clear wipes your entries.',
-        'Au clavier : flèches pour bouger, Espace pour changer, 1 = soleil, 2 = lune, Retour arrière pour effacer. Les cases fautives passent au rouge et comptent comme une erreur dès que vous passez à une autre case. Effacer retire vos entrées.',
+        'Keyboard: arrows move, Space cycles, 1 = sun, 2 = moon, Backspace clears. Cells breaking a rule turn red and count as a mistake once you stop tapping. Clear wipes your entries.',
+        'Au clavier : flèches pour bouger, Espace pour changer, 1 = soleil, 2 = lune, Retour arrière pour effacer. Les cases fautives passent au rouge et comptent comme une erreur dès que vous arrêtez de toucher. Effacer retire vos entrées.',
       ),
     ],
     tips: [
@@ -224,12 +224,8 @@ export const eclipse: PuzzleDef = {
       grid.append(el);
       return el;
     });
-    /**
-     * Rule breaks count as a mistake once the player moves on: a tap cycles sun → moon, so the sun on the
-     * way to a moon must not count. `pending` is the cell whose entry hasn't been judged yet.
-     */
+    /** Counts a mistake when an entry breaks a rule (judged once the taps stop: sun → moon cycles freely). */
     const watch = ruleBreaks(grid, ctx.mistake);
-    let pending = -1;
     const render = () => {
       const bad = broken(g, n);
       cells.forEach((el, i) => {
@@ -249,11 +245,9 @@ export const eclipse: PuzzleDef = {
     const set = (i: number, v: number) => {
       if (done || given[i] || g[i] === v) return;
       ctx.touch();
-      if (pending !== i && pending >= 0) watch();
       g[i] = v;
       const won = render();
-      pending = v >= 0 && !won ? i : -1;
-      if (pending < 0) watch(false);
+      watch();
       if (won) {
         done = true;
         ctx.solved();
@@ -277,7 +271,6 @@ export const eclipse: PuzzleDef = {
         ctx.touch();
         g.forEach((_, i) => !given[i] && (g[i] = -1));
         cur = -1;
-        pending = -1;
         render();
         watch(false);
       }),

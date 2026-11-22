@@ -98,10 +98,10 @@
     0 0 0 2px var(--cell),
     0 0 0 4px color-mix(in srgb, var(--ink) 40%, transparent);
 }
-[data-puzzle='mines'] .lk-mines .cell.mine.err {
+[data-puzzle='mines'] .lk-mines .cell.mine.err:not([data-hold]) {
   border-color: var(--ink);
 }
-[data-puzzle='mines'] .lk-mines .cell.mine.err::after {
+[data-puzzle='mines'] .lk-mines .cell.mine.err:not([data-hold])::after {
   box-shadow:
     0 0 0 2px var(--bad),
     0 0 0 4px var(--ink);

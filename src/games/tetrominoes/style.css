@@ -36,7 +36,7 @@
 [data-puzzle='tetrominoes'] .tt-plate .cell.on.bb {
   border-bottom: 2px solid var(--ink);
 }
-[data-puzzle='tetrominoes'] .tt-plate .cell.err {
+[data-puzzle='tetrominoes'] .tt-plate .cell.err:not([data-hold]) {
   background: color-mix(in srgb, var(--bad) 45%, var(--rc, var(--cell)));
 }
 /* drag preview */
