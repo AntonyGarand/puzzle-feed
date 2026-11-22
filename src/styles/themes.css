@@ -135,7 +135,7 @@
   transform: translateY(1px);
 }
 
-/* ---------- OLED (Settings > Light or dark): dark mode with pure-black surfaces ----------
+/* ---------- OLED, labelled "Black" (Settings > Light or dark): dark mode with pure-black surfaces ----------
    main.ts sets data-theme='dark' plus data-oled, so every dark rule applies and only the surfaces go
    black. Works with any style: each keeps its own text, ink, borders and font. Last in the file so it
    wins over the style dark blocks it ties with (0,3,0). Open cells sit one small step above the black
