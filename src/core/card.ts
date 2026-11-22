@@ -156,19 +156,16 @@ export class Card {
     const resume = this.pauseWhile();
     const p = prefs(this.def.id);
     const daily = !!this.opts.daily;
-    const options: { label: string; value: Difficulty | 'auto' }[] = [
-      ...(this.opts.lab ? [] : [{ label: L('Auto', 'Auto'), value: 'auto' as const }]),
-      ...LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l })),
-    ];
-    const current: Difficulty | 'auto' = this.opts.lab || p.manual ? this.level : 'auto';
+    // The picker always shows the level being played; Auto is a separate switch (feed only).
+    const options = LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l }));
     let close = () => {};
-    const pickLevel = (v: Difficulty | 'auto') => {
+    const pickLevel = (v: Difficulty) => {
       close();
       if (this.opts.lab) {
-        this.mount({ level: v === 'auto' ? this.level : v });
+        this.mount({ level: v });
         return;
       }
-      setLevel(this.def.id, v);
+      setLevel(this.def.id, v); // picking a level turns Auto off
       this.mount(); // the feed also regenerates untouched upcoming cards
     };
     const seg = <T>(name: string, items: { label: string; value: T }[], cur: T, onpick: (v: T) => void) =>
@@ -203,23 +200,35 @@ export class Card {
         b.setAttribute('aria-checked', String(weights[i].value === v));
       });
     });
+    const autoOpts = [
+      { label: L('Off', 'Non'), value: 0 },
+      { label: L('On', 'Oui'), value: 1 },
+    ];
+    const auto = seg('auto', autoOpts, p.manual ? 0 : 1, (v) => {
+      // The level stays where it is: On lets auto-levelling move it from here, Off locks it.
+      setLevel(this.def.id, v ? 'auto' : this.level);
+      auto.querySelectorAll('button').forEach((b, i) => {
+        b.classList.toggle('on', autoOpts[i].value === v);
+        b.setAttribute('aria-checked', String(autoOpts[i].value === v));
+      });
+    });
+    const showAuto = !daily && !this.opts.lab;
     close = openSheet({
       title: this.def.name,
       puzzle: this.def.id,
       className: 'game-settings',
       body: [
         daily ? null : h('h3', null, L('Difficulty', 'Difficulté')),
-        daily ? null : seg('level', options, current, pickLevel),
-        this.opts.lab
-          ? null
-          : h(
+        daily ? null : seg('level', options, this.level, pickLevel),
+        showAuto ? h('h3', null, L('Auto-level', 'Niveau auto')) : null,
+        showAuto
+          ? h(
               'p',
-              { class: 'muted small' },
-              L(
-                'Auto raises the level when you solve quickly and cleanly.',
-                'Auto monte le niveau quand vous résolvez vite et sans faute.',
-              ),
-            ),
+              { class: 'muted small auto-hint' },
+              L('Raises the level when you solve quickly and cleanly.', 'Monte le niveau quand vous résolvez vite et sans faute.'),
+            )
+          : null,
+        showAuto ? auto : null,
         this.opts.lab ? null : h('h3', null, L('In the feed', 'Dans le fil')),
         this.opts.lab ? null : freq,
         h('h3', null, L('Share this puzzle', 'Partager cette partie')),

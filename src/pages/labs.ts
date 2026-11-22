@@ -5,8 +5,10 @@ import { allSaves, clearSave, type Save } from '../core/saves';
 import { navigate } from '../core/nav';
 import { encodeCode, resolveCode } from '../core/share';
 import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
-import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
-import { fmtTime, h, segmented } from '../core/ui';
+import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
+import { cogIcon, fmtTime, h, segmented } from '../core/ui';
+import { openSheet } from '../core/sheet';
+import { destroyThumbs, thumb } from '../core/thumb';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -30,98 +32,150 @@ const weights = (): { label: string; value: Weight }[] => [
 ];
 
 /**
- * Games tab: every game grouped by category, with search. Each tile resumes the unfinished game or
- * starts a new one, and holds the game's level and how often it shows up in the feed.
+ * Games tab: every game grouped by category, with search. Each row resumes the unfinished game or
+ * starts a new one; its cog holds the game's level and how often it shows up in the feed.
  */
 export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { input: string; error: string }) {
   // Saves of word games made in the other language can't be resumed here.
   const saves = Object.fromEntries(
     Object.entries(allSaves()).filter(([id, sv]) => !defs.find((d) => d.id === id)?.localized || (sv.locale ?? 'en') === locale()),
   );
+  destroyThumbs();
   const rerender = () => renderLabs(el, defs);
   const catName = (d: PuzzleDef) => CATEGORIES.find((c) => c.id === d.category)?.name ?? '';
 
-  const tile = (d: PuzzleDef, save: Save | undefined) => {
-    const st = stats(d.id);
-    // The same level the feed uses: Auto follows auto-levelling, picking one locks it (like the card's cog).
-    const levelSel = h(
-      'select',
-      { class: 'select', 'aria-label': `${d.name} — ${L('level', 'niveau')}` },
-      h('option', { value: 'auto' }),
-      ...LEVELS.map((l) => h('option', { value: String(l) }, LEVEL_NAMES[l])),
-    );
-    const meta = h('p', { class: 'lab-meta' });
+  /** Level, feed frequency and save management, behind the tile's cog. */
+  const openTileSettings = (d: PuzzleDef, save: Save | undefined) => {
+    const pr = prefs(d.id);
+    // The picker always shows the current level; Auto is a separate switch. Picking a level turns Auto off.
+    const levelBox = h('div', { class: 'level-box' });
     const drawLevel = () => {
-      const pr = prefs(d.id);
-      levelSel.options[0].textContent = pr.manual ? 'Auto' : `Auto · ${LEVEL_NAMES[pr.level]}`;
-      levelSel.value = pr.manual ? String(pr.level) : 'auto';
-      if (save) return;
-      const best = st.best[pr.level];
-      meta.replaceChildren(
-        P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']),
-        best != null ? ` · ${L('best', 'record')} ${fmtTime(best)}` : '',
-      );
-    };
-    levelSel.addEventListener('change', () => {
-      setLevel(d.id, levelSel.value === 'auto' ? 'auto' : (Number(levelSel.value) as Difficulty));
-      drawLevel();
-    });
-    drawLevel();
-    if (save)
-      meta.append(
-        `${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
-        h(
-          'button',
-          {
-            type: 'button',
-            class: 'linkish',
-            onclick: () => {
-              clearSave(d.id);
-              rerender();
-            },
+      const p = prefs(d.id);
+      levelBox.replaceChildren(
+        segmented(
+          LEVELS.map((l) => ({ label: LEVEL_NAMES[l], value: l })),
+          p.level,
+          (v) => {
+            setLevel(d.id, v);
+            drawLevel();
           },
-          L('discard', 'abandonner'),
+          { class: 'seg wrap', 'aria-label': L('Difficulty', 'Difficulté') },
+        ),
+        h('h3', null, L('Auto-level', 'Niveau auto')),
+        h(
+          'p',
+          { class: 'muted small auto-hint' },
+          L('Raises the level when you solve quickly and cleanly.', 'Monte le niveau quand vous résolvez vite et sans faute.'),
+        ),
+        segmented(
+          [
+            { label: L('Off', 'Non'), value: 0 },
+            { label: L('On', 'Oui'), value: 1 },
+          ],
+          p.manual ? 0 : 1,
+          (v) => {
+            setLevel(d.id, v ? 'auto' : prefs(d.id).level);
+            drawLevel();
+          },
+          { 'aria-label': L('Auto-level', 'Niveau auto') },
         ),
       );
-    const startNew = () => navigate(`/game/${d.id}/new/${prefs(d.id).level}`);
+    };
+    drawLevel();
+    const close = openSheet({
+      title: d.name,
+      puzzle: d.id,
+      className: 'game-settings',
+      body: [
+        h('p', { class: 'muted small' }, d.rules),
+        h('h3', null, L('Difficulty', 'Difficulté')),
+        levelBox,
+        h('h3', null, L('In the feed', 'Dans le fil')),
+        segmented(weights(), pr.weight, (v) => setWeight(d.id, v)),
+        save
+          ? h(
+              'p',
+              { class: 'small' },
+              `${L('Unfinished', 'En cours')} : ${LEVEL_NAMES[save.level]} · ${fmtTime(save.elapsed)} · ${ago(save.at)} · `,
+              h(
+                'button',
+                {
+                  type: 'button',
+                  class: 'linkish',
+                  onclick: () => {
+                    clearSave(d.id);
+                    close();
+                  },
+                },
+                L('discard', 'abandonner'),
+              ),
+            )
+          : null,
+      ],
+      onClose: () => {
+        if (location.pathname.startsWith('/games')) rerender();
+      },
+    });
+  };
 
-    const art = h(
+  /**
+   * One row per game: preview, name, rules and stats. The whole row starts the game (or resumes the
+   * unfinished one); "?" and the cog are separate buttons layered above the row's link.
+   */
+  const tile = (d: PuzzleDef, save: Save | undefined) => {
+    const st = stats(d.id);
+    const pr = prefs(d.id);
+    const href = save ? `/game/${d.id}` : `/game/${d.id}/new/${pr.level}`;
+    const best = st.best[pr.level];
+    const chips = save
+      ? [
+          h('span', { class: 'resume-pill' }, `${L('Resume', 'Reprendre')} · ${fmtTime(save.elapsed)}`),
+          LEVEL_NAMES[save.level],
+          ago(save.at),
+        ]
+      : [
+          `${pr.manual ? '' : 'Auto · '}${LEVEL_NAMES[pr.level]}`,
+          st.solved ? P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']) : null,
+          best != null ? `${L('best', 'record')} ${fmtTime(best)}` : null,
+        ];
+    const cog = h(
+      'button',
+      {
+        type: 'button',
+        class: 'icon-btn cog-btn',
+        title: L('Options', 'Options'),
+        'aria-label': `${d.name} — ${L('options', 'options')}`,
+        onclick: () => openTileSettings(d, save),
+      },
+      cogIcon(),
+    );
+    return h(
       'article',
       {
-        class: `lab-tile ${save ? 'has-save' : ''} ${prefs(d.id).weight === 0 ? 'off' : ''}`,
+        class: `lab-tile ${save ? 'has-save' : ''} ${pr.weight === 0 ? 'off' : ''}`,
         'data-puzzle': d.id,
         'data-search': fold(`${d.name} ${d.id} ${d.rules} ${catName(d)}`),
       },
-      h('header', null, h('h2', null, d.name), save ? h('span', { class: 'badge' }, L('In progress', 'En cours')) : null, helpButton(d)),
-      h('p', { class: 'rules' }, d.rules),
-      meta,
+      thumb(d, 'tile-art'),
       h(
         'div',
-        { class: 'lab-new' },
-        save ? h('a', { class: 'btn primary', href: `/game/${d.id}` }, L('Resume', 'Reprendre')) : null,
-        levelSel,
+        { class: 'tile-main' },
         h(
-          'button',
-          { type: 'button', class: `btn ${save ? '' : 'primary'}`, onclick: startNew },
-          save ? L('New', 'Nouvelle') : L('Play', 'Jouer'),
+          'header',
+          null,
+          h(
+            'h2',
+            null,
+            h('a', { class: 'tile-link', href, 'aria-label': `${save ? L('Resume', 'Reprendre') : L('Play', 'Jouer')} ${d.name}` }, d.name),
+          ),
+          helpButton(d, { quiet: true }),
+          cog,
         ),
+        h('p', { class: 'rules' }, d.rules),
+        h('p', { class: 'lab-meta' }, ...chips.filter(Boolean).map((c) => (typeof c === 'string' ? h('span', null, c) : c))),
       ),
-      h(
-        'div',
-        { class: 'lab-freq' },
-        h('span', { class: 'lab-freq-label' }, L('In the feed', 'Dans le fil')),
-        segmented(
-          weights(),
-          prefs(d.id).weight,
-          (v) => {
-            setWeight(d.id, v);
-            art.classList.toggle('off', v === 0);
-          },
-          { 'aria-label': `${d.name} — ${L('how often in the feed', 'fréquence dans le fil')}` },
-        ),
-      ),
+      h('span', { class: 'tile-go', 'aria-hidden': 'true' }, save ? '↻' : '▶'),
     );
-    return art;
   };
 
   // Play a puzzle someone shared: paste a code (or a whole link).
@@ -254,8 +308,8 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         'p',
         { class: 'muted' },
         L(
-          `${defs.length} games. Pick any game and level — unfinished ones are saved automatically. “In the feed” sets how often a game shows up in the Feed tab.`,
-          `${defs.length} jeux. Choisissez un jeu et un niveau — les parties en cours sont sauvegardées automatiquement. « Dans le fil » règle la fréquence d’un jeu dans l’onglet Fil.`,
+          `${defs.length} games. Tap one to play — unfinished games are saved automatically. The cog sets its level and how often it shows up in the Feed tab.`,
+          `${defs.length} jeux. Touchez un jeu pour jouer — les parties en cours sont sauvegardées automatiquement. La roue dentée règle son niveau et sa fréquence dans l’onglet Fil.`,
         ),
       ),
       codeForm,
