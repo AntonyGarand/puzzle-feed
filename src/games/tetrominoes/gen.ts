@@ -63,7 +63,7 @@ const BASE: [number, [number, number][]][] = [
 ];
 
 const norm = (cs: [number, number][]): [number, number][] => {
-  const s = [...cs].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const s = cs.toSorted((a, b) => a[0] - b[0] || a[1] - b[1]);
   const [r0, c0] = s[0];
   return s.map(([r, c]) => [r - r0, c - c0]);
 };

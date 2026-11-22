@@ -235,7 +235,7 @@ export const worms: PuzzleDef = {
       ctx.touch();
       history.push(ws);
       // whichever end led is the head now
-      ws = nx.map((sq, j) => (j === k && tail ? sq.slice().reverse() : sq));
+      ws = nx.map((sq, j) => (j === k && tail ? sq.toReversed() : sq));
       sel = k;
       if (solved(ws)) {
         done = true;
@@ -248,7 +248,7 @@ export const worms: PuzzleDef = {
       return true;
     };
     const flip = (k: number) => {
-      ws = ws.map((sq, j) => (j === k ? sq.slice().reverse() : sq));
+      ws = ws.map((sq, j) => (j === k ? sq.toReversed() : sq));
     };
     const dirTo = (a: number, b: number) => [0, 1, 2, 3].find((dd) => nb(a, dd) === b) ?? -1;
 

@@ -102,8 +102,8 @@ function mergeDown(rng: Rng, start: number[][], n: number, k: number, maxLen: nu
     for (const [key, t] of touch) {
       const [la, lb] = [lines[Math.floor(key / 64)], lines[key % 64]];
       if (!t || la.length + lb.length > maxLen) continue;
-      const x = t[0] === la[la.length - 1] ? la : t[0] === la[0] ? [...la].reverse() : null;
-      const y = t[1] === lb[0] ? lb : t[1] === lb[lb.length - 1] ? [...lb].reverse() : null;
+      const x = t[0] === la[la.length - 1] ? la : t[0] === la[0] ? la.toReversed() : null;
+      const y = t[1] === lb[0] ? lb : t[1] === lb[lb.length - 1] ? lb.toReversed() : null;
       if (x && y) joins.push([Math.floor(key / 64), key % 64, ...x, ...y]);
     }
     if (!joins.length) return null;

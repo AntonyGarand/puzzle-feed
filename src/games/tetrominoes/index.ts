@@ -148,7 +148,7 @@ export const tetrominoes: PuzzleDef = {
     const place = (p: number[]) => {
       const set = new Set(p);
       pieces = pieces.filter((q) => !q.some((i) => set.has(i)));
-      pieces.push([...p].sort((a, b) => a - b));
+      pieces.push(p.toSorted((a, b) => a - b));
     };
     const check = () => {
       const won = render();
@@ -220,7 +220,7 @@ export const tetrominoes: PuzzleDef = {
         if (!p.every((i) => Number.isInteger(i) && i >= 0 && i < N && !used.has(i))) continue;
         if (shapeOf(p as number[], cols) < 0) continue;
         p.forEach((i: number) => used.add(i));
-        pieces.push([...(p as number[])].sort((a, b) => a - b));
+        pieces.push((p as number[]).toSorted((a, b) => a - b));
       }
     }
     root.append(grid);

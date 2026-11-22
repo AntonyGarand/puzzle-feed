@@ -124,7 +124,7 @@ export function planPush(
     return false;
   };
   type Node = { bx: number[]; p: number; g: number; key: string };
-  const keyOf = (bx: number[], p: number) => `${[...bx].sort((a, b) => a - b).join(',')}|${reach(p, new Set(bx))}`;
+  const keyOf = (bx: number[], p: number) => `${bx.toSorted((a, b) => a - b).join(',')}|${reach(p, new Set(bx))}`;
   const k0 = keyOf(boxes, player);
   const prev = new Map<string, { from: string; step: PushStep } | null>([[k0, null]]);
   const best = new Map<string, number>([[k0, 0]]);

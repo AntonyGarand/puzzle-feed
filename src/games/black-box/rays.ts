@@ -118,7 +118,7 @@ export function layouts(n: number, count: number, shots: { port: number; res: nu
       else if (r !== shots[j].res) return;
     }
     if (placed === count) {
-      out.push([...balls].sort((a, b) => a - b));
+      out.push(balls.toSorted((a, b) => a - b));
       return;
     }
     if (count - placed > N - i) return;
@@ -186,7 +186,7 @@ function wander(n: number, count: number, shots: { port: number; res: number }[]
       balls[j] = to;
       cur = next;
       if (!cur) {
-        const l = [...balls].sort((a, b) => a - b);
+        const l = balls.toSorted((a, b) => a - b);
         const key = l.join();
         if (!found.has(key)) {
           found.set(key, l);

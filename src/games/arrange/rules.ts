@@ -256,7 +256,7 @@ export function deadEnd(P: ArrangePuzzle, pos: Pos, solve: (pos: Pos) => SolveRe
   // The smallest empty gap, and the misplaced piece that touches it most.
   const gap = gaps(P, (i) => owner[i] < 0).sort((a, b) => a.length - b.length)[0] ?? [];
   const touch = (p: number) => gap.filter((i) => around(P, i).some((x) => owner[x] === p)).length;
-  const p = [...off].sort((a, b) => touch(b) - touch(a))[0];
+  const p = off.toSorted((a, b) => touch(b) - touch(a))[0];
   return { p, gap, small: gap.length > 0 && gap.length < minSize };
 }
 

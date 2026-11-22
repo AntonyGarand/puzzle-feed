@@ -133,7 +133,7 @@ export type PAct =
 
 /** Like solveP, with the winning line when there is one. */
 export function searchP(s0: PState, maxPasses: number, budget = 20000): { v: Verdict; line: PAct[] } {
-  const talon = [...s0.waste, ...s0.stock.slice().reverse()]; // draw order
+  const talon = [...s0.waste, ...s0.stock.toReversed()]; // draw order
   const T = talon.length;
   const unlimited = maxPasses < 0;
   const seen = new Set<string>();

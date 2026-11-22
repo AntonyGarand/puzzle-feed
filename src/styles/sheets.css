@@ -73,7 +73,13 @@ dialog.sheet {
 dialog.sheet:not([open]) {
   display: none;
 }
+/* keep scroll gestures on the sheet or its backdrop from scrolling the feed behind it */
+dialog.sheet:modal {
+  overscroll-behavior: contain;
+}
 dialog.sheet::backdrop {
+  overflow: hidden; /* ::backdrop isn't a scroll container, so it would ignore overscroll-behavior */
+  overscroll-behavior: contain;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   backdrop-filter: blur(2px);
 }

@@ -162,7 +162,7 @@ export const hunt: PuzzleDef = {
         ),
       );
       foundEl.replaceChildren(
-        ...[...found].reverse().map((w) => h('span', { class: listed.includes(w) ? 'word-pill' : 'word-pill bonus' }, w)),
+        ...found.toReversed().map((w) => h('span', { class: listed.includes(w) ? 'word-pill' : 'word-pill bonus' }, w)),
       );
       finish.hidden = won || st < 1 || st >= 3;
       ctx.status(
@@ -287,7 +287,7 @@ export const hunt: PuzzleDef = {
         p.findIndex((v, k) => k > 0 && Math.floor(v / n) !== Math.floor(p[k - 1] / n) && v % n !== p[k - 1] % n);
       const rules: Record<string, () => Hint | null> = {
         extend: () => {
-          for (const f of [...found].reverse()) {
+          for (const f of found.toReversed()) {
             const x = left.find((y) => y.w.length > f.length && y.w.startsWith(f));
             const tag = [...foundEl.children].find((el) => el.textContent === f);
             if (x)

@@ -65,7 +65,12 @@ export function openSheet(opts: {
   const close = () => dlg.close();
   const dlg = h(
     'dialog',
-    { class: `sheet ${opts.className ?? ''}`.trim(), 'data-puzzle': opts.puzzle, 'aria-labelledby': 'sheet-title' },
+    {
+      class: `sheet ${opts.className ?? ''}`.trim(),
+      'data-puzzle': opts.puzzle,
+      'aria-labelledby': 'sheet-title',
+      closedby: 'any', // backdrop click, Esc and back gesture all close it
+    },
     h(
       'div',
       { class: 'sheet-head' },
@@ -75,9 +80,7 @@ export function openSheet(opts: {
     h('div', { class: 'sheet-body' }, ...opts.body.filter((n): n is Node => !!n)),
     opts.footer ? h('div', { class: 'sheet-foot' }, ...opts.footer.filter((n): n is Node => !!n)) : null,
   );
-  dlg.addEventListener('click', (e) => {
-    if (e.target === dlg) close(); // backdrop
-  });
+  if (!('closedBy' in HTMLDialogElement.prototype)) lightDismiss(dlg); // Safari
   dlg.addEventListener('close', () => {
     dlg.remove();
     if (open === dlg) open = null;
@@ -87,4 +90,21 @@ export function openSheet(opts: {
   open = dlg;
   dlg.showModal();
   return close;
+}
+
+/**
+ * `closedby="any"` fallback: close when a press starts and ends outside the dialog box. Tests the
+ * pointer position, not `e.target` (the dialog is also the target of its own padding), and needs both
+ * ends outside so a drag that ends on the backdrop doesn't dismiss.
+ */
+function lightDismiss(dlg: HTMLDialogElement) {
+  const outside = (e: PointerEvent) => {
+    const r = dlg.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  let pressedOutside = false;
+  dlg.addEventListener('pointerdown', (e) => void (pressedOutside = outside(e)));
+  dlg.addEventListener('pointerup', (e) => {
+    if (pressedOutside && outside(e)) dlg.close();
+  });
 }

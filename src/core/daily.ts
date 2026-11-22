@@ -38,7 +38,7 @@ export function generateDaily(date: string, level: Difficulty, defs: Pick<Puzzle
   const rng = new Rng(hash(`${date}:${level}`));
   // Sort by id: display names are localised, and the list must not depend on the language.
   const byCat = new Map<string, string[]>();
-  for (const d of [...defs].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+  for (const d of defs.toSorted((a, b) => (a.id < b.id ? -1 : 1))) {
     const list = byCat.get(d.category) ?? [];
     list.push(d.id);
     byCat.set(d.category, list);
