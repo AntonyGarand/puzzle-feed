@@ -1,6 +1,6 @@
 # Toolchain + task runner. `mise install` once, then `mise run <task>` (or the npm scripts directly).
 [tools]
-node = "24"
+node = "26"
 
 [tasks.install]
 description = "Install dependencies"
