@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// The four word games in Québec French: generation speed, not solved at start, resume round-trip, a–z only.
+// The word games in Québec French: generation speed, not solved at start, resume round-trip, a–z only.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests } from '../src/core/i18n';
 import { Rng } from '../src/core/rng';
@@ -13,7 +13,7 @@ import { answers, commonOfLength, fold, isWord, letterKey, whenDict } from '../s
 };
 (globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 
-const IDS = ['anagram', 'word-guess', 'hunt', 'tower'];
+const IDS = ['anagram', 'word-guess', 'hunt', 'tower', 'cover'];
 const GAMES = IDS.map((id) => [id, PUZZLES.find((p) => p.id === id)!] as const);
 
 beforeAll(() => _setLocaleForTests('fr'));

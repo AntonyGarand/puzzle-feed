@@ -1,8 +1,9 @@
 import { L, P, wordLocale } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
-import { board, btn, h, s as svg, shake } from '../core/ui';
+import { board, btn, h, shake } from '../core/ui';
 import { adjacent, findPath, makeGrid, points } from './wordkit/hunt-solver';
 import { dictReady, isWord, letterKey, whenDict } from './wordkit/lexicon';
+import { traceInput, traceOverlay } from './wordkit/trace';
 import './hunt.css';
 
 export const hunt: PuzzleDef = {
@@ -101,36 +102,8 @@ export const hunt: PuzzleDef = {
       return el;
     });
     // The current path drawn as a line through the letters, so diagonal links are unambiguous.
-    const under = svg('polyline', { class: 'hunt-line-under' });
-    const over = svg('polyline', { class: 'hunt-line' });
-    const startDot = svg('circle', { class: 'hunt-start', r: 0 });
-    const endDot = svg('circle', { class: 'hunt-end', r: 0 });
-    const overlay = svg('svg', { class: 'hunt-path', 'aria-hidden': 'true' }, under, over, startDot, endDot);
-    const wrap = h('div', { class: 'hunt-wrap' }, grid, overlay);
-    const drawPath = () => {
-      const w = wrap.clientWidth;
-      const hgt = wrap.clientHeight;
-      overlay.setAttribute('viewBox', `0 0 ${w} ${hgt}`);
-      const pts = path.map((i) => {
-        const el = cells[i];
-        return [el.offsetLeft + el.offsetWidth / 2, el.offsetTop + el.offsetHeight / 2] as const;
-      });
-      const cell = cells[0].offsetWidth || 40;
-      const str = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-      for (const line of [under, over]) line.setAttribute('points', str);
-      overlay.style.setProperty('--lw', `${(cell * 0.11).toFixed(1)}px`);
-      const dot = (c: SVGCircleElement, p: readonly [number, number] | undefined, r: number) => {
-        c.setAttribute('r', p ? String(r) : '0');
-        if (p) {
-          c.setAttribute('cx', p[0].toFixed(1));
-          c.setAttribute('cy', p[1].toFixed(1));
-        }
-      };
-      dot(startDot, pts[0], cell * 0.36);
-      dot(endDot, pts.length > 1 ? pts[pts.length - 1] : undefined, cell * 0.08);
-    };
-    const pathResize = new ResizeObserver(() => drawPath());
-    pathResize.observe(grid);
+    const trace = traceOverlay(grid);
+    const wrap = trace.wrap;
 
     let msg = '';
     let msgTimer = 0;
@@ -154,7 +127,7 @@ export const hunt: PuzzleDef = {
         const k = path.indexOf(i);
         el.className = `cell${k >= 0 ? (k === path.length - 1 ? ' sel' : ' on') : ''}`;
       });
-      drawPath();
+      trace.draw(path);
       renderWord();
       // Bar runs to "perfect"; stars sit at the milestones.
       const scale = Math.max(perfect, score);
@@ -237,65 +210,17 @@ export const hunt: PuzzleDef = {
     };
 
     // Pointer: drag to trace (release submits); or tap cells one by one and tap the last again to submit.
-    let dragging = false;
-    let moved = false;
-    const cellAt = (x: number, y: number) => {
-      const el = document.elementFromPoint(x, y) as HTMLElement | null;
-      const c = el?.closest<HTMLElement>('[data-i]');
-      if (!c || !grid.contains(c)) return -1;
-      const r = c.getBoundingClientRect();
-      const dx = x - (r.left + r.width / 2),
-        dy = y - (r.top + r.height / 2);
-      // only count the inner part of a cell so diagonal drags don't clip neighbours
-      return dx * dx + dy * dy <= (r.width * 0.42) ** 2 ? Number(c.dataset.i) : -1;
-    };
-    const extend = (i: number) => {
-      if (i < 0) return false;
-      const lastI = path[path.length - 1];
-      if (i === lastI) return false;
-      if (path.length >= 2 && i === path[path.length - 2]) {
-        path.pop();
-        return true;
-      } // back up
-      if (path.includes(i) || (path.length && !adjacent(n, lastI, i))) return false;
-      path.push(i);
-      return true;
-    };
-    grid.addEventListener('pointerdown', (e) => {
-      if (won) return;
-      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-i]');
-      if (!el) return;
-      const i = Number(el.dataset.i);
-      ctx.touch();
-      e.preventDefault();
-      dragging = true;
-      moved = false;
-      if (path.length && i === path[path.length - 1]) {
-        dragging = false;
-        submit();
-        return;
-      }
-      const k = path.indexOf(i);
-      if (k >= 0) path = path.slice(0, k + 1);
-      else if (!(path.length && adjacent(n, path[path.length - 1], i))) path = [i];
-      else path.push(i);
-      render();
-    });
-    const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
-      if (extend(cellAt(e.clientX, e.clientY))) {
-        moved = true;
+    const stopInput = traceInput(grid, {
+      cols: n,
+      path: () => path,
+      set: (p) => {
+        path = p;
         render();
-      }
-    };
-    const onUp = () => {
-      if (!dragging) return;
-      dragging = false;
-      if (moved && path.length > 1) submit();
-    };
-    grid.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
+      },
+      submit,
+      active: () => !won,
+      touch: () => ctx.touch(),
+    });
 
     const sv = ctx.saved as { f?: unknown; p?: unknown } | undefined;
     if (sv && Array.isArray(sv.f)) {
@@ -485,9 +410,8 @@ export const hunt: PuzzleDef = {
       },
       destroy() {
         clearTimeout(msgTimer);
-        pathResize.disconnect();
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onUp);
+        trace.destroy();
+        stopInput();
       },
     };
   },
