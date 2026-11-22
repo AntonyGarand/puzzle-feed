@@ -26,6 +26,17 @@ jobs:
       - uses: jdx/mise-action@v3
       - run: npm ci
       - run: npm run build
+      # Game bundle for the Android app's self-update (src/core/update.ts): the same commit built in
+      # android mode, zipped, plus version.json at /android/. Only the latest one is kept.
+      - name: Android update bundle
+        run: |
+          npx vite build --mode android --outDir dist-android
+          sha=$(git rev-parse --short=10 HEAD) # same as vite.config.ts buildVersion()
+          mkdir -p dist/android
+          (cd dist-android && zip -qr "../dist/android/bundle-$sha.zip" .)
+          sum=$(sha256sum "dist/android/bundle-$sha.zip" | cut -d' ' -f1)
+          printf '{"sha":"%s","url":"https://puzzle.garand.dev/android/bundle-%s.zip","checksum":"%s"}' "$sha" "$sha" "$sum" > dist/android/version.json
+          cat dist/android/version.json
       # Same as actions/upload-pages-artifact, minus its dotfile exclusion: the Android app's
       # Digital Asset Links file lives at /.well-known/assetlinks.json.
       - run: tar --dereference --hard-dereference --directory dist -cvf "$RUNNER_TEMP/artifact.tar" .

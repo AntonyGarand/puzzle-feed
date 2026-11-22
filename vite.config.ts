@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 function buildVersion() {
   let sha = 'dev';
   try {
-    sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+    sha = execSync('git rev-parse --short=10 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {

@@ -13,6 +13,17 @@
     "SystemBars": {
       "insetsHandling": "native",
       "initialViewportFitValueHint": "cover"
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "updateUrl": "",
+      "statsUrl": "",
+      "channelUrl": "",
+      "resetWhenUpdate": true,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "keepUrlPathAfterReload": true,
+      "appReadyTimeout": 10000
     }
   }
 }
