@@ -1,0 +1,81 @@
+[data-puzzle='black-box'] {
+  --accent: var(--p5);
+}
+/* the box: dark-ish inner cells so the edge reads as "outside" */
+[data-puzzle='black-box'] .bb .bb-in {
+  background: color-mix(in oklab, var(--accent) 16%, var(--cell));
+}
+[data-puzzle='black-box'] .bb .bb-in.on,
+[data-puzzle='black-box'] .bb .bb-in.bb-ball {
+  background: color-mix(in oklab, var(--accent) 16%, var(--cell));
+}
+/* a ball: a solid disc with an ink rim */
+[data-puzzle='black-box'] .bb .bb-in.on::after,
+[data-puzzle='black-box'] .bb .bb-in.bb-ball::after {
+  content: '';
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
+  border: var(--cbw) solid var(--ink);
+  background: var(--accent);
+  animation: bb-drop 0.15s ease-out;
+}
+[data-puzzle='black-box'] .bb .bb-in.miss {
+  opacity: 1;
+}
+[data-puzzle='black-box'] .bb .bb-in.miss::after {
+  background: var(--ink);
+}
+@keyframes bb-drop {
+  from {
+    transform: scale(0.6);
+  }
+}
+/* edge cells: flat round launchers with a small inward arrow */
+[data-puzzle='black-box'] .bb .bb-port {
+  margin: 14%;
+  border-radius: 50%;
+  border-style: dashed;
+  box-shadow: none;
+  background: transparent;
+  font-size: calc(var(--board) / var(--cols) * 0.36);
+  font-weight: 800;
+}
+[data-puzzle='black-box'] .bb .bb-port:not(.hit, .refl, .pair)::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border: calc(var(--board) / var(--cols) * 0.09) solid transparent;
+  border-top-color: var(--muted);
+  border-bottom-width: 0;
+}
+[data-puzzle='black-box'] .bb .bb-port.s1::after {
+  transform: rotate(90deg);
+}
+[data-puzzle='black-box'] .bb .bb-port.s2::after {
+  transform: rotate(180deg);
+}
+[data-puzzle='black-box'] .bb .bb-port.s3::after {
+  transform: rotate(-90deg);
+}
+[data-puzzle='black-box'] .bb .bb-port.hit,
+[data-puzzle='black-box'] .bb .bb-port.refl,
+[data-puzzle='black-box'] .bb .bb-port.pair {
+  border-style: solid;
+  color: var(--on-tone);
+  cursor: default;
+  animation: bb-drop 0.15s ease-out;
+}
+[data-puzzle='black-box'] .bb .bb-port.hit {
+  background: var(--ink);
+  color: var(--cell);
+}
+[data-puzzle='black-box'] .bb .bb-port.refl {
+  background: var(--hi);
+}
+[data-puzzle='black-box'] .bb .bb-port.pair {
+  background: var(--c);
+}
+[data-puzzle='black-box'] .bb button.bb-port:active {
+  transform: none;
+}
