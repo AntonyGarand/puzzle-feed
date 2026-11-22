@@ -68,6 +68,8 @@ export interface Profile {
   days: Record<string, number>;
   /** Daily challenges by calendar date (YYYY-MM-DD). */
   daily: Record<string, DailyDay>;
+  /** Puzzles whose off-by-default was already applied, so turning one back on sticks. */
+  offApplied?: string[];
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -101,6 +103,26 @@ function load(): Profile {
 }
 
 let profile = load();
+
+const defaultOff = new Set<string>();
+
+/** Switch these puzzles off in the feed, once per profile: a player who turns one back on keeps it. */
+export function setDefaultOff(ids: string[]) {
+  for (const id of ids) defaultOff.add(id);
+  applyDefaultOff();
+}
+
+function applyDefaultOff() {
+  const done = (profile.offApplied ??= []);
+  let changed = false;
+  for (const id of defaultOff) {
+    if (done.includes(id)) continue;
+    prefs(id).weight = 0;
+    done.push(id);
+    changed = true;
+  }
+  if (changed) save();
+}
 
 type Listener = (kind: 'level' | 'weight' | 'profile' | 'record', id?: string) => void;
 const listeners = new Set<Listener>();
@@ -267,6 +289,7 @@ export function importProfile(json: string) {
   const p = JSON.parse(json);
   if (!p || p.v !== 1 || typeof p.types !== 'object' || typeof p.stats !== 'object') throw new Error('Not a puzzle feed profile');
   profile = { ...fresh(), ...p };
+  applyDefaultOff();
   save();
   emit('profile');
   emit('level');
@@ -274,6 +297,7 @@ export function importProfile(json: string) {
 
 export function resetProfile() {
   profile = fresh();
+  applyDefaultOff();
   save();
   emit('profile');
   emit('level');

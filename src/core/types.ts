@@ -103,6 +103,8 @@ export interface PuzzleDef {
   help?: () => Help;
   /** Content depends on the locale (word games): saves from another locale aren't resumed. */
   localized?: boolean;
+  /** Starts switched off in the mixed feed (the player can turn it on); still playable from its own page. */
+  offByDefault?: boolean;
   /** Target solve time in seconds at a given difficulty; used for auto-levelling. */
   par: (d: Difficulty) => number;
   create(ctx: PuzzleCtx): PuzzleInstance | void;

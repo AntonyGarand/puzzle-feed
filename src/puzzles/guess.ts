@@ -16,6 +16,8 @@ export function scoreGuess(secret: number[], g: number[]) {
 
 export const guess: PuzzleDef = {
   id: 'guess',
+  // Plays like Code Breaker with digits: kept for manual play, out of the feed unless turned on.
+  offByDefault: true,
   get name() {
     return L('Guess', 'Code secret');
   },
