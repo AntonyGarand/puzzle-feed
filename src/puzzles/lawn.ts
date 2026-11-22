@@ -3,8 +3,8 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, s, shake } from '../core/ui';
 import { anim, keyDir, type Dir } from './movekit/kit';
 import { adjacent, capture, cellAt, stepsToward } from './pathkit/grid';
-import { blocker, genMow, lawnAdj, movesFrom, solveMow, type Blocker } from './playkit/mow-gen';
-import './mow.css';
+import { blocker, genMow, lawnAdj, movesFrom, solveMow, type Blocker } from './playkit/lawn-gen';
+import './lawn.css';
 
 /** Grass blades for one cell (viewBox 0 0 10 10), rooted on the bottom edge; deterministic per cell. */
 function blades(i: number) {
@@ -22,8 +22,8 @@ function blades(i: number) {
   return g;
 }
 
-export const mow: PuzzleDef = {
-  id: 'mow',
+export const lawn: PuzzleDef = {
+  id: 'lawn',
   get name() {
     return L('Mow', 'Tonte');
   },
@@ -81,7 +81,7 @@ export const mow: PuzzleDef = {
     /** Direction the mower faces (for drawing only). */
     let facing: Dir = 0;
 
-    const grid = board(w, rows, 'mow-grid');
+    const grid = board(w, rows, 'lawn-grid');
     const nums: HTMLElement[] = [];
     const cells = Array.from({ length: N }, (_, i) => {
       if (rocks[i]) {

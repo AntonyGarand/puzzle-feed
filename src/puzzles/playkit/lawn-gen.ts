@@ -247,14 +247,13 @@ function connected(N: number, adj: number[][], lawn: number[]) {
   return k === lawn.length;
 }
 
-export function genMow(rng: Rng, d: Difficulty, msBudget = 180): MowPuzzle {
+export function genMow(rng: Rng, d: Difficulty, attempts = 160): MowPuzzle {
   const p = PARAMS(d);
   const { w, h } = p;
   const N = w * h;
-  const t0 = performance.now();
   let best: { score: number; puz: MowPuzzle } | null = null;
-  for (let attempt = 0; attempt < 4000; attempt++) {
-    if (best && (attempt % 8 === 0 ? performance.now() - t0 > msBudget : false)) break;
+  // A fixed attempt count, not a time budget: resume must regenerate the same lawn from the seed.
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const rocks = new Array<boolean>(N).fill(false);
     for (let k = 0; k < p.rocks; k++) {
       const i = rng.int(0, N - 1);
