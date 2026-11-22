@@ -1,0 +1,120 @@
+[data-puzzle='worms'] {
+  --accent: var(--p8);
+}
+/* One flat floor: no gaps between squares, so the worm layer maps 1:1 onto the cells. */
+[data-puzzle='worms'] .wm-grid {
+  position: relative;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  touch-action: none;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  background: var(--cell-alt);
+}
+[data-puzzle='worms'] .wm-grid .cell {
+  position: relative;
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--cell-alt));
+}
+[data-puzzle='worms'] .wm-grid button.cell:active {
+  transform: none;
+}
+/* wall: a dark hatched block */
+[data-puzzle='worms'] .wm-grid .cell.wall {
+  border-color: color-mix(in srgb, var(--ink) 40%, transparent);
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--ink) 22%, transparent) 0 3px, transparent 3px 9px),
+    color-mix(in srgb, var(--muted) 55%, var(--cell));
+}
+/* goal: a square tinted in its worm's colour, with a dashed frame */
+[data-puzzle='worms'] .wm-grid .cell.goal {
+  background: color-mix(in srgb, var(--c) 34%, var(--cell));
+}
+[data-puzzle='worms'] .wm-grid .cell.goal::before {
+  content: '';
+  position: absolute;
+  inset: 9%;
+  border: max(2px, var(--cbw)) dashed color-mix(in srgb, var(--c) 70%, var(--ink));
+  border-radius: var(--r-cell);
+}
+/* where the selected worm can go: full dot by the head, hollow dot by the tail */
+[data-puzzle='worms'] .wm-grid .cell.to::after {
+  content: '';
+  position: relative;
+  width: 30%;
+  height: 30%;
+  box-sizing: border-box;
+  border: max(2px, var(--cbw)) solid var(--ink);
+  border-radius: 50%;
+  background: var(--accent);
+}
+[data-puzzle='worms'] .wm-grid .cell.to.tl::after {
+  width: 26%;
+  height: 26%;
+  background: transparent;
+}
+
+/* the worm layer */
+[data-puzzle='worms'] .wm-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+[data-puzzle='worms'] .wm polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='worms'] .wm .edge {
+  stroke: var(--ink);
+  stroke-width: 0.6;
+}
+[data-puzzle='worms'] .wm .body {
+  stroke: var(--c);
+  stroke-width: 0.48;
+}
+[data-puzzle='worms'] .wm .crease {
+  stroke: color-mix(in srgb, var(--on-tone) 35%, var(--c));
+  stroke-width: 0.035;
+  stroke-linecap: round;
+}
+[data-puzzle='worms'] .wm .head {
+  fill: var(--c);
+  stroke: var(--ink);
+  stroke-width: 0.06;
+}
+[data-puzzle='worms'] .wm .eye {
+  fill: var(--on-tone);
+}
+[data-puzzle='worms'] .wm .lid {
+  fill: none;
+  stroke: var(--on-tone);
+  stroke-width: 0.04;
+  stroke-linecap: round;
+}
+/* selected: lifted, with a hard shadow like the other raised pieces */
+[data-puzzle='worms'] .wm.sel {
+  transform: translate(-0.04px, -0.04px);
+}
+[data-puzzle='worms'] .wm.sel .shadow {
+  stroke: var(--ink);
+  stroke-width: 0.6;
+  transform: translate(0.1px, 0.1px);
+}
+[data-puzzle='worms'] .wm.sel .edge {
+  stroke-width: 0.66;
+}
+[data-puzzle='worms'] .wm.sel .head {
+  stroke-width: 0.09;
+}
+/* home: a soft glow in the "good" colour under the body */
+[data-puzzle='worms'] .wm.home .edge {
+  stroke: color-mix(in srgb, var(--good) 60%, var(--ink));
+}
