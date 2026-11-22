@@ -1,0 +1,75 @@
+[data-puzzle='pearls'] {
+  --accent: var(--p2);
+}
+[data-puzzle='pearls'] .pe-board {
+  width: var(--board);
+  aspect-ratio: 1;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+[data-puzzle='pearls'] .pe-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+[data-puzzle='pearls'] .pe-grid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+  stroke-width: 0.025;
+}
+[data-puzzle='pearls'] .pe-svg .dot {
+  fill: var(--muted);
+  opacity: 0.6;
+}
+[data-puzzle='pearls'] .pe-svg .dot.on {
+  opacity: 0;
+}
+[data-puzzle='pearls'] .pe-svg .dot.err {
+  fill: var(--bad);
+  opacity: 1;
+  r: 0.14px;
+}
+[data-puzzle='pearls'] .pe-svg .pl {
+  stroke: var(--ink);
+  stroke-width: 0.07;
+  transition: stroke 0.2s;
+}
+[data-puzzle='pearls'] .pe-svg .pl.b {
+  fill: var(--ink);
+}
+[data-puzzle='pearls'] .pe-svg .pl.w {
+  fill: var(--cell);
+}
+[data-puzzle='pearls'] .pe-svg .pl.err {
+  stroke: var(--bad);
+  stroke-width: 0.1;
+}
+[data-puzzle='pearls'] .pe-svg .edge .ln {
+  stroke: transparent;
+  stroke-width: 0.15;
+  stroke-linecap: round;
+}
+[data-puzzle='pearls'] .pe-svg .edge.on .ln {
+  stroke: var(--accent);
+}
+[data-puzzle='pearls'] .pe-svg .edge .xx {
+  display: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 0.05;
+  stroke-linecap: round;
+}
+[data-puzzle='pearls'] .pe-svg .edge.x .xx {
+  display: inline;
+}
+[data-puzzle='pearls'] .pe-board.won .edge.on .ln {
+  stroke: var(--good);
+}

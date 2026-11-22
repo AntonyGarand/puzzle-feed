@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { genBridges } from '../src/puzzles/logickit/bridgesgen';
+import { genPearls, isSolved } from '../src/puzzles/gridkit/pearls';
 import { genMines, solvableByLogic } from '../src/puzzles/logickit/minesgen';
 import { drawPiece, PIECES } from '../src/puzzles/movekit/pieces';
 
@@ -36,5 +37,16 @@ describe('blocks', () => {
   it('never deals 1×1 or 2×1 pieces', () => {
     const rng = new Rng(7);
     for (let k = 0; k < 2000; k++) expect(PIECES[drawPiece(rng, 5, 0)].cells.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('pearls', () => {
+  it('generates unique puzzles whose loop obeys every pearl', () => {
+    for (const n of [6, 8, 10])
+      for (let seed = 1; seed <= 10; seed++) {
+        const p = genPearls(n, 0, 0.35, new Rng(seed));
+        expect(p.unique).toBe(true);
+        expect(isSolved(p, p.pearl, (e) => p.sol[e])).toBe(true);
+      }
   });
 });
