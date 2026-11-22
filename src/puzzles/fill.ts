@@ -22,6 +22,7 @@ export const fill: PuzzleDef = {
     return L('Fill', 'Remplissage');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Each group of equal numbers has that many cells.', 'Chaque groupe de nombres égaux compte autant de cases.');
   },

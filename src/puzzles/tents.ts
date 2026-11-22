@@ -26,6 +26,7 @@ export const tents: PuzzleDef = {
     return L('Tents', 'Tentes');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('A tent beside each tree. Tents never touch. Match counts.', 'Une tente près de chaque arbre, sans contact. Totaux exacts.');
   },

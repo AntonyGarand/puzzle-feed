@@ -11,6 +11,7 @@ export const connect: PuzzleDef = {
     return L('Connect', 'Relier');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Link same-colour dots. Fill every cell. No U-turns.', 'Reliez les couleurs. Remplissez tout, sans demi-tour.');
   },

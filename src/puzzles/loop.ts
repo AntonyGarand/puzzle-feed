@@ -13,6 +13,7 @@ export const loop: PuzzleDef = {
     return L('Loop', 'Boucle');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Draw one loop. Numbers count the sides it uses.', 'Tracez une boucle. Les nombres comptent ses côtés utilisés.');
   },

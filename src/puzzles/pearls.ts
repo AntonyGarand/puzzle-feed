@@ -16,6 +16,7 @@ export const pearls: PuzzleDef = {
     return L('Pearls', 'Perles');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Draw one loop through every pearl.', 'Tracez une boucle qui passe par toutes les perles.');
   },

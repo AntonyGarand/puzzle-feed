@@ -1,6 +1,6 @@
 import { confirmSheet, openSheet, sheetOpen } from '../core/sheet';
 import { L, locale, setLocale, setWordLocale, wordLocale, type Locale } from '../core/i18n';
-import { Card, type DailyRef } from '../core/card';
+import { Card, isUndoKey, type DailyRef } from '../core/card';
 import { dailySaveKey, getSave, type Save } from '../core/saves';
 import type { DailyEntry } from '../core/store';
 import { setPath } from '../core/nav';
@@ -25,7 +25,7 @@ export class LabView {
       if (!this.shown || !this.card || sheetOpen()) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.ctrlKey || e.metaKey || e.altKey) && !isUndoKey(e)) return;
       if (this.card.onKey(e)) e.preventDefault();
     });
     document.addEventListener('visibilitychange', () => this.card?.setActive(this.shown && !document.hidden));

@@ -169,6 +169,7 @@ export const logicGrid: PuzzleDef = {
     return L('Logic grid', 'Grille logique');
   },
   category: 'logic',
+  undo: true,
   offByDefault: true,
   get rules() {
     return L('Use the clues to find who has what in each house.', 'Trouvez qui a quoi dans chaque maison grâce aux indices.');

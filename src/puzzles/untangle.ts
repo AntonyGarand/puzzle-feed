@@ -11,6 +11,7 @@ export const untangle: PuzzleDef = {
     return L('Untangle', 'Démêler');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Drag the points until no lines cross.', 'Glissez les points pour qu’aucune ligne ne se croise.');
   },

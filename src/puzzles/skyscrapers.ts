@@ -58,6 +58,7 @@ export const skyscrapers: PuzzleDef = {
     return L('Skyscrapers', 'Gratte-ciel');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Heights once per line; edge clues count what you see.', 'Hauteurs uniques par ligne; les indices comptent les vues.');
   },

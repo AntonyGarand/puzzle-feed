@@ -20,6 +20,7 @@ export const lightUp: PuzzleDef = {
     return L('Light Up', 'Ampoules');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Light every cell. Bulbs never see each other.', 'Éclairez tout. Les ampoules ne se voient jamais.');
   },

@@ -16,6 +16,7 @@ export const factory: PuzzleDef = {
     return L('Factory', 'Usine');
   },
   category: 'numbers',
+  undo: true,
   get rules() {
     return L('Place tiles so every output gets its number.', 'Posez les tuiles pour que chaque sortie ait son nombre.');
   },

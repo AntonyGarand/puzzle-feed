@@ -62,6 +62,7 @@ export const floodPuzzle: PuzzleDef = {
     return L('Flood', 'Inondation');
   },
   category: 'moves',
+  undo: true,
   get rules() {
     return L('Flood the whole board with one colour.', 'Couvrez toute la grille d’une seule couleur.');
   },

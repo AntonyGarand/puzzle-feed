@@ -18,6 +18,7 @@ export const sightlines: PuzzleDef = {
     return L('Sightlines', 'Lignes de vue');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Shade cells so each number sees that many whites.', 'Noircissez pour que chaque nombre voie autant de blanches.');
   },

@@ -11,6 +11,7 @@ export const galaxies: PuzzleDef = {
     return L('Galaxies', 'Galaxies');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Split the grid into shapes symmetric about one dot.', 'Découpez la grille en formes symétriques autour d’un point.');
   },

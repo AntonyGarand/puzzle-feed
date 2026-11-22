@@ -9,6 +9,7 @@ export const slide: PuzzleDef = {
     return L('Slide', 'Taquin');
   },
   category: 'moves',
+  undo: true,
   get rules() {
     return L('Slide the tiles back into order.', 'Glissez les tuiles pour les remettre en ordre.');
   },

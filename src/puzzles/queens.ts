@@ -27,6 +27,7 @@ export const queens: PuzzleDef = {
     return L('Queens', 'Dames');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('One queen per row. No shared columns or diagonals.', 'Une dame par rangée, sans colonne ni diagonale commune.');
   },

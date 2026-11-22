@@ -10,6 +10,7 @@ export const mosaic: PuzzleDef = {
     return L('Mosaic', 'Mosaïque');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Each number counts filled cells in its 3×3 square.', 'Chaque nombre compte les cases pleines de son carré 3×3.');
   },

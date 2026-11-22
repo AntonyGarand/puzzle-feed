@@ -15,6 +15,7 @@ export const killerSudoku: PuzzleDef = {
     return L('Killer Sudoku', 'Sudoku killer');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Sudoku; dashed cages add up to their sum, no repeats.', 'Sudoku; chaque cage pointillée fait sa somme, sans doublon.');
   },

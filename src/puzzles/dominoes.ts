@@ -11,6 +11,7 @@ export const dominoes: PuzzleDef = {
     return L('Dominoes', 'Dominos');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Split the grid into dominoes, each pair exactly once.', 'Découpez la grille en dominos, chaque paire une seule fois.');
   },

@@ -11,6 +11,7 @@ export const tracks: PuzzleDef = {
     return L('Tracks', 'Tracé');
   },
   category: 'paths',
+  undo: true,
   get rules() {
     return L('Draw A to B. Edge numbers count path cells per line.', 'Tracez de A à B. Les chiffres comptent les cases par ligne.');
   },

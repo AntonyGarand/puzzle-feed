@@ -55,6 +55,7 @@ export const haunted: PuzzleDef = {
     return L('Haunted', 'Hanté');
   },
   category: 'logic',
+  undo: true,
   get rules() {
     return L('Fill with monsters; edge numbers count what is seen.', 'Placez les monstres; les bords comptent ceux vus.');
   },
