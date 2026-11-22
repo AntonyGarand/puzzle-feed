@@ -3,21 +3,7 @@ import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { h, restartBtn, shake, undoBtn } from '../../ui/dom';
 import { cardEl, elAt, label, leCard, pileEl, pilesEl, rank, rankLabel, slotEl, tableEl, topEl } from '../../kits/card/cards';
-import {
-  cardAt,
-  canRecycle,
-  clearedP,
-  deadP,
-  drawP,
-  exposed,
-  genP,
-  idx,
-  removeP,
-  searchP,
-  solveP,
-  type PAct,
-  type PState,
-} from './rules';
+import { cardAt, canRecycle, clearedP, deadP, drawP, exposed, genP, idx, removeP, searchP, solveP, type PAct, type PState } from './rules';
 import { bindTable, History } from '../../kits/card/table';
 
 const STEP = 0.7; // row step in card widths

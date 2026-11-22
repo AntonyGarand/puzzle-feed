@@ -2,7 +2,23 @@ import './style.css';
 import { L, P } from '../../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { restartBtn, shake, undoBtn } from '../../ui/dom';
-import { cap, cardEl, elAt, fan, isRed, label, leCard, pileEl, pilesEl, rank, slotEl, suit, SUITS, tableEl, topEl } from '../../kits/card/cards';
+import {
+  cap,
+  cardEl,
+  elAt,
+  fan,
+  isRed,
+  label,
+  leCard,
+  pileEl,
+  pilesEl,
+  rank,
+  slotEl,
+  suit,
+  SUITS,
+  tableEl,
+  topEl,
+} from '../../kits/card/cards';
 import { autoF, bestDestF, genF, moveF, pickedF, searchF, solveF, wonF, type FMove, type FState } from './rules';
 import { bindTable, History } from '../../kits/card/table';
 

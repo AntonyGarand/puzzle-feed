@@ -3,17 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../../core/types';
 import { board, h, PALETTE, restartBtn, shake, undoBtn } from '../../ui/dom';
 import { mark, setMark } from '../../ui/symbols';
 import { anim } from '../../kits/move/kit';
-import {
-  collapseSolver,
-  genCollapse,
-  groupAt,
-  groupList,
-  hasMove,
-  removeCells,
-  stranded,
-  type CollapseVerdict,
-  type Cols,
-} from './gen';
+import { collapseSolver, genCollapse, groupAt, groupList, hasMove, removeCells, stranded, type CollapseVerdict, type Cols } from './gen';
 import './style.css';
 
 /** Palette slots used for the blocks (well apart from each other in both themes). */

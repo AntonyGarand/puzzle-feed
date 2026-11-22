@@ -4,7 +4,19 @@ import type { Rng } from '../../core/rng';
 import { byLevel, type PuzzleDef } from '../../core/types';
 import { h } from '../../ui/dom';
 import { latinEntry, latinEntrySteps } from '../../kits/latin/entry';
-import { and, cap, entryPlace, entryVals, isAre, lineHUnits, makeCheck, makeHint, or, type Broken, type HintOpts } from '../../kits/sudoku/hint';
+import {
+  and,
+  cap,
+  entryPlace,
+  entryVals,
+  isAre,
+  lineHUnits,
+  makeCheck,
+  makeHint,
+  or,
+  type Broken,
+  type HintOpts,
+} from '../../kits/sudoku/hint';
 import { latinConflicts, latinUnique, randomLatin, revealLatin, type Table } from '../../kits/latin/solver';
 
 type Op = '+' | '−' | '×' | '÷' | '';

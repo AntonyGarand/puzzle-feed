@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import {
-  generate as generateEcho,
-  search as echoSearch,
-  track as echoTrack,
-  walk as echoWalk,
-  type GenOpts,
-} from '../src/games/echo/gen';
+import { generate as generateEcho, search as echoSearch, track as echoTrack, walk as echoWalk, type GenOpts } from '../src/games/echo/gen';
 import { genArrows, rounds } from '../src/games/arrows/gen';
 import { genBridges } from '../src/games/bridges/gen';
 import { genPearls, isSolved } from '../src/games/pearls/gen';
