@@ -43,10 +43,10 @@
   transition: stroke 0.2s;
 }
 [data-puzzle='pearls'] .pe-svg .pl.b {
-  fill: var(--ink);
+  fill: #111111;
 }
 [data-puzzle='pearls'] .pe-svg .pl.w {
-  fill: var(--cell);
+  fill: #ffffff;
 }
 [data-puzzle='pearls'] .pe-svg .pl.err {
   stroke: var(--bad);

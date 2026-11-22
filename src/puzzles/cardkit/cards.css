@@ -44,6 +44,12 @@
   cursor: pointer;
 }
 .ctable .pc {
+  /* Faces look like real cards in both themes, so "red on black" stays true in dark mode. */
+  --cell: #fffdf6;
+  --cell-alt: #f4ead6;
+  --fg: #111111;
+  --accent-soft: color-mix(in srgb, var(--accent) 32%, var(--cell));
+  --pc-red: color-mix(in srgb, var(--bad) 78%, var(--fg));
   border: 2px solid var(--ink);
   background: var(--cell);
   color: var(--fg);
