@@ -49,7 +49,7 @@ scripts/             Playwright audit + screenshot tools (use your installed Chr
 
 There are 53 games in seven categories (`src/core/categories.ts`):
 
-- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Binary, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker
+- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Untangle, Maze
 - **Numbers:** Target, Guess, 2048
 - **Words:** Anagram, Word Guess, Hunt, Tower (English and French word lists)

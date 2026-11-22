@@ -1,4 +1,4 @@
-// Guide deductions shared by the two-symbol grids (binary, eclipse). Cells: -1 empty, 0 or 1.
+// Guide deductions for the two-symbol grid (eclipse). Cells: -1 empty, 0 or 1.
 
 export type TakuzuRule = 'pair' | 'gap' | 'count' | 'twin';
 
