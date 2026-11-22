@@ -48,42 +48,49 @@ interface BundleManifest {
   /** Commit of the build, same as the start of __APP_VERSION__. */
   sha: string;
   url: string;
-  /** sha256 of the zip, checked by the updater before it unpacks it. */
+  /** sha256 of the zip, checked before it is unpacked. */
   checksum: string;
+}
+
+/** Native side: android-foss/app/src/main/java/dev/garand/puzzle/foss/BundleUpdaterPlugin.java. */
+interface BundleUpdater {
+  confirm(): Promise<void>;
+  download(o: { url: string; sha: string; checksum: string }): Promise<{ path: string }>;
+  apply(o: { path: string; now?: boolean }): Promise<void>;
 }
 
 /**
  * Android (Capacitor) build: the game files ship inside the APK, and newer builds of the site are
- * downloaded in the background like the website's service worker does. A downloaded build switches
- * in the next time the app goes to the background, or right away from the banner.
+ * downloaded in the background like the website's service worker does. A downloaded build is used
+ * from the next launch, when the app goes to the background, or right away from the banner.
  */
 async function setupAndroidUpdates() {
-  const [{ CapacitorUpdater }, { CapacitorHttp }] = await Promise.all([import('@capgo/capacitor-updater'), import('@capacitor/core')]);
-  // Confirms this bundle started fine; without it the updater rolls back to the previous one.
-  await CapacitorUpdater.notifyAppReady();
+  const { CapacitorHttp, registerPlugin } = await import('@capacitor/core');
+  const updater = registerPlugin<BundleUpdater>('BundleUpdater');
+  // This build started fine: without this, the next launch rolls back to the previous files.
+  await updater.confirm();
   const running = __APP_VERSION__.split(' ')[0];
+
+  let staged: string | null = null;
+  const switchNow = () => {
+    if (!staged) return;
+    window.dispatchEvent(new Event('pagehide')); // flush in-progress saves
+    void updater.apply({ path: staged, now: true });
+  };
 
   let busy = false;
   const check = async () => {
-    if (busy || !navigator.onLine) return;
+    if (busy || staged || !navigator.onLine) return;
     busy = true;
     try {
       // Native request: in the app, fetch() to puzzle.garand.dev is served from the bundled files.
       const res = await CapacitorHttp.get({ url: `${ANDROID_MANIFEST}?t=${Date.now()}`, responseType: 'json' });
       const latest = (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) as BundleManifest;
       if (res.status !== 200 || !latest?.sha || latest.sha === running) return;
-
-      const { bundles } = await CapacitorUpdater.list();
-      let bundle = bundles.find((b) => b.version === latest.sha && b.status === 'success');
-      bundle ??= await CapacitorUpdater.download({ url: latest.url, version: latest.sha, checksum: latest.checksum });
-      // Older downloads are no longer needed.
-      for (const b of bundles) if (b.id !== bundle.id && b.version !== running) void CapacitorUpdater.delete({ id: b.id }).catch(() => {});
-      await CapacitorUpdater.next({ id: bundle.id });
-      const id = bundle.id;
-      showBanner(() => {
-        window.dispatchEvent(new Event('pagehide')); // flush in-progress saves
-        void CapacitorUpdater.set({ id });
-      });
+      const { path } = await updater.download({ url: latest.url, sha: latest.sha, checksum: latest.checksum });
+      await updater.apply({ path });
+      staged = path;
+      showBanner(switchNow);
     } catch {
       /* offline or a bad download: try again later */
     } finally {
@@ -93,7 +100,8 @@ async function setupAndroidUpdates() {
   void check();
   setInterval(check, CHECK_EVERY_MS);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) void check();
+    if (document.hidden) switchNow();
+    else void check();
   });
 }
 
