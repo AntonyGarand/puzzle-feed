@@ -1,0 +1,118 @@
+[data-puzzle='capture-chess'] {
+  --accent: var(--p3);
+  /* A physical board: squares and pieces keep the same tones in both themes. */
+  --sq-l: #f3e7cc;
+  --sq-d: color-mix(in srgb, var(--p3) 45%, #6b4a2b);
+  --sq-ink: #111111;
+  --sq-hi: #ffd23f;
+}
+/* One solid framed board: no gaps, no per-square borders, ink frame + hard shadow. */
+[data-puzzle='capture-chess'] .grid.cc-board {
+  gap: 0;
+  padding: 0;
+  border: calc(var(--bw) + 0.5px) solid var(--ink);
+  border-radius: 6px;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  overflow: hidden;
+  background: var(--sq-l);
+  touch-action: none;
+}
+[data-puzzle='capture-chess'] .cc-board .cell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--sq-l);
+  color: var(--sq-ink);
+  font-size: calc(var(--board) / var(--cols) * 0.7);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+[data-puzzle='capture-chess'] .cc-board .cell:active {
+  transform: none;
+  box-shadow: none;
+}
+[data-puzzle='capture-chess'] .cc-board .cell.dk {
+  background: var(--sq-d);
+}
+[data-puzzle='capture-chess'] .cc-board .cell.last {
+  background: color-mix(in srgb, var(--sq-hi) 55%, var(--sq-l));
+}
+[data-puzzle='capture-chess'] .cc-board .cell.last.dk {
+  background: color-mix(in srgb, var(--sq-hi) 50%, var(--sq-d));
+}
+[data-puzzle='capture-chess'] .cc-board .cell.sel {
+  background: color-mix(in srgb, var(--sq-hi) 82%, var(--sq-l));
+  box-shadow: inset 0 0 0 3px var(--sq-ink);
+}
+/* Capture targets: a thick ring around the piece. */
+[data-puzzle='capture-chess'] .cc-board .cell.tgt::after {
+  content: '';
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  border: 4px solid var(--sq-ink);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* Rank / file labels on the edge squares (drawn in the opposite square tone). */
+[data-puzzle='capture-chess'] .cc-board .cell[data-rank]::before,
+[data-puzzle='capture-chess'] .cc-board .cell > .co {
+  position: absolute;
+  font-size: max(8px, calc(var(--board) / var(--cols) * 0.16));
+  font-weight: 800;
+  line-height: 1;
+  color: var(--sq-d);
+  pointer-events: none;
+}
+[data-puzzle='capture-chess'] .cc-board .cell[data-rank]::before {
+  content: attr(data-rank);
+  left: 3px;
+  top: 3px;
+}
+[data-puzzle='capture-chess'] .cc-board .cell > .co {
+  right: 3px;
+  bottom: 2px;
+}
+[data-puzzle='capture-chess'] .cc-board .cell.dk[data-rank]::before,
+[data-puzzle='capture-chess'] .cc-board .cell.dk > .co {
+  color: var(--sq-l);
+}
+[data-puzzle='capture-chess'] .cc-board .pc {
+  position: relative;
+  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', 'Apple Symbols', sans-serif;
+  font-variant-emoji: text;
+  font-weight: 400;
+  pointer-events: none;
+  transform: translateY(-3%);
+  paint-order: stroke fill;
+  color: #fffdf6;
+  -webkit-text-stroke: 2px #111111;
+  text-shadow: 1px 1.5px 0 rgb(17 17 17 / 0.35);
+}
+/* A piece with no capture left fades a little: it can only be taken now. */
+[data-puzzle='capture-chess'] .cc-board .cell.spent .pc {
+  color: #c9c2b2;
+}
+/* Captures left: small dots at the top-right of the square. */
+[data-puzzle='capture-chess'] .cc-board .pips {
+  position: absolute;
+  top: 6%;
+  right: 6%;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+}
+[data-puzzle='capture-chess'] .cc-board .pips i {
+  width: max(6px, calc(var(--board) / var(--cols) * 0.12));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1.5px solid var(--sq-ink);
+  background: var(--sq-l);
+}
+[data-puzzle='capture-chess'] .cc-board .pips i.on {
+  background: var(--sq-hi);
+}
+.card.is-solved[data-puzzle='capture-chess'] .grid {
+  animation: pop 0.45s ease;
+}

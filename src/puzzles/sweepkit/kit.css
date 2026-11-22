@@ -1,0 +1,114 @@
+/* Shared minefield tiles for the sweep variants (shape-mines, mow). Each game sets --sw-tile. */
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) {
+  --sw-edge: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board {
+  -webkit-touch-callout: none;
+}
+/* closed: raised tile (ink border + hard bottom/right lip) */
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell {
+  background: var(--sw-tile);
+  border-radius: 5px;
+  box-shadow: inset -2px -3px 0 var(--sw-edge);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board button.cell:active {
+  transform: none;
+  box-shadow: inset 0 0 0 var(--sw-edge);
+}
+/* long-press progress */
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.lp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--bad) 55%, transparent) 0 60%, transparent 62%);
+  animation: sw-press 0.35s linear forwards;
+}
+@keyframes sw-press {
+  from {
+    transform: scale(0);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+}
+/* opened: flat, sunk into the board */
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.open,
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine {
+  background: var(--sw-open, var(--cell));
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+  box-shadow: none;
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m1 {
+  color: color-mix(in oklab, var(--p2) 80%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m2 {
+  color: color-mix(in oklab, var(--p3) 55%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m3 {
+  color: color-mix(in oklab, var(--bad) 85%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m4 {
+  color: color-mix(in oklab, var(--p5) 72%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m5 {
+  color: color-mix(in oklab, var(--p1) 75%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m6 {
+  color: color-mix(in oklab, var(--p6) 62%, var(--fg));
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m7 {
+  color: var(--fg);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.m8 {
+  color: var(--muted);
+}
+/* flag: ink pole + red pennant */
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.flag::before,
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.flag::after {
+  content: '';
+  position: absolute;
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.flag::before {
+  left: 34%;
+  top: 20%;
+  width: 9%;
+  height: 62%;
+  border-radius: 2px;
+  background: var(--ink);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.flag::after {
+  left: 40%;
+  top: 20%;
+  width: 36%;
+  height: 34%;
+  background: var(--bad);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.x {
+  color: var(--bad);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine::after {
+  content: '';
+  position: absolute;
+  width: 44%;
+  height: 44%;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow:
+    0 0 0 2px var(--cell),
+    0 0 0 4px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err {
+  border-color: var(--ink);
+}
+:is([data-puzzle='shape-mines'], [data-puzzle='mow']) .sw-board .cell.mine.err::after {
+  box-shadow:
+    0 0 0 2px var(--bad),
+    0 0 0 4px var(--ink);
+}

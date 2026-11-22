@@ -1,0 +1,68 @@
+[data-puzzle='zigzag'] {
+  --accent: var(--p5);
+}
+[data-puzzle='zigzag'] .zz-grid {
+  position: relative;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background-color: var(--cell);
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+  background-position: -0.5px -0.5px;
+  --line: color-mix(in srgb, var(--ink) 28%, transparent);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-puzzle='zigzag'] .zz-grid .cell {
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+[data-puzzle='zigzag'] .zz-grid .cell.on {
+  background: color-mix(in srgb, var(--c) 30%, transparent);
+}
+[data-puzzle='zigzag'] .zz-grid .cell.err {
+  background: color-mix(in srgb, var(--bad) 55%, transparent);
+}
+[data-puzzle='zigzag'] .zz-n {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 70%;
+  height: 70%;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--c, var(--cell));
+  color: var(--on-tone);
+  font-weight: 700;
+  line-height: 1;
+}
+[data-puzzle='zigzag'] .cell.done .zz-n {
+  border-color: var(--c);
+  background: var(--cell);
+  color: var(--fg);
+}
+[data-puzzle='zigzag'] .zz-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+[data-puzzle='zigzag'] .zz-lines polyline {
+  fill: none;
+  stroke-width: 0.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
