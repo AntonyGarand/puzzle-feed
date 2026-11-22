@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
+import {
+  generate as generateEcho,
+  search as echoSearch,
+  track as echoTrack,
+  walk as echoWalk,
+  type GenOpts,
+} from '../src/puzzles/echokit/gen';
 import { genBridges } from '../src/puzzles/logickit/bridgesgen';
 import { genPearls, isSolved } from '../src/puzzles/gridkit/pearls';
 import { genMines, solvableByLogic } from '../src/puzzles/logickit/minesgen';
@@ -47,6 +54,32 @@ describe('pearls', () => {
         const p = genPearls(n, 0, 0.35, new Rng(seed));
         expect(p.unique).toBe(true);
         expect(isSolved(p, p.pearl, (e) => p.sol[e])).toBe(true);
+      }
+  });
+});
+
+describe('echo', () => {
+  const opts: GenOpts[] = [
+    { w: 5, h: 6, doors: 1, runs: 2, slack: 5, loops: 1, minT: 7, maxT: 18 },
+    { w: 7, h: 7, doors: 3, runs: 2, slack: 1, loops: 3, minT: 17, maxT: 34 },
+    { w: 7, h: 7, doors: 3, runs: 3, slack: 2, loops: 3, minT: 14, maxT: 34 },
+  ];
+  it('needs every run, and its stored solution gets out', () => {
+    for (const o of opts)
+      for (let seed = 1; seed <= 10; seed++) {
+        const room = generateEcho(new Rng(seed), o);
+        expect(room.sol.length).toBe(room.runs);
+        const tracks: number[][] = [];
+        for (const rec of room.sol) {
+          expect(rec.length).toBeLessThanOrEqual(room.T);
+          const tr = echoTrack(room, rec, tracks);
+          expect(tr).not.toBeNull();
+          tracks.push(tr!);
+        }
+        expect(tracks[tracks.length - 1].at(-1)).toBe(room.exit);
+        // one run alone never gets out, nor (with three runs) two
+        expect(echoWalk(room, [], room.start, 0, room.exit, room.T)).toBeNull();
+        expect(room.runs === 3 && echoSearch(room, [], room.T, true)).toBeFalsy();
       }
   });
 });
