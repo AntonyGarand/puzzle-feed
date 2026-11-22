@@ -8,14 +8,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, Hint, PuzzleCtx, PuzzleDef, PuzzleInstance } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, Hint, PuzzleDef } from '../src/core/types';
+import { PUZZLES } from '../src/games';
+import { mountGame } from './support/mount';
 
 /**
  * Games the button can't always finish, and why. Every other game must be solved by the button
@@ -44,29 +39,13 @@ const MAX_STEPS = 900;
 const TEST_MS = 30_000;
 
 function make(def: PuzzleDef, d: Difficulty, seed: number) {
-  const root = document.createElement('div');
-  document.body.append(root);
-  let outcome: '' | 'solved' | 'failed' = '';
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    solved: (o) => {
-      if (!o?.keepPlaying || !outcome) outcome ||= 'solved';
-    },
-    failed: () => (outcome ||= 'failed'),
-    mistake() {},
-    touch() {},
-    status() {},
-    lives: () => {},
-    controls: (...els) => root.append(...els),
-  };
-  const inst: PuzzleInstance = def.create(ctx) || {};
+  const g = mountGame(def, d, seed, { attach: true, controlsInRoot: true });
+  const { root, inst } = g;
   inst.activate?.();
   return {
     root,
     inst,
-    outcome: () => outcome,
+    outcome: () => g.outcome,
     destroy() {
       inst.destroy?.();
       root.remove();
@@ -115,7 +94,7 @@ function assist(g: ReturnType<typeof make>, opts: { cleanStart: boolean }) {
   return { log, last };
 }
 
-const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean);
+const ONLY = (process.env['ONLY'] ?? '').split(',').filter(Boolean);
 const games = PUZZLES.filter((p) => !ONLY.length || ONLY.includes(p.id));
 
 describe.each(games.map((p) => [p.id, p] as const))('%s hint button', (id, def) => {

@@ -1,6 +1,6 @@
 import { getProfile, prefs, resetAllToAuto, setWeight, update, type Theme } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { h, segmented } from '../core/ui';
+import { h, segmented } from '../ui/dom';
 import { L, LOCALES, P, locale, setLocale, type Locale } from '../core/i18n';
 import { analyticsEnabled, setAnalyticsEnabled } from '../core/analytics';
 

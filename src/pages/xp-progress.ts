@@ -1,7 +1,7 @@
 import { L, localeTag } from '../core/i18n';
 import { dayKey, stats, totalXp, xpByDay } from '../core/store';
 import type { PuzzleDef } from '../core/types';
-import { h, s, segmented } from '../core/ui';
+import { h, s, segmented } from '../ui/dom';
 import { xpLevel } from '../core/xp';
 
 const WEEKS = 26;

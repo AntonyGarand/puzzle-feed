@@ -2,8 +2,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests, setWordLocale, wordLocale } from '../src/core/i18n';
 import { decodeCode, encodeCode, resolveCode } from '../src/core/share';
-import { PUZZLES } from '../src/puzzles';
-import { answers } from '../src/puzzles/wordkit/lexicon';
+import { PUZZLES } from '../src/games';
+import { answers } from '../src/kits/word/lexicon';
 
 afterAll(() => _setLocaleForTests('en'));
 

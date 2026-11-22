@@ -47,11 +47,147 @@
         "allowTernary": true
       }
     ],
-    "oxc/no-map-spread": "off"
+    "oxc/no-map-spread": "off",
+    "no-param-reassign": "error",
+    "no-useless-assignment": "error",
+    "no-self-compare": "error",
+    "no-else-return": "error",
+    "no-implicit-coercion": [
+      "error",
+      {
+        "allow": ["!!"]
+      }
+    ],
+    "typescript/ban-ts-comment": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      {
+        "considerDefaultExhaustiveForUnions": true
+      }
+    ],
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        "allowNumber": true
+      }
+    ],
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expectResumes"]
+      }
+    ],
+    "vitest/no-disabled-tests": "error",
+    "vitest/no-focused-tests": "error",
+    "vitest/no-identical-title": "error",
+    "vitest/no-conditional-expect": "error",
+    "vitest/no-standalone-expect": "error",
+    "typescript/no-misused-spread": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "typescript/require-array-sort-compare": [
+      "error",
+      {
+        "ignoreStringArrays": true
+      }
+    ],
+    "max-lines": [
+      "error",
+      {
+        "max": 600,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ]
   },
   "overrides": [
     {
-      "files": ["scripts/**", "src/puzzles/wordkit/*.mjs"],
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "no-console": [
+          "error",
+          {
+            "allow": ["warn", "error"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/core/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/ui/**", "**/app/**", "**/pages/**", "**/games/**", "**/kits/**"],
+                "message": "src/core is logic and storage only: it must not depend on UI, the app shell or games (see README, Layout)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/ui/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/app/**", "**/pages/**", "**/games/**", "**/kits/**"],
+                "message": "src/ui holds generic building blocks: it must not depend on the app shell or on games."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/kits/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/app/**", "**/pages/**", "**/games/**"],
+                "message": "A kit is shared by several games: it must not depend on a game or on the app shell."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/games/*/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/app/**", "**/pages/**"],
+                "message": "Games only talk to the card through PuzzleCtx: no app shell or page imports."
+              },
+              {
+                "regex": "^\\.\\./[^./][^/]*/",
+                "message": "A game must not import another game: move shared code to src/kits/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["scripts/**", "src/kits/word/*.mjs"],
       "env": {
         "node": true,
         "browser": false
@@ -71,7 +207,14 @@
           }
         ]
       }
+    },
+    {
+      "files": ["**/*.mjs"],
+      "rules": {
+        "typescript/require-array-sort-compare": "off",
+        "typescript/restrict-template-expressions": "off"
+      }
     }
   ],
-  "ignorePatterns": ["dist/**", "shots*/**", "src/puzzles/wordkit/dict*.txt"]
+  "ignorePatterns": ["dist/**", "shots*/**", "src/kits/word/dict*.txt", ".claude/**"]
 }

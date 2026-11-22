@@ -1,0 +1,303 @@
+/* App shell: header, tabs and the scroll-snapping feed of cards. */
+
+/* ---------- header ---------- */
+.top {
+  height: var(--head);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 max(14px, env(safe-area-inset-left));
+  border-bottom: var(--bw) solid var(--ink);
+  background: var(--bg);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+  letter-spacing: -0.03em;
+}
+.logo {
+  display: grid;
+  grid-template-columns: repeat(2, 11px);
+  gap: 3px;
+}
+.logo i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+}
+.logo i:nth-child(1) {
+  background: var(--p4);
+}
+.logo i:nth-child(2) {
+  background: var(--p7);
+}
+.logo i:nth-child(3) {
+  background: var(--p2);
+}
+.logo i:nth-child(4) {
+  background: var(--p3);
+}
+.top-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
+}
+.streak {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border: 2px dashed var(--ink);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.streak:empty {
+  display: none;
+}
+
+/* tabs: inline in the header on wide screens, a bottom tab bar on phones */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  padding: 5px 12px;
+  border: var(--bw) solid transparent;
+  border-radius: 999px;
+}
+.tab:hover {
+  border-color: var(--ink);
+}
+.tab.on {
+  background: var(--hi);
+  color: var(--on-tone);
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.tab-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --tabs: calc(58px + env(safe-area-inset-bottom));
+  }
+  .tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--tabs);
+    padding: 5px 10px env(safe-area-inset-bottom);
+    background: var(--bg);
+    border-top: var(--bw) solid var(--ink);
+    justify-content: space-around;
+    gap: 4px;
+    z-index: 10;
+  }
+  .tab {
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px 0 3px;
+    font-size: 11.5px;
+    border-radius: var(--r);
+    max-width: 96px;
+  }
+  .tab-icon {
+    width: 21px;
+    height: 21px;
+  }
+}
+/* Phones: no title bar. The tabs live at the bottom and every card shows its own title, so the brand
+   bar only cost vertical space. Keep just the status-bar inset for the installed app. */
+@media (max-width: 640px) {
+  :root {
+    --head: env(safe-area-inset-top, 0px);
+  }
+  .top {
+    border-bottom: 0;
+    padding: 0;
+  }
+  .brand,
+  .top-extra {
+    display: none;
+  }
+}
+
+/* ---------- feed ---------- */
+.feed {
+  height: calc(100dvh - var(--head) - var(--tabs));
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.feed::-webkit-scrollbar {
+  display: none;
+}
+.card {
+  height: calc(100dvh - var(--head) - var(--tabs));
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 14px 6px;
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.card-head .title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+.level-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  padding-left: 2px;
+}
+.card-head h2 {
+  display: inline-block;
+  font-size: 20px;
+  line-height: 1.1;
+  padding: 5px 12px 6px;
+  background: var(--accent);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
+}
+.rules {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 32ch;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.mistakes {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 3px 8px;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--bad);
+  color: var(--on-tone);
+  font-variant-numeric: tabular-nums;
+}
+.lives {
+  display: flex;
+  gap: 2px;
+  padding: 3px 6px;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+}
+.lives i {
+  width: 11px;
+  height: 10px;
+  background: var(--bad);
+  clip-path: path('M5.5 10 0.8 5.2A2.8 2.8 0 0 1 5.5 1.4 2.8 2.8 0 0 1 10.2 5.2Z');
+}
+.lives i:not(.on) {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.lives.bump,
+.mistakes.bump {
+  animation: bump 0.3s ease;
+}
+@keyframes bump {
+  40% {
+    transform: scale(1.25) rotate(-4deg);
+  }
+}
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 3.4em;
+  text-align: center;
+  padding: 3px 6px;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+}
+.select {
+  appearance: none;
+  background-color: var(--cell);
+  border-radius: 999px;
+  padding: 3px 28px 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 55%,
+    calc(100% - 10px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+.select option {
+  background: var(--cell);
+  color: var(--fg);
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* --fit is measured by Card.fit(): the largest board for which the whole game fits this stage. */
+  --board: var(--fit, min(90vw, calc(100dvh - var(--head) - var(--tabs) - 180px), 440px));
+}
+.puzzle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.stage {
+  position: relative;
+}

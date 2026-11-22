@@ -4,7 +4,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const ROOT = join(__dirname, '..', 'src', 'puzzles');
+// Games and the engines they share: everything that renders inside a card.
+const ROOT = join(__dirname, '..', 'src');
+const DIRS = ['games', 'kits'].map((d) => join(ROOT, d));
 
 function walk(dir: string, ext: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -13,8 +15,8 @@ function walk(dir: string, ext: string): string[] {
   });
 }
 const rel = (p: string) => relative(ROOT, p).replaceAll('\\', '/');
-const TS = walk(ROOT, '.ts');
-const CSS = walk(ROOT, '.css');
+const TS = DIRS.flatMap((d) => walk(d, '.ts'));
+const CSS = DIRS.flatMap((d) => walk(d, '.css'));
 
 /** Every match of `re` in the files, as "file:line  text". */
 function offenders(files: string[], re: RegExp, allow: (file: string, line: string) => boolean = () => false) {

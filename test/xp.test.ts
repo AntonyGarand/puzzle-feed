@@ -39,7 +39,7 @@ describe('xp', () => {
   it('old profiles start with 10 XP per past solve, dated from recent results', () => {
     const p = getProfile();
     const at = Date.now() - 3 * 86_400_000;
-    p.stats.mines = { played: 4, solved: 3, failed: 1, skipped: 0, time: 0, best: {}, recent: [{ d: 1, o: 'solved', ms: 1, m: 0, at }] };
+    p.stats['mines'] = { played: 4, solved: 3, failed: 1, skipped: 0, time: 0, best: {}, recent: [{ d: 1, o: 'solved', ms: 1, m: 0, at }] };
     expect(stats('mines').xp).toBe(30);
     expect([...xpByDay('mines').values()]).toEqual([10]);
   });

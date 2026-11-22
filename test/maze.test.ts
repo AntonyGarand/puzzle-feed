@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { genMaze, mazeStats } from '../src/puzzles/pathkit/maze-gen';
+import { genMaze, mazeStats } from '../src/games/maze/gen';
 
-// Same tuning as src/puzzles/maze.ts.
+// Same tuning as src/games/maze/index.ts.
 const LEVELS = [
   { size: 6, newest: 0.8, braid: 0 },
   { size: 9, newest: 0.75, braid: 0 },

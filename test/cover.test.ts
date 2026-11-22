@@ -3,15 +3,11 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests } from '../src/core/i18n';
 import { Rng } from '../src/core/rng';
-import { LEVELS, type PuzzleCtx } from '../src/core/types';
-import { cover } from '../src/puzzles/cover';
-import { makeCover } from '../src/puzzles/wordkit/cover-gen';
-import { answers } from '../src/puzzles/wordkit/lexicon';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
+import { LEVELS } from '../src/core/types';
+import { cover } from '../src/games/cover/index';
+import { makeCover } from '../src/games/cover/gen';
+import { answers } from '../src/kits/word/lexicon';
+import { mountGame } from './support/mount';
 
 afterAll(() => _setLocaleForTests('en'));
 
@@ -59,20 +55,7 @@ describe('cover game', () => {
   it.each(LEVELS)('the guide solves level %i by tracing every hidden word', (d) => {
     _setLocaleForTests('en');
     for (let seed = 1; seed <= 5; seed++) {
-      const events: string[] = [];
-      const ctx: PuzzleCtx = {
-        difficulty: d,
-        rng: new Rng(seed),
-        root: document.createElement('div'),
-        solved: () => events.push('solved'),
-        failed: () => events.push('failed'),
-        mistake: () => events.push('mistake'),
-        touch() {},
-        status() {},
-        lives() {},
-        controls() {},
-      };
-      const inst = cover.create(ctx) || {};
+      const { inst, events } = mountGame(cover, d, seed);
       for (let k = 0; k < 20 && !events.length; k++) inst.hint?.()?.play();
       expect(events).toEqual(['solved']);
       expect(inst.hint?.()).toBeNull();

@@ -1,33 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../src/core/rng';
-import type { PuzzleCtx } from '../src/core/types';
-import { merge } from '../src/puzzles/merge';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
+import { merge } from '../src/games/merge/index';
+import { mountGame } from './support/mount';
 
 function run(saved: unknown) {
-  const events: string[] = [];
-  const buttons: HTMLElement[] = [];
-  const c: PuzzleCtx = {
-    difficulty: 1,
-    rng: new Rng(1),
-    root: document.createElement('div'),
-    solved: (o) => events.push(o?.keepPlaying ? 'reached' : 'solved'),
-    failed: () => events.push('failed'),
-    mistake: () => {},
-    touch: () => {},
-    status: () => {},
-    lives: () => {},
-    controls: (...els) => buttons.push(...els),
-    saved,
-  };
-  const inst = merge.create(c) || {};
-  const key = (k: string) => inst.onKey!(new KeyboardEvent('keydown', { key: k }));
-  return { events, buttons, key };
+  const g = mountGame(merge, 1, 1, { saved });
+  const key = (k: string) => g.inst.onKey!(new KeyboardEvent('keydown', { key: k }));
+  return { events: g.events, buttons: g.controls, key };
 }
 
 describe('2048 (merge)', () => {

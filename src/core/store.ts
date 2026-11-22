@@ -238,7 +238,7 @@ export interface RecordOutcome {
   /** Beat the previous best at this level (by at least a second). */
   best?: boolean;
   /** Best time at this level before this result, if any. */
-  prevBest?: number;
+  prevBest?: number | undefined;
   /** XP earned by a solve. */
   xp?: XpOutcome;
 }

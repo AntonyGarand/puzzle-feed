@@ -6,43 +6,23 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, PuzzleCtx, PuzzleDef, PuzzleInstance } from '../src/core/types';
-import { dominoes } from '../src/puzzles/dominoes';
-import { lightUp } from '../src/puzzles/light-up';
-import { loop } from '../src/puzzles/loop';
-import { mines } from '../src/puzzles/mines';
-import { mosaic } from '../src/puzzles/mosaic';
-import { mow } from '../src/puzzles/mow';
-import { pearls } from '../src/puzzles/pearls';
-import { shapeMines } from '../src/puzzles/shape-mines';
-import { sightlines } from '../src/puzzles/sightlines';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, PuzzleDef } from '../src/core/types';
+import { dominoes } from '../src/games/dominoes/index';
+import { lightUp } from '../src/games/light-up/index';
+import { loop } from '../src/games/loop/index';
+import { mines } from '../src/games/mines/index';
+import { mosaic } from '../src/games/mosaic/index';
+import { mow } from '../src/games/mow/index';
+import { pearls } from '../src/games/pearls/index';
+import { shapeMines } from '../src/games/shape-mines/index';
+import { sightlines } from '../src/games/sightlines/index';
+import { mountGame } from './support/mount';
 
 function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
-  const root = document.createElement('div');
-  document.body.append(root);
-  let outcome = '';
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    solved: () => (outcome ||= 'solved'),
-    failed: () => (outcome ||= 'failed'),
-    mistake() {},
-    touch() {},
-    status() {},
-    lives: () => {},
-    controls: (...els) => root.append(...els),
-    saved,
-  };
-  const inst: PuzzleInstance = def.create(ctx) || {};
+  const g = mountGame(def, d, seed, { saved, attach: true, controlsInRoot: true });
+  const { root, inst } = g;
   inst.activate?.();
-  return { root, inst, outcome: () => outcome, destroy: () => (inst.destroy?.(), root.remove()) };
+  return { root, inst, outcome: () => g.outcome, destroy: () => (inst.destroy?.(), root.remove()) };
 }
 
 function assist(g: ReturnType<typeof make>) {

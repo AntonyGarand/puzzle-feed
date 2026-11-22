@@ -1,13 +1,13 @@
-import { confirmSheet, openSheet, sheetOpen } from '../core/sheet';
+import { confirmSheet, openSheet, sheetOpen } from '../ui/sheet';
 import { L, locale, setLocale, setWordLocale, wordLocale, type Locale } from '../core/i18n';
-import { Card, isUndoKey, type DailyRef } from '../core/card';
+import { Card, isUndoKey, type DailyRef } from '../app/card/card';
 import { dailySaveKey, getSave, type Save } from '../core/saves';
 import type { DailyEntry } from '../core/store';
-import { setPath } from '../core/nav';
+import { setPath } from '../app/nav';
 import { prefs } from '../core/store';
 import type { ShareCode } from '../core/share';
 import type { Difficulty, PuzzleDef } from '../core/types';
-import { btn, h } from '../core/ui';
+import { btn, h } from '../ui/dom';
 
 /** A single puzzle opened from Labs: resume or new, outside the feed. */
 export class LabView {

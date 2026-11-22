@@ -1,0 +1,325 @@
+/* Games tab (labs): game rows, live mini boards, category chips. */
+
+/* ---------- labs ---------- */
+.page.wide {
+  max-width: 1080px;
+}
+.lab-grid {
+  display: grid;
+  margin-top: 22px;
+}
+.lab-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+/* One row per game; the name's link is stretched over the whole row, buttons sit above it. */
+.lab-tile {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 4px 4px 0 var(--ink);
+  overflow: hidden;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+.lab-tile:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.lab-tile:has(.tile-link:active) {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--ink);
+}
+.lab-tile:has(.tile-link:focus-visible) {
+  outline: 3px solid var(--hi);
+  outline-offset: 3px;
+}
+.tile-link {
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tile-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.lab-tile .icon-btn {
+  position: relative;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+.lab-tile .cog-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+.tile-art {
+  flex: none;
+  width: 84px;
+  margin: 8px 0 8px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+}
+.tile-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px 9px 12px;
+}
+.tile-main header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tile-main h2 {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  line-height: 1.15;
+}
+.lab-tile .rules {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lab-meta {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lab-meta span {
+  padding: 0 7px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+.lab-meta .lvl-hex {
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.lab-meta .resume-pill {
+  background: var(--hi);
+  color: var(--on-tone);
+}
+/* The coloured "go" edge: shows the row is the button. */
+.tile-go {
+  flex: none;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border-left: var(--bw) solid var(--ink);
+  background: var(--accent);
+  color: var(--on-tone);
+  font-size: 15px;
+  transition: width 0.12s;
+}
+.lab-tile:hover .tile-go {
+  width: 46px;
+}
+.lab-tile.off {
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.lab-tile.off .tile-art,
+.lab-tile.off .tile-go {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+/* Live mini board (core/thumb.ts). */
+.thumb {
+  position: relative;
+  overflow: hidden;
+  background: var(--accent-soft);
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1.4px);
+  background-size: 10px 10px;
+}
+.thumb-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 340px;
+  height: auto;
+  min-height: 0;
+  flex: none;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.thumb-ready .thumb-stage {
+  opacity: 1;
+}
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--hi);
+  color: var(--on-tone);
+}
+.cat-toggle {
+  margin-left: auto;
+  min-height: 24px; /* WCAG 2.5.8 target size */
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+@media (max-width: 640px) {
+  .page.games {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .games .filters {
+    margin: 0 -12px;
+    padding: 0 12px 4px;
+  }
+  .lab-grid,
+  .cat .lab-grid {
+    gap: 10px;
+  }
+  .cat h3 {
+    margin-top: 22px;
+  }
+}
+
+/* single puzzle opened from Labs */
+.lab {
+  height: calc(100dvh - var(--head) - var(--tabs));
+  display: flex;
+  flex-direction: column;
+}
+.lab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 6px 10px 0;
+}
+.lab .card {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* games tab: category filters & sections */
+.games-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 10px 0;
+  background: var(--bg);
+}
+.input.search {
+  width: 100%;
+  max-width: none;
+  font-size: 16px;
+  text-align: left;
+  padding: 7px 14px;
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* Phones: one row of category chips that scrolls sideways, so the pinned bar stays short. */
+@media (max-width: 640px) {
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px 4px;
+  }
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+  .chip-filter {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+.no-match {
+  margin-top: 24px;
+}
+.chip-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.chip-filter span {
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--cell-alt);
+}
+.chip-filter.on {
+  background: var(--hi);
+  color: var(--on-tone);
+}
+.chip-filter.on span {
+  background: color-mix(in srgb, var(--ink) 15%, transparent);
+}
+.cat h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 15px;
+  margin-top: 30px;
+}
+.cat-blurb {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 13px;
+}
+.cat .lab-grid {
+  margin-top: 0;
+}
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  cursor: pointer;
+}

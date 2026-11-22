@@ -3,11 +3,11 @@ import './core/migrate-storage';
 import { telemetry } from './core/analytics';
 import { L, localeTag } from './core/i18n';
 import '@fontsource-variable/space-grotesk';
-import './styles.css';
-import { Feed } from './core/feed';
+import './styles/index.css';
+import { Feed } from './app/feed';
 import { dayStreak, getProfile, onChange } from './core/store';
 import { LEVELS, type Difficulty } from './core/types';
-import { cogIcon, h, s } from './core/ui';
+import { cogIcon, h, s } from './ui/dom';
 import { LabView } from './pages/lab';
 import { renderDaily } from './pages/daily';
 import { dailyDate, getDaily } from './core/daily';
@@ -15,10 +15,10 @@ import { renderLabs } from './pages/labs';
 import { renderSettings } from './pages/settings';
 import { renderStats } from './pages/stats';
 import { resolveCode } from './core/share';
-import { PUZZLES } from './puzzles';
-import { setupUpdates } from './core/update';
-import { closeSheet } from './core/sheet';
-import { navigate, onNavigate, upgradeHashRoute } from './core/nav';
+import { PUZZLES } from './games';
+import { setupUpdates } from './app/update';
+import { closeSheet } from './ui/sheet';
+import { navigate, onNavigate, upgradeHashRoute } from './app/nav';
 import { isReload, sessionGet, sessionSet } from './core/session';
 
 const app = document.getElementById('app')!;
@@ -67,10 +67,10 @@ app.append(header, feed.el, lab.el, page);
 
 function applyTheme() {
   const t = getProfile().theme;
-  if (t === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = t;
-  if (getProfile().symbols) document.documentElement.dataset.symbols = '';
-  else delete document.documentElement.dataset.symbols;
+  if (t === 'system') delete document.documentElement.dataset['theme'];
+  else document.documentElement.dataset['theme'] = t;
+  if (getProfile().symbols) document.documentElement.dataset['symbols'] = '';
+  else delete document.documentElement.dataset['symbols'];
   const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#17161a' : '#fff6e5');
 }
@@ -194,7 +194,8 @@ applyTheme();
 upgradeHashRoute();
 // A reload that dropped the route (e.g. the app reloading its start page) goes back to it.
 // Sessions from before path routing stored "#/…"; upgradeHashRoute() turns those into paths too.
-const lastRoute = isReload && location.pathname === '/' ? sessionGet<string>('route') : undefined;
+const storedRoute = isReload && location.pathname === '/' ? sessionGet('route') : undefined;
+const lastRoute = typeof storedRoute === 'string' ? storedRoute : undefined;
 if (lastRoute && lastRoute !== '/') {
   history.replaceState(null, '', lastRoute);
   upgradeHashRoute();

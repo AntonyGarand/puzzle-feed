@@ -6,10 +6,11 @@
   "ignorePatterns": [
     "dist/**",
     "shots*/**",
-    "src/puzzles/wordkit/dict*.txt",
-    "src/puzzles/wordkit/common*.ts",
+    "src/kits/word/dict*.txt",
+    "src/kits/word/common*.ts",
     "package-lock.json",
     "android/**",
-    "android-foss/**"
+    "android-foss/**",
+    ".claude/**"
   ]
 }

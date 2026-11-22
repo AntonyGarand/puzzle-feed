@@ -1,0 +1,13 @@
+/* Global styles, in cascade order. Game styles live next to each game (src/games/<id>/style.css). */
+@import './tokens.css';
+@import './base.css';
+@import './shell.css';
+@import './result.css';
+@import './controls.css';
+@import './pages.css';
+@import './labs.css';
+@import './sheets.css';
+@import './daily.css';
+@import './xp.css';
+@import './hint.css';
+@import './contrast.css';

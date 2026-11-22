@@ -55,7 +55,10 @@ function audit(rootSel) {
     return [0, 1, 2].map((i) => top[i] * a + bot[i] * (1 - a)).concat(1);
   };
   const lum = ([r, gg, b]) => {
-    const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const f = (c) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
     return 0.2126 * f(r) + 0.7152 * f(gg) + 0.0722 * f(b);
   };
   const ratio = (a, b) => {
@@ -74,7 +77,7 @@ function audit(rootSel) {
     if (r.width < 1 || r.height < 1) return false;
     for (let e = el; e && e.nodeType === 1; e = e.parentElement || e.parentNode?.host) {
       const s = getComputedStyle(e);
-      if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity < 0.05) return false;
+      if (s.visibility === 'hidden' || s.display === 'none' || Number(s.opacity) < 0.05) return false;
     }
     return true;
   };
@@ -107,7 +110,7 @@ function audit(rootSel) {
   const root = document.querySelector(rootSel);
   const out = [];
   const push = (kind, el, need, got, fg, bg, extra = '') =>
-    out.push({ kind, sel: path(el), need, got: +got.toFixed(2), fg: hex(fg), bg: hex(bg), extra });
+    out.push({ kind, sel: path(el), need, got: Number(got.toFixed(2)), fg: hex(fg), bg: hex(bg), extra });
 
   // ---- text ----
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -124,7 +127,7 @@ function audit(rootSel) {
     // an outlined glyph (text-stroke / hard text-shadow) carries its own contrast; checked by eye
     if (parseFloat(s.webkitTextStrokeWidth) > 0 || s.textShadow !== 'none') continue;
     const size = parseFloat(s.fontSize);
-    const large = size >= 24 || (size >= 18.66 && +s.fontWeight >= 700);
+    const large = size >= 24 || (size >= 18.66 && Number(s.fontWeight) >= 700);
     const need = large ? 3 : 4.5;
     let fg;
     let bg;
@@ -140,7 +143,7 @@ function audit(rootSel) {
     }
     const op = [
       ...(function* () {
-        for (let e = el; e && e !== document.body; e = e.parentElement) yield +getComputedStyle(e).opacity;
+        for (let e = el; e && e !== document.body; e = e.parentElement) yield Number(getComputedStyle(e).opacity);
       })(),
     ].reduce((a, b) => a * b, 1);
     fg = over([fg[0], fg[1], fg[2], fg[3] * op], bg);
@@ -157,10 +160,10 @@ function audit(rootSel) {
     const sw = parseFloat(s.strokeWidth) * Math.abs(el.getScreenCTM()?.a ?? 1);
     const st = rgba(s.stroke);
     const fi = rgba(s.fill);
-    const op = +s.opacity * (+s.strokeOpacity || 1);
+    const op = Number(s.opacity) * (Number(s.strokeOpacity) || 1);
     const cand = [];
     if (st[3] > 0 && sw >= 1) cand.push(over([st[0], st[1], st[2], st[3] * op], bg));
-    if (fi[3] > 0) cand.push(over([fi[0], fi[1], fi[2], fi[3] * +s.opacity * (+s.fillOpacity || 1)], bg));
+    if (fi[3] > 0) cand.push(over([fi[0], fi[1], fi[2], fi[3] * Number(s.opacity) * (Number(s.fillOpacity) || 1)], bg));
     if (!cand.length) continue;
     const best = Math.max(...cand.map((c) => ratio(c, bg)));
     if (best < 3) push('graphic', el, 3, best, cand[0], bg);

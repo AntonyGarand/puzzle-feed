@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterAll, describe, expect, it } from 'vitest';
 import { _setLocaleForTests, type Locale } from '../src/core/i18n';
-import { PUZZLES } from '../src/puzzles';
+import { PUZZLES } from '../src/games';
 
 afterAll(() => _setLocaleForTests('en'));
 

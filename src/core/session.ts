@@ -12,10 +12,11 @@ export const isReload = (() => {
   }
 })();
 
-export function sessionGet<T>(key: string): T | undefined {
+/** The stored JSON value, unchecked: callers validate its shape. */
+export function sessionGet(key: string): unknown {
   try {
     const v = sessionStorage.getItem(`puzzle-feed:${key}`);
-    return v == null ? undefined : (JSON.parse(v) as T);
+    return v == null ? undefined : (JSON.parse(v) as unknown);
   } catch {
     return undefined;
   }

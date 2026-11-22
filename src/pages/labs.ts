@@ -1,15 +1,15 @@
-import { helpButton } from '../core/help';
+import { helpButton } from '../ui/help';
 import { L, locale, P } from '../core/i18n';
 import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
-import { navigate } from '../core/nav';
+import { navigate } from '../app/nav';
 import { encodeCode, resolveCode } from '../core/share';
 import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { cogIcon, fmtTime, h, segmented } from '../core/ui';
-import { openSheet } from '../core/sheet';
-import { destroyThumbs, thumb } from '../core/thumb';
-import { levelHex } from '../core/win';
+import { cogIcon, fmtTime, h, segmented } from '../ui/dom';
+import { openSheet } from '../ui/sheet';
+import { destroyThumbs, thumb } from '../ui/thumb';
+import { levelHex } from '../ui/win';
 import { xpLevel } from '../core/xp';
 
 const ago = (t: number) => {
@@ -266,7 +266,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
     for (const sec of el.querySelectorAll<HTMLElement>('section.cat')) {
       let n = 0;
       for (const t of sec.querySelectorAll<HTMLElement>('.lab-tile')) {
-        const hit = words.every((w) => t.dataset.search!.includes(w));
+        const hit = words.every((w) => t.dataset['search']!.includes(w));
         t.hidden = !hit;
         if (hit) n++;
       }

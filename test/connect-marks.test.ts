@@ -1,32 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../src/core/rng';
-import type { PuzzleCtx } from '../src/core/types';
-import { connect } from '../src/puzzles/connect';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import { connect } from '../src/games/connect/index';
+import { mountGame } from './support/mount';
 
 function make(seed: number, saved?: unknown) {
-  const root = document.createElement('div');
-  const ctx: PuzzleCtx = {
-    difficulty: 3,
-    rng: new Rng(seed),
-    root,
-    saved,
-    solved() {},
-    failed() {},
-    mistake() {},
-    touch() {},
-    status() {},
-    lives() {},
-    controls() {},
-  };
-  connect.create(ctx);
-  return root;
+  return mountGame(connect, 3, seed, { saved }).root;
 }
 
 describe('connect X marks', () => {
@@ -35,7 +13,9 @@ describe('connect X marks', () => {
       const root = make(seed);
       const n = Math.round(Math.sqrt(root.querySelectorAll('.cell').length));
       // circles come in pairs, one pair per colour
-      const dots = [...root.querySelectorAll('circle')].map((e) => (+e.getAttribute('cy')! - 0.5) * n + (+e.getAttribute('cx')! - 0.5));
+      const dots = [...root.querySelectorAll('circle')].map(
+        (e) => (Number(e.getAttribute('cy')!) - 0.5) * n + (Number(e.getAttribute('cx')!) - 0.5),
+      );
       const isDot = new Set(dots);
       for (let di = 0; di < dots.length; di++) {
         const d = dots[di];

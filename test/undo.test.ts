@@ -1,33 +1,14 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, PuzzleCtx, PuzzleDef } from '../src/core/types';
-import { PUZZLES } from '../src/puzzles';
-
-(globalThis as any).ResizeObserver ??= class {
-  observe() {}
-  disconnect() {}
-};
-(globalThis as any).matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+import type { Difficulty, PuzzleDef } from '../src/core/types';
+import { PUZZLES } from '../src/games';
+import { mountGame } from './support/mount';
 
 function make(def: PuzzleDef, d: Difficulty, seed: number, saved?: unknown) {
-  const root = document.createElement('div');
-  const events: string[] = [];
-  const ctx: PuzzleCtx = {
-    difficulty: d,
-    rng: new Rng(seed),
-    root,
-    saved,
-    solved: () => events.push('solved'),
-    failed: () => events.push('failed'),
-    mistake: () => events.push('mistake'),
-    touch() {},
-    lives() {},
-    status() {},
-    controls() {},
-  };
-  const inst = def.create(ctx) || {};
-  return { root, inst, events };
+  const g = mountGame(def, d, seed, { saved });
+  const { root, inst } = g;
+  return { root, inst, events: g.events };
 }
 
 const snap = (inst: { snapshot?(): unknown }) => JSON.stringify(inst.snapshot?.() ?? null);

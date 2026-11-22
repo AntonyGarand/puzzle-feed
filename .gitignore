@@ -12,3 +12,6 @@ android/app/build/
 android/dist/
 android/local.properties
 dist-android/
+
+# Agent worktrees and scratch files
+.claude/

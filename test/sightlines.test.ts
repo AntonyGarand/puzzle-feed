@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import type { Difficulty, PuzzleCtx } from '../src/core/types';
-import { countSolutions, genSightlines, rays, sees } from '../src/puzzles/gridkit/sightlines';
-import { sightlines } from '../src/puzzles/sightlines';
+import type { Difficulty } from '../src/core/types';
+import { countSolutions, genSightlines, rays, sees } from '../src/games/sightlines/gen';
+import { sightlines } from '../src/games/sightlines/index';
+import { mountGame } from './support/mount';
 
 describe('sightlines', () => {
   it('generates boards with one solution that matches every number', () => {
@@ -21,25 +22,13 @@ describe('sightlines', () => {
   it('is solved by the guide alone, without guessing', () => {
     for (const d of [1, 3, 5] as Difficulty[])
       for (let seed = 1; seed <= 5; seed++) {
-        let done = false;
-        const ctx: PuzzleCtx = {
-          difficulty: d,
-          rng: new Rng(seed * 101 + d),
-          root: document.createElement('div'),
-          solved: () => (done = true),
-          failed() {},
-          mistake() {},
-          touch() {},
-          status() {},
-          lives() {},
-          controls() {},
-        };
-        const inst = sightlines.create(ctx) || {};
+        const g = mountGame(sightlines, d, seed * 101 + d);
+        const inst = g.inst;
         for (let k = 0, hint = inst.hint!(); hint && k < 200; hint = inst.hint!(), k++) {
           expect(hint.text).not.toMatch(/^No single/);
           hint.play();
         }
-        expect(done).toBe(true);
+        expect(g.outcome).toBe('solved');
         inst.destroy?.();
       }
   });

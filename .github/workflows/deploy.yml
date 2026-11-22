@@ -26,7 +26,7 @@ jobs:
       - uses: jdx/mise-action@v3
       - run: npm ci
       - run: npm run build
-      # Game bundle for the Android app's self-update (src/core/update.ts): the same commit built in
+      # Game bundle for the Android app's self-update (src/app/update.ts): the same commit built in
       # android mode, zipped, plus version.json at /android/. Only the latest one is kept.
       - name: Android update bundle
         run: |

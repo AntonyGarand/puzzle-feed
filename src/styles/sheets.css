@@ -1,0 +1,416 @@
+/* Icon buttons and bottom sheets (guide, game settings, share). */
+
+/* ---------- icon buttons (?, cog) ---------- */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  /* Next to text that wraps onto two lines, a flex row would squash the circle into an oval. */
+  flex: none;
+  align-self: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: 50%;
+  background: var(--cell);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+}
+.icon-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.icon-btn .icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.help-btn.fresh {
+  background: var(--accent);
+  color: var(--on-tone);
+  animation: nudge 1.8s ease-in-out 3;
+}
+@keyframes nudge {
+  0%,
+  70%,
+  100% {
+    transform: none;
+  }
+  80% {
+    transform: rotate(-12deg) scale(1.08);
+  }
+  90% {
+    transform: rotate(10deg) scale(1.08);
+  }
+}
+
+/* ---------- sheets (guide, game settings) ---------- */
+dialog.sheet {
+  width: min(540px, calc(100vw - 24px));
+  max-height: min(86dvh, 760px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--fg);
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+dialog.sheet:not([open]) {
+  display: none;
+}
+dialog.sheet::backdrop {
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+@media (max-width: 640px) {
+  /* bottom sheet on phones */
+  dialog.sheet {
+    width: 100vw;
+    max-width: 100vw;
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 0;
+    box-shadow: 0 -4px 0 var(--ink);
+    animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 6px;
+}
+.sheet-head h2 {
+  display: inline-block;
+  font-size: 22px;
+  padding: 4px 12px 5px;
+  background: var(--accent);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  transform: rotate(-1.5deg);
+}
+.sheet-body {
+  overflow: auto;
+  padding: 4px 18px 12px;
+  overscroll-behavior: contain;
+}
+.sheet-body h3 {
+  margin: 18px 0 8px;
+}
+.sheet-foot {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 18px max(12px, env(safe-area-inset-bottom));
+  border-top: 2px dashed var(--ink);
+}
+.seg.wrap {
+  flex-wrap: wrap;
+  border-radius: 14px;
+}
+
+.help-goal {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+.help-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 8px;
+}
+.help-steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.help-steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-tone);
+  font-weight: 700;
+  font-size: 13px;
+}
+.help-tips {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.help-levels {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--ink);
+}
+
+/* animated walkthrough inside the guide */
+.guide-section h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.guide-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.guide-stage {
+  position: relative;
+  border: 2px dashed var(--ink);
+  border-radius: var(--r);
+  background: var(--bg);
+  overflow: hidden;
+}
+.guide-board {
+  --fit: min(300px, calc(100vw - 80px));
+  --board: var(--fit);
+  display: flex;
+  justify-content: center;
+  padding: 14px 8px;
+  pointer-events: none;
+}
+.guide-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.guide-why {
+  fill: color-mix(in srgb, var(--p2) 14%, transparent);
+  stroke: var(--p2);
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+  animation: guide-in 0.3s ease-out both;
+}
+.guide-at {
+  fill: none;
+  stroke: var(--bad-ink);
+  stroke-width: 4;
+  animation:
+    guide-in 0.3s ease-out 0.25s both,
+    guide-pulse 1s ease-in-out 0.55s infinite alternate;
+}
+.guide-arrow,
+.guide-head {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.guide-arrow {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: guide-draw 0.5s ease-out 0.35s forwards;
+}
+.guide-head {
+  opacity: 0;
+  animation: guide-in 0.2s ease-out 0.8s forwards;
+}
+.guide-dot {
+  fill: var(--ink);
+}
+@keyframes guide-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes guide-pulse {
+  to {
+    stroke-width: 7;
+  }
+}
+@keyframes guide-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.guide-caption {
+  min-height: 3.6em;
+  margin: 10px 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.guide-stage.done + .guide-caption {
+  color: var(--good-ink);
+}
+.guide-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* result line extras */
+.record {
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--hi);
+  color: var(--on-tone);
+}
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+}
+.confetti i {
+  position: absolute;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+}
+
+/* long (often French) status lines wrap themselves instead of stacking the footer buttons */
+.card-foot .status {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+}
+.card-foot .actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* new-version banner + toast */
+.update-banner {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--tabs) + 12px);
+  max-width: 520px;
+  margin: 0 auto;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px 10px 16px;
+  background: var(--hi);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  font-size: 14px;
+  animation: sheet-up 0.25s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.update-banner .btn.ghost {
+  color: var(--on-tone);
+}
+.toast {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: fit-content;
+  margin: 0 auto;
+  bottom: calc(var(--tabs) + 12px);
+  z-index: 60;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 var(--ink);
+  animation: sheet-up 0.25s ease;
+}
+.app-version {
+  margin-top: 28px;
+  text-align: center;
+}
+
+/* share codes: "Play a shared puzzle" on the Games tab, "Share this puzzle" in the game sheets */
+.code-form {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: var(--cell);
+  border: 2px dashed var(--ink);
+  border-radius: var(--r);
+}
+.code-form h3 {
+  margin: 0 0 8px;
+}
+.page .code-form .row {
+  margin-top: 0;
+}
+.code-form .input.inline,
+.share .input.inline {
+  max-width: none;
+  font-size: 16px;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  box-shadow: none;
+}
+.code-msg {
+  margin: 8px 0 0;
+}
+.code-msg.bad {
+  color: var(--bad-ink);
+  font-weight: 700;
+}
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.share-row .input.inline {
+  flex: 1 1 100%;
+}
+.share-row .btn {
+  flex: 1;
+}
+.share-note {
+  min-height: 1.3em;
+  margin: 8px 0 0;
+}
+.lab-bar .small {
+  flex: 1;
+  text-align: center;
+}
