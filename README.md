@@ -26,6 +26,7 @@ npm run check         # everything CI runs: fmt:check, lint, typecheck, knip, te
 | `npm run e2e:audit`                 | Plays games in Chrome against the running dev server                                                  |
 | `npm run e2e:shots`                 | Screenshots every game into `shots/` (`IDS=`, `LEVELS=`, `LOCALE=fr`, `HELP=1`, `VP=mobile,desktop`)  |
 | `npm run dict`                      | Rebuilds the word dictionaries from the npm word lists                                                |
+| `node scripts/og-image.mjs`         | Re-renders `public/og.png`, the link-preview image (needs Chrome installed)                           |
 
 The same commands are available as mise tasks (`mise run check`, `mise run fix`, …).
 
