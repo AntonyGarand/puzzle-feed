@@ -6,7 +6,7 @@
 }
 [data-puzzle='blocks'] .blk-grid .cell.fill {
   background: var(--c);
-  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  box-shadow: var(--csh) var(--csh) 0 var(--drop);
 }
 [data-puzzle='blocks'] .blk-grid .cell.pv {
   background: color-mix(in srgb, var(--c) 45%, var(--cell));
@@ -63,7 +63,7 @@
   gap: var(--gap);
   pointer-events: none;
   opacity: 0.85;
-  filter: drop-shadow(var(--sh) var(--sh) 0 var(--ink));
+  filter: drop-shadow(var(--sh) var(--sh) 0 var(--drop));
 }
 [data-puzzle='blocks'] .blk-ghost i {
   border-width: var(--bw);

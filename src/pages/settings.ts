@@ -1,4 +1,4 @@
-import { getProfile, prefs, resetAllToAuto, setWeight, update, type Theme } from '../core/store';
+import { getProfile, prefs, resetAllToAuto, setWeight, update, type Style, type Theme } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
 import { h, segmented } from '../ui/dom';
 import { L, LOCALES, P, locale, setLocale, type Locale } from '../core/i18n';
@@ -31,7 +31,34 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
       h(
         'div',
         { class: 'setting' },
-        h('div', null, h('div', null, L('Theme', 'Thème'))),
+        h(
+          'div',
+          null,
+          h('div', null, L('Theme', 'Thème')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'Neo: bold and colourful. Minimal: quiet and clean. Soft: round and pastel. Newsprint: the puzzle page of a paper.',
+              'Néo : franc et coloré. Minimal : sobre et épuré. Doux : arrondi et pastel. Journal : la page des jeux du journal.',
+            ),
+          ),
+        ),
+        segmented<Style>(
+          [
+            { label: L('Neo', 'Néo'), value: 'neo' },
+            { label: L('Minimal', 'Minimal'), value: 'minimal' },
+            { label: L('Soft', 'Doux'), value: 'soft' },
+            { label: L('Newsprint', 'Journal'), value: 'newsprint' },
+          ],
+          p.style ?? 'neo',
+          (v) => update({ style: v }),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h('div', null, h('div', null, L('Light or dark', 'Clair ou sombre'))),
         segmented<Theme>(
           [
             { label: L('System', 'Système'), value: 'system' },

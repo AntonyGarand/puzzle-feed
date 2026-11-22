@@ -93,7 +93,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   padding: 8px 6px 2px;
   overflow: hidden;
 }
@@ -147,7 +147,7 @@
   border: 2px solid var(--ink);
   border-radius: 6px;
   background: var(--cell);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;

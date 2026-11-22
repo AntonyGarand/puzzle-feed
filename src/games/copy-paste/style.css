@@ -35,7 +35,7 @@
   overflow: hidden;
   background: var(--ink);
   gap: 1px;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }
 [data-puzzle='copy-paste'] .cp-mini i {
   display: block;

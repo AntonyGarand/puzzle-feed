@@ -5,6 +5,8 @@ type Outcome = 'solved' | 'failed' | 'skipped';
 /** 0 = off, 1 = less, 2 = normal, 3 = more */
 export type Weight = 0 | 1 | 2 | 3;
 export type Theme = 'system' | 'light' | 'dark';
+/** Look of the whole app (styles/themes.css), on top of light / dark. */
+export type Style = 'neo' | 'minimal' | 'soft' | 'newsprint';
 
 export interface Result {
   d: Difficulty;
@@ -67,6 +69,8 @@ export interface Profile {
   name: string;
   created: number;
   theme: Theme;
+  /** Absent = Neo. */
+  style?: Style;
   autoAdvance: boolean;
   /** Shape symbols on colour-coded pieces (see core/symbols.ts). */
   symbols?: boolean;
@@ -156,7 +160,7 @@ function save() {
 
 export const getProfile = () => profile;
 
-export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'autoAdvance' | 'symbols' | 'startLevel'>>) {
+export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'startLevel'>>) {
   Object.assign(profile, patch);
   save();
   emit('profile');

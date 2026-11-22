@@ -1,0 +1,136 @@
+/* =========================================================
+   Styles (Settings > Theme), on top of the Neo tokens in tokens.css.
+   <html data-style="…"> picks one; no attribute = Neo. Light / dark stays a separate setting.
+
+   A style only restyles the chrome: surfaces, text, ink, borders, corners, shadows and font. The game
+   palette (--p*, --t*, --shade, --paper*, …) is shared, so every rule that says "red" or "shaded" holds.
+   Every pair below keeps the contrast rules of tokens.css: text 4.5:1 and --faint / --ink 3:1 on --bg,
+   --cell and --cell-alt, and --on-tone (#111) 4.5:1 on --hi.
+
+   Specificity: the light block uses :where() so it ties with :root (0,1,0) and still loses to the Neo
+   dark blocks (0,2,0); the dark blocks (0,3,0) win over both.
+   ========================================================= */
+
+/* ---------- Minimal: quiet greys, hairline borders, no shadows, system font ---------- */
+:root:where([data-style='minimal']) {
+  --bg: #f6f6f7;
+  --cell: #ffffff;
+  --cell-alt: #eeeef0;
+  --fg: #18181b;
+  --ink: #52525b;
+  --muted: #5c5c66;
+  --faint: #74747d;
+  --hi: #d4e2ff;
+  --bw: 1.5px;
+  --drop: transparent;
+  --r: 12px;
+  --r-cell: 6px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --weight: 400;
+}
+:root[data-style='minimal'][data-theme='dark'] {
+  --bg: #111113;
+  --cell: #1b1b1e;
+  --cell-alt: #252529;
+  --fg: #ececee;
+  --ink: #a1a1aa;
+  --muted: #a1a1aa;
+  --faint: #8a8a93;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style='minimal']:not([data-theme='light']) {
+    --bg: #111113;
+    --cell: #1b1b1e;
+    --cell-alt: #252529;
+    --fg: #ececee;
+    --ink: #a1a1aa;
+    --muted: #a1a1aa;
+    --faint: #8a8a93;
+  }
+}
+
+/* ---------- Soft: lavender pastels, round corners, gentle shadows ---------- */
+:root:where([data-style='soft']) {
+  --bg: #f5f2fb;
+  --cell: #ffffff;
+  --cell-alt: #ece6f7;
+  --fg: #2a2540;
+  --ink: #4a4366;
+  --muted: #645d7d;
+  --faint: #7a7394;
+  --good-ink: #0c6b34;
+  --bad-ink: #b3262c;
+  --hi: #d8cbff;
+  --bw: 2px;
+  --drop: rgb(74 67 102 / 0.22);
+  --r: 18px;
+  --r-cell: 10px;
+  --font: ui-rounded, 'SF Pro Rounded', 'Space Grotesk Variable', system-ui, sans-serif;
+}
+:root[data-style='soft'][data-theme='dark'] {
+  --bg: #1a1726;
+  --cell: #252136;
+  --cell-alt: #2f2a44;
+  --fg: #f1edfc;
+  --ink: #c4bbe6;
+  --muted: #b4acd0;
+  --faint: #958db2;
+  --drop: rgb(0 0 0 / 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style='soft']:not([data-theme='light']) {
+    --bg: #1a1726;
+    --cell: #252136;
+    --cell-alt: #2f2a44;
+    --fg: #f1edfc;
+    --ink: #c4bbe6;
+    --muted: #b4acd0;
+    --faint: #958db2;
+    --drop: rgb(0 0 0 / 0.45);
+  }
+}
+
+/* ---------- Newsprint: the puzzle page of a paper — serif type, fine rules, square corners ---------- */
+:root:where([data-style='newsprint']) {
+  --bg: #f2eee3;
+  --cell: #fbf9f3;
+  --cell-alt: #e9e3d4;
+  --fg: #1c1a17;
+  --ink: #1c1a17;
+  --muted: #57524a;
+  --faint: #6f695f;
+  --good-ink: #0c6b34;
+  --bad-ink: #b3262c;
+  --hi: #f1dc85;
+  --bw: 1.5px;
+  --drop: transparent;
+  --r: 3px;
+  --r-cell: 1px;
+  --font: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, ui-serif, serif;
+  --weight: 400;
+}
+:root[data-style='newsprint'][data-theme='dark'] {
+  --bg: #191816;
+  --cell: #22211e;
+  --cell-alt: #2c2a26;
+  --fg: #ebe5d6;
+  --ink: #d9d2c1;
+  --muted: #b2aa99;
+  --faint: #948c7d;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style='newsprint']:not([data-theme='light']) {
+    --bg: #191816;
+    --cell: #22211e;
+    --cell-alt: #2c2a26;
+    --fg: #ebe5d6;
+    --ink: #d9d2c1;
+    --muted: #b2aa99;
+    --faint: #948c7d;
+  }
+}
+
+/* Flat styles have no shadow to press into: shell buttons dip slightly instead of jumping diagonally. */
+:root:is([data-style='minimal'], [data-style='newsprint']) :is(.btn:active, .lab-tile:has(.tile-link:active)) {
+  transform: translateY(1px);
+}

@@ -17,7 +17,7 @@
   font-size: 24px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
   transition:
     transform 0.06s,
     box-shadow 0.06s;
@@ -30,7 +30,7 @@
   background: var(--accent);
   color: var(--on-tone);
   transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--drop);
 }
 [data-puzzle='target'] .big {
   padding: 2px 22px;
@@ -38,5 +38,5 @@
   color: var(--on-tone);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }

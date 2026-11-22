@@ -15,7 +15,7 @@
   color: var(--on-tone);
   border-style: solid;
   border-color: var(--ink);
-  box-shadow: var(--csh) var(--csh) 0 var(--ink);
+  box-shadow: var(--csh) var(--csh) 0 var(--drop);
 }
 [data-puzzle='merge'] .cell.mg.lo {
   color: var(--fg);

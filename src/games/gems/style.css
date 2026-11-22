@@ -13,7 +13,7 @@
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
   background: color-mix(in srgb, var(--accent) 14%, var(--cell));
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   touch-action: none;
 }
 /* 3×3 direction pad, move counter in the middle */
@@ -62,7 +62,7 @@
   box-shadow:
     inset 0 calc(var(--rk) * 0.9) 0 color-mix(in srgb, var(--cell) 45%, transparent),
     inset 0 calc(var(--rk) * -0.9) 0 color-mix(in srgb, var(--ink) 18%, transparent),
-    var(--rk) var(--rk) 0 var(--ink);
+    var(--rk) var(--rk) 0 var(--drop);
 }
 /* mine: a red bomb with spikes */
 [data-puzzle='gems'] .gems-grid .cell.mine::before {
@@ -117,5 +117,5 @@
   border-radius: 50%;
   background: var(--accent);
   border: var(--bw) solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
 }

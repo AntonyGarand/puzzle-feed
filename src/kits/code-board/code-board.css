@@ -6,7 +6,7 @@
   width: min(var(--board), 340px);
   padding: 8px;
   background: var(--cell);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }
 :is([data-puzzle='codebreaker'], [data-puzzle='guess']) .code-row {
   display: flex;

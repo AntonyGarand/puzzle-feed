@@ -7,7 +7,7 @@
   width: var(--board);
   aspect-ratio: 1;
   overflow: hidden;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   background: var(--cell);
 }
 [data-puzzle='maze'] .maze {

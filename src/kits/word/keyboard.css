@@ -22,7 +22,7 @@
   height: 52px;
   font-size: 20px;
   text-transform: uppercase;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
   border-width: 2px;
   padding: 0;
   touch-action: manipulation;

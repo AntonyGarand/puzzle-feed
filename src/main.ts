@@ -71,8 +71,12 @@ function applyTheme() {
   else document.documentElement.dataset['theme'] = t;
   if (getProfile().symbols) document.documentElement.dataset['symbols'] = '';
   else delete document.documentElement.dataset['symbols'];
-  const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#17161a' : '#fff6e5');
+  const style = getProfile().style ?? 'neo';
+  if (style === 'neo') delete document.documentElement.dataset['style'];
+  else document.documentElement.dataset['style'] = style;
+  // Browser / status bar colour follows the page background of the current style and mode.
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#fff6e5');
 }
 function updateStreak() {
   const n = dayStreak();

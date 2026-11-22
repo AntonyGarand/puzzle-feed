@@ -53,7 +53,7 @@
   border: var(--cbw) solid var(--ink);
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--drop);
   transform: scale(0);
   opacity: 0;
   transition:
@@ -79,5 +79,5 @@
 }
 [data-puzzle='pegs'] .cell.sel .bead {
   transform: translate(-2px, -3px) scale(1.06);
-  box-shadow: 4px 5px 0 var(--ink);
+  box-shadow: 4px 5px 0 var(--drop);
 }

@@ -18,7 +18,7 @@
   color: var(--on-tone);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   transform: rotate(-1.5deg);
 }
 .page-head {
@@ -39,7 +39,7 @@
 .stat {
   background: var(--cell);
   padding: 12px 14px;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }
 .stat:nth-child(1) {
   background: var(--p3);
@@ -76,7 +76,7 @@
   overflow-x: auto;
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   background: var(--cell);
 }
 /* Header row and first column stay put while the table scrolls inside its box. */

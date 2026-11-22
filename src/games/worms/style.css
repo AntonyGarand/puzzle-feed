@@ -10,7 +10,7 @@
   touch-action: none;
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
   background: var(--cell-alt);
 }
 [data-puzzle='worms'] .wm-grid .cell {

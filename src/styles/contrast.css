@@ -11,6 +11,17 @@
     --faint: #aaa397;
   }
 }
+/* The dark blocks of the other styles (themes.css) outrank :root: match them. */
+@media (prefers-contrast: more) {
+  :root[data-style][data-theme='dark'] {
+    --muted: var(--fg);
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root[data-style]:not([data-theme='light']) {
+    --muted: var(--fg);
+  }
+}
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --faint: #aaa397;

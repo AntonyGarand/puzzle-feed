@@ -32,7 +32,7 @@
   background: var(--cell);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }
 .daily-item.is-solved {
   background: color-mix(in srgb, var(--p3) 22%, var(--cell));

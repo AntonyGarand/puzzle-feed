@@ -12,7 +12,7 @@
   background: var(--cell-alt);
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
 }
 [data-puzzle='unblock'] .ub-field {
   position: relative;
@@ -71,7 +71,7 @@
   background: color-mix(in srgb, var(--c) 70%, var(--cell));
   border: var(--bw) solid var(--ink);
   border-radius: var(--r-cell);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--drop);
   transition:
     transform 0.12s ease-out,
     box-shadow 0.12s ease-out;
@@ -97,7 +97,7 @@
   transform: translate(-2px, -2px);
 }
 [data-puzzle='unblock'] .ub-blk.sel::before {
-  box-shadow: 5px 5px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--drop);
 }
 /* held: lifted higher, one crisp border and a deeper shadow */
 [data-puzzle='unblock'] .ub-blk.drag {
@@ -111,7 +111,7 @@
   transform: translate(-3px, -3px) scale(1.02);
 }
 [data-puzzle='unblock'] .ub-blk.drag::before {
-  box-shadow: 7px 7px 0 var(--ink);
+  box-shadow: 7px 7px 0 var(--drop);
 }
 /* where the held block came from: a faint dashed slot */
 [data-puzzle='unblock'] .ub-origin {
