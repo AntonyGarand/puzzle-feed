@@ -150,7 +150,8 @@ function solvePushes(
   return -1;
 }
 
-function makeFloor(w: number, h: number, rng: Rng, wallP: number) {
+/** Random walls (probability `wallP`), keeping only the largest connected floor area. */
+export function makeFloor(w: number, h: number, rng: Rng, wallP: number) {
   const nb = stepper(w, h);
   const floor = Array.from({ length: w * h }, () => !rng.chance(wallP));
   // keep the largest connected component
@@ -179,7 +180,7 @@ function makeFloor(w: number, h: number, rng: Rng, wallP: number) {
 }
 
 /** BFS distance map over floor from a cell. */
-function dist(w: number, h: number, floor: boolean[], from: number) {
+export function dist(w: number, h: number, floor: boolean[], from: number) {
   const nb = stepper(w, h);
   const dd = new Array<number>(w * h).fill(-1);
   dd[from] = 0;

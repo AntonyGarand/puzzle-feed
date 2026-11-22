@@ -4,6 +4,7 @@ import { genBridges } from '../src/puzzles/logickit/bridgesgen';
 import { genPearls, isSolved } from '../src/puzzles/gridkit/pearls';
 import { genMines, solvableByLogic } from '../src/puzzles/logickit/minesgen';
 import { drawPiece, PIECES } from '../src/puzzles/movekit/pieces';
+import { applyMove, genTether, legalMoves, solveTether } from '../src/puzzles/movekit/tethergen';
 
 describe('bridges', () => {
   it('spreads islands to all four edges of the grid', () => {
@@ -48,5 +49,23 @@ describe('pearls', () => {
         expect(p.unique).toBe(true);
         expect(isSolved(p, p.pearl, (e) => p.sol[e])).toBe(true);
       }
+  });
+});
+
+describe('tether', () => {
+  it('generates rooms whose fewest-moves solution replays legally onto both goals', () => {
+    const tune = { w: 6, h: 7, max: 4, minMoves: 14, maxMoves: 28, minExtra: 10, cap: 120000, budget: 500000 };
+    for (let seed = 1; seed <= 8; seed++) {
+      const g = genTether(new Rng(seed), tune);
+      const sol = solveTether(g.w, g.h, g.floor, g.max, g.path, g.goals)!;
+      expect(sol.length).toBe(g.moves);
+      let path = g.path;
+      for (const m of sol) {
+        expect(legalMoves(g.w, g.h, g.floor, path, g.max)).toContainEqual(m);
+        path = applyMove(path, m);
+        expect(path.length - 2).toBeLessThanOrEqual(g.max);
+      }
+      expect([path[0], path[path.length - 1]]).toEqual(g.goals);
+    }
   });
 });
