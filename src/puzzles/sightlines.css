@@ -24,7 +24,7 @@
   opacity: 0.35;
 }
 [data-puzzle='sightlines'] .sl-grid .cell.shade {
-  background: var(--ink);
+  background: var(--shade);
 }
 [data-puzzle='sightlines'] .sl-grid .cell.mark::after {
   content: '';

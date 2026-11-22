@@ -12,8 +12,8 @@
   line-height: 1;
 }
 [data-puzzle='singles'] .sgl .cell.shade {
-  background: var(--ink);
-  color: color-mix(in srgb, var(--bg) 45%, var(--ink));
+  background: var(--shade);
+  color: color-mix(in srgb, var(--on-shade) 45%, var(--shade));
 }
 [data-puzzle='singles'] .sgl .cell.ring::before {
   content: '';

@@ -30,12 +30,12 @@ export const pearls: PuzzleDef = {
         'La boucle va d’une case voisine à l’autre, sans se diviser ni se croiser, et peut sauter des cases.',
       ),
       L(
-        'On a black (filled) pearl the loop turns, then goes straight through the next cell on both sides.',
-        'Sur une perle noire (pleine), la boucle tourne, puis va tout droit dans la case suivante, des deux côtés.',
+        'On a black pearl the loop turns, then goes straight through the next cell on both sides.',
+        'Sur une perle noire, la boucle tourne, puis va tout droit dans la case suivante, des deux côtés.',
       ),
       L(
-        'On a white (hollow) pearl the loop goes straight, and turns in the cell just before or just after it (or both).',
-        'Sur une perle blanche (creuse), la boucle va tout droit et tourne dans la case juste avant ou juste après (ou les deux).',
+        'On a white pearl the loop goes straight, and turns in the cell just before or just after it (or both).',
+        'Sur une perle blanche, la boucle va tout droit et tourne dans la case juste avant ou juste après (ou les deux).',
       ),
       L(
         'Drag from cell to cell to draw; start a drag on a line to erase instead.',

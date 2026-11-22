@@ -14,6 +14,10 @@
   --good: #3ddc84;
   --bad: #ff5a5f;
   --hi: #ffd23f; /* site highlight (nav, primary buttons) */
+  /* "black" cells (shaded / walls): always darker than an open cell, in both themes, so rules that say
+     black / white or shaded read true either way */
+  --shade: #111111;
+  --on-shade: #ffffff;
 
   /* shared palette (flood, code breaker, …) */
   --p1: #ff8a3d;
@@ -45,6 +49,8 @@
   --fg: #f6f1e7;
   --ink: #f6f1e7;
   --muted: #aaa397;
+  --shade: #050506;
+  --on-shade: var(--fg);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -55,6 +61,8 @@
     --fg: #f6f1e7;
     --ink: #f6f1e7;
     --muted: #aaa397;
+    --shade: #050506;
+    --on-shade: var(--fg);
     color-scheme: dark;
   }
 }
