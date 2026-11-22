@@ -99,10 +99,10 @@ export function evaluate(f: Pick<Factory, 'rows' | 'cols' | 'kinds' | 'into' | '
  * Count tray placements that hit every target, stopping at `limit`. Slots may stay empty.
  * Returns `limit` too when the node budget runs out (treat as "not unique").
  */
-function countSolutions(f: Factory, limit: number, budget: number): { n: number; nodes: number } {
+function countSolutions(f: Factory, limit: number, budget: number, fixed: (Op | null)[] = []): { n: number; nodes: number } {
   const steps = program(f);
   const types = [...new Set(f.tray)];
-  const left = types.map((t) => f.tray.filter((x) => x === t).length);
+  const left = types.map((t) => f.tray.filter((x) => x === t).length - fixed.filter((x) => x === t).length);
   // A lane is settled after step k when nothing later touches it.
   const touched = (lane: number, k: number) =>
     steps.slice(k).some((s) => (s.t === 'slot' ? s.lane === lane : s.from === lane || s.to === lane));
@@ -130,6 +130,15 @@ function countSolutions(f: Factory, limit: number, budget: number): { n: number;
       next(vals);
       return;
     }
+    const pin = fixed[st.s];
+    if (pin) {
+      const v = applyOp(pin, cur[st.lane]!);
+      if (v == null) return;
+      const vals = [...cur];
+      vals[st.lane] = v;
+      next(vals);
+      return;
+    }
     next(cur);
     for (let j = 0; j < types.length; j++) {
       if (!left[j]) continue;
@@ -144,6 +153,15 @@ function countSolutions(f: Factory, limit: number, budget: number): { n: number;
   };
   go(0, [...f.inputs]);
   return { n: nodes > budget ? limit : found, nodes };
+}
+
+/**
+ * Whether the slots already filled (`placed[s]`, null when empty) can still be completed with the
+ * rest of the tray so that every output hits its target. `null` when the search ran out of budget.
+ */
+export function canFinish(f: Factory, placed: (Op | null)[], budget = 100_000): boolean | null {
+  const { n, nodes } = countSolutions(f, 1, budget, placed);
+  return nodes > budget ? null : n > 0;
 }
 
 const OPS: Op[][] = [

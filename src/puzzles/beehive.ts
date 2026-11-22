@@ -3,6 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, h, s, shake } from '../core/ui';
 import { genBeehive } from './pathkit/beehive-gen';
 import { capture } from './pathkit/grid';
+import { deadEnd, solvePath, type PathSolve } from './pathkit/number-path';
 import './beehive.css';
 
 const SQ3 = Math.sqrt(3);
@@ -208,26 +209,87 @@ export const beehive: PuzzleDef = {
     // ---- guide: one number at a time, with the simplest rule that pins it ----
     const hexEl = (i: number) => groups[i].g;
     let lastRule = '';
+    /** Solver result for the current chain, kept while the chain follows it. */
+    let memo: (PathSolve & { key: string }) | null = null;
+    const BUDGET = 6000;
+    const solveHere = (): PathSolve => {
+      const key = chain.join(',');
+      if (memo?.path && chain.every((c, k) => memo!.path![k] === c)) return memo;
+      if (memo?.key !== key) memo = { key, ...solvePath(adj, givenAt, chain, BUDGET, P.path) };
+      return memo;
+    };
+    /** Length of the chain's common start with the stored solution. */
+    const onTrack = () => {
+      let k = 0;
+      while (k < chain.length && chain[k] === P.path[k]) k++;
+      return k;
+    };
+    const rewind = (k: number) => {
+      act(chain[k - 1], false);
+      check();
+    };
+    /** A chain that can no longer cover the board: say why, and go back to the last number that still can. */
+    const checkHint = (): Hint | null => {
+      if (finished) return null;
+      const k0 = onTrack();
+      if (k0 === chain.length) return null;
+      const res = solveHere();
+      if (res.path || res.capped) return null;
+      let k = chain.length - 1;
+      const t0 = performance.now();
+      while (k > k0 && (performance.now() - t0 > 25 || !solvePath(adj, givenAt, chain.slice(0, k), BUDGET, P.path).path)) k--;
+      const dead = deadEnd(adj, givenAt, chain);
+      const text = !dead
+        ? L(
+            `This route leads to a dead end: there is no way to visit every hex from here. Go back to ${k}.`,
+            `Ce chemin mène à une impasse : impossible de visiter tous les hexagones d’ici. Revenez au ${k}.`,
+          )
+        : dead.kind === 'isolated'
+          ? L(
+              `This empty hex is walled in by used hexes: the path can never reach it. Go back to ${k}.`,
+              `Cet hexagone libre est entouré d’hexagones utilisés : le chemin ne pourra jamais l’atteindre. Revenez au ${k}.`,
+            )
+          : dead.kind === 'ends'
+            ? L(
+                `These hexes each have a single way in, so each would have to be the last number. Only one can be. Go back to ${k}.`,
+                `Ces hexagones n’ont chacun qu’une seule entrée : chacun devrait être le dernier nombre, mais un seul peut l’être. Revenez au ${k}.`,
+              )
+            : dead.kind === 'split'
+              ? L(
+                  `The path has cut these hexes off from the rest: it can’t visit both sides. Go back to ${k}.`,
+                  `Le chemin a coupé ces hexagones du reste : il ne peut pas visiter les deux côtés. Revenez au ${k}.`,
+                )
+              : L(
+                  `${dead.num} must come ${dead.steps} step${dead.steps > 1 ? 's' : ''} after ${chain.length}, but ${dead.dist < 0 ? 'it can’t be reached any more' : `it is ${dead.dist} steps away`}. Go back to ${k}.`,
+                  `Le ${dead.num} doit venir ${dead.steps} pas après le ${chain.length}, mais ${dead.dist < 0 ? 'il est devenu inaccessible' : `il est à ${dead.dist} pas`}. Revenez au ${k}.`,
+                );
+      const why = !dead ? [] : dead.kind === 'isolated' || dead.kind === 'far' ? [dead.cell] : dead.cells;
+      return {
+        kind: 'fix',
+        text,
+        why: why.map(hexEl),
+        at: chain.slice(k).map(hexEl),
+        action: L(`Back to ${k}`, `Revenir au ${k}`),
+        play: () => rewind(k),
+      };
+    };
     const hint = (): Hint | null => {
       if (finished) return null;
-      const sol = P.path;
-      let k = 0;
-      while (k < chain.length && chain[k] === sol[k]) k++;
-      if (k < chain.length) {
-        const back = sol[k - 1];
+      const res = solveHere();
+      if (!res.path) {
+        // The search gave up on this route (too many options): go back to where a known route continues.
+        const k = Math.max(1, onTrack());
         return {
           text: L(
-            `This route strands part of the board. Tap ${k} to rewind to it and try another way.`,
-            `Ce chemin isole une partie de la grille. Touchez ${k} pour revenir à lui et essayer autrement.`,
+            `This route is hard to finish from here. Tap ${k} to go back to where a known route continues.`,
+            `Ce chemin est difficile à terminer d’ici. Touchez ${k} pour revenir là où un chemin connu continue.`,
           ),
           why: chain.slice(k).map(hexEl),
-          at: [hexEl(back)],
-          play: () => {
-            act(back, false);
-            check();
-          },
+          at: [hexEl(chain[k - 1])],
+          play: () => rewind(k),
         };
       }
+      const sol = res.path;
       const len = chain.length;
       const tip = chain[len - 1];
       const next = len + 1;
@@ -353,6 +415,6 @@ export const beehive: PuzzleDef = {
         play,
       };
     };
-    return { hint, snapshot: () => ({ chain }) };
+    return { hint, check: checkHint, snapshot: () => ({ chain }) };
   },
 };

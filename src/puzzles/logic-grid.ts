@@ -465,7 +465,6 @@ export const logicGrid: PuzzleDef = {
     render();
 
     // ---- guide ----
-    const correct = () => vals.every((v, i) => v < 0 || solPos[Math.floor(i / n) * n + v] === i % n);
     const known = () => {
       const dom = new Uint8Array(size).fill((1 << n) - 1);
       vals.forEach((v, i) => {
@@ -495,22 +494,96 @@ export const logicGrid: PuzzleDef = {
         place(f.cell, f.it % n);
       },
     });
-    const hint = (): Hint | null => {
+    /** Whether value `v` sits in cell `c` in the (unique) solution. */
+    const right = (c: number, v: number) => solPos[Math.floor(c / n) * n + v] === c % n;
+    /**
+     * A wrong value (a repeated one or a broken clue first), then a ✗ that rules out the right value:
+     * ✗ marks are the player's eliminations, so crossing out the answer is a real mistake.
+     */
+    const check = (): Hint | null => {
       if (done) return null;
-      if (!correct()) {
-        const i = vals.findIndex((v, c) => v >= 0 && solPos[Math.floor(c / n) * n + v] !== c % n);
+      const wrongs = vals.flatMap((v, c) => (v >= 0 && !right(c, v) ? [c] : []));
+      if (wrongs.length) {
+        const fix = (i: number, text: string, why: Element[] = []): Hint => {
+          const v = vals[i];
+          return {
+            kind: 'fix',
+            text,
+            why,
+            at: [cellEls[i]],
+            action: L('Take it out', 'Retirer la valeur'),
+            play: () => {
+              mark = false;
+              if (vals[i] === v) place(i, v);
+            },
+          };
+        };
+        const word = (i: number) => wordOf(Math.floor(i / n) * n + vals[i]);
+        const twice = dupes();
+        const dup = wrongs.find((i) => twice.has(i));
+        if (dup !== undefined)
+          return fix(
+            dup,
+            L(
+              `${cap(word(dup))} is in two houses, but each value appears once per row.`,
+              `${cap(word(dup))} est dans deux maisons, mais chaque valeur n’apparaît qu’une fois par rangée.`,
+            ),
+            [...twice]
+              .filter((j) => j !== dup && Math.floor(j / n) === Math.floor(dup / n) && vals[j] === vals[dup])
+              .map((j) => cellEls[j]),
+          );
+        const pos = placed();
+        for (let k = 0; k < clues.length; k++) {
+          if (clueState(k, pos) !== -1) continue;
+          const items = clueItems(clues[k]);
+          const c = wrongs.find((i) => items.includes(Math.floor(i / n) * n + vals[i]));
+          if (c !== undefined)
+            return fix(
+              c,
+              L(
+                `With ${word(c)} in house ${(c % n) + 1}, this clue no longer holds.`,
+                `Avec ${word(c)} dans la maison ${(c % n) + 1}, cet indice n’est plus respecté.`,
+              ),
+              [clueEls[k]],
+            );
+        }
+        const i = wrongs[0];
+        return fix(
+          i,
+          L(
+            `${cap(word(i))} in house ${(i % n) + 1} breaks no clue yet, but it leads to a dead end.`,
+            `${cap(word(i))} dans la maison ${(i % n) + 1} ne brise encore aucun indice, mais mène à une impasse.`,
+          ),
+        );
+      }
+      for (let i = 0; i < size; i++) {
+        if (vals[i] >= 0 || !xs[i]) continue;
+        const g = Math.floor(i / n);
+        const v = groups[g].vals.findIndex((_, x) => right(i, x));
+        if (v < 0 || !(xs[i] & (1 << v))) continue;
         return {
+          kind: 'fix',
           text: L(
-            `${cap(wordOf(Math.floor(i / n) * n + vals[i]))} can’t go here: it doesn’t fit the clues. Take it out.`,
-            `${cap(wordOf(Math.floor(i / n) * n + vals[i]))} ne peut pas aller ici : ça ne respecte pas les indices. Retirez cette valeur.`,
+            `You ruled out ${wordOf(g * n + v)} for house ${(i % n) + 1}, but it belongs there: that ✗ leads to a dead end.`,
+            `Vous avez exclu ${wordOf(g * n + v)} de la maison ${(i % n) + 1}, mais c’est sa place : ce ✗ mène à une impasse.`,
           ),
           at: [cellEls[i]],
+          action: L('Remove the ✗', 'Enlever le ✗'),
           play: () => {
-            mark = false;
-            place(i, vals[i]);
+            const was = mark;
+            select(i);
+            if (!mark) toggleMark();
+            if (xs[i] & (1 << v)) press(v);
+            if (mark !== was) toggleMark();
           },
         };
       }
+      return null;
+    };
+    const hint = (): Hint | null => {
+      if (done) return null;
+      const fix = check();
+      if (fix) return fix;
       // A row with a single gap.
       const last = newFact([]);
       if (last)
@@ -568,6 +641,7 @@ export const logicGrid: PuzzleDef = {
     return {
       snapshot: () => ({ vals, xs, struck, sel, mark }),
       hint,
+      check,
       onKey(e) {
         const k = Number(e.key);
         if (k >= 1 && k <= n) {

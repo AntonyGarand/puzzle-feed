@@ -162,28 +162,28 @@ function scoreF(s: FState): number {
   return (52 - home) * 3 + blocked * 2 + (s.cells.length - freeCells(s)) - emptyCols(s) * 2;
 }
 
-/** Successor states. `full` adds every run length to an empty cascade (needed to prove a loss). */
-function childrenF(s: FState, full: boolean): FState[] {
-  const out: FState[] = [];
-  const push = (n: FState) => {
+/** A move: card(s) at pile `p` / index `i` to `to` ('f', 'c', 'c#' or 't#'), as the game's go() takes it. */
+export interface FMove {
+  p: string;
+  i: number;
+  to: string;
+}
+
+/** Successor states (safe cards already sent home). `full` adds every run length to an empty cascade (needed to prove a loss). */
+function childrenF(s: FState, full: boolean): { s: FState; m: FMove }[] {
+  const out: { s: FState; m: FMove }[] = [];
+  const push = (p: string, i: number, to: string) => {
+    const n = cloneF(s);
+    moveF(n, p, i, to);
     autoF(n);
-    out.push(n);
+    out.push({ s: n, m: { p, i, to } });
   };
   const nc = s.cells.length;
   // foundation plays
-  for (let k = 0; k < nc; k++)
-    if (s.cells[k] >= 0 && fitsFoundF(s, s.cells[k])) {
-      const n = cloneF(s);
-      moveF(n, 'c' + k, 0, 'f');
-      push(n);
-    }
+  for (let k = 0; k < nc; k++) if (s.cells[k] >= 0 && fitsFoundF(s, s.cells[k])) push('c' + k, 0, 'f');
   for (let a = 0; a < 8; a++) {
     const col = s.cas[a];
-    if (col.length && fitsFoundF(s, col[col.length - 1])) {
-      const n = cloneF(s);
-      moveF(n, 't' + a, col.length - 1, 'f');
-      push(n);
-    }
+    if (col.length && fitsFoundF(s, col[col.length - 1])) push('t' + a, col.length - 1, 'f');
   }
   // cell to cascade
   for (let k = 0; k < nc; k++) {
@@ -194,9 +194,7 @@ function childrenF(s: FState, full: boolean): FState[] {
       const dst = s.cas[b];
       if (dst.length ? fitsOnF(c, dst[dst.length - 1]) : !emptyDone) {
         if (!dst.length) emptyDone = true;
-        const n = cloneF(s);
-        moveF(n, 'c' + k, 0, 't' + b);
-        push(n);
+        push('c' + k, 0, 't' + b);
       }
     }
   }
@@ -217,34 +215,22 @@ function childrenF(s: FState, full: boolean): FState[] {
         // find the card in the run that fits on t
         for (let i = Math.max(rs, col.length - lim); i < col.length; i++) {
           if (rank(col[i]) === need && isRed(col[i]) !== isRed(t)) {
-            const n = cloneF(s);
-            moveF(n, 't' + a, i, 't' + b);
-            push(n);
+            push('t' + a, i, 't' + b);
             break;
           }
         }
       } else if (!emptyDone) {
         emptyDone = true;
         const i = Math.max(rs, col.length - limE);
-        if (i > 0) {
-          const n = cloneF(s);
-          moveF(n, 't' + a, i, 't' + b);
-          push(n);
-        }
+        if (i > 0) push('t' + a, i, 't' + b);
         for (let j = i + 1; j < col.length; j++) {
           if (!full && j !== col.length - 1) continue;
-          const n = cloneF(s);
-          moveF(n, 't' + a, j, 't' + b);
-          push(n);
+          push('t' + a, j, 't' + b);
         }
       }
     }
     // to a free cell
-    if (s.cells.includes(-1)) {
-      const n = cloneF(s);
-      moveF(n, 't' + a, col.length - 1, 'c');
-      push(n);
-    }
+    if (s.cells.includes(-1)) push('t' + a, col.length - 1, 'c');
   }
   return out;
 }
@@ -252,18 +238,33 @@ function childrenF(s: FState, full: boolean): FState[] {
 /** Solver outcome: a winning line exists, no line exists, or the budget ran out first. */
 type Verdict = 'win' | 'dead' | 'unknown';
 
+/** Solver result with the winning line (moves from the given state; safe cards go home after each). */
+type FResult = { v: 'win'; line: FMove[] } | { v: 'dead' } | { v: 'unknown' };
+
 /**
  * Best-first search within `budget` expansions. 'dead' only when every reachable state was seen,
  * which needs `full` move generation.
  */
 export function solveF(s0: FState, budget = 3000, full = false): Verdict {
+  return searchF(s0, budget, full).v;
+}
+
+/** Like solveF, with the winning line. */
+export function searchF(s0: FState, budget = 3000, full = false): FResult {
+  type Node = { s: FState; f: number; up: Node | null; m: FMove | null };
+  const line = (n: Node) => {
+    const out: FMove[] = [];
+    for (let x: Node | null = n; x?.m; x = x.up) out.push(x.m);
+    return out.reverse();
+  };
   const start = cloneF(s0);
   autoF(start);
+  if (wonF(start)) return { v: 'win', line: [] };
   const seen = new Set<number>([hashF(start)]);
   // binary heap on score
-  const heap: { s: FState; f: number }[] = [];
-  const pushH = (s: FState, f: number) => {
-    heap.push({ s, f });
+  const heap: Node[] = [];
+  const pushH = (n: Node) => {
+    heap.push(n);
     let i = heap.length - 1;
     while (i > 0) {
       const p = (i - 1) >> 1;
@@ -291,19 +292,20 @@ export function solveF(s0: FState, budget = 3000, full = false): Verdict {
     }
     return top;
   };
-  pushH(start, scoreF(start));
-  if (wonF(start)) return 'win';
+  pushH({ s: start, f: scoreF(start), up: null, m: null });
   for (let n = 0; n < budget && heap.length; n++) {
-    const { s } = popH();
-    for (const c of childrenF(s, full)) {
-      if (wonF(c)) return 'win';
+    const node = popH();
+    for (const { s: c, m } of childrenF(node.s, full)) {
+      const kid: Node = { s: c, f: 0, up: node, m };
+      if (wonF(c)) return { v: 'win', line: line(kid) };
       const h = hashF(c);
       if (seen.has(h)) continue;
       seen.add(h);
-      pushH(c, scoreF(c));
+      kid.f = scoreF(c);
+      pushH(kid);
     }
   }
-  return heap.length || !full ? 'unknown' : 'dead';
+  return heap.length || !full ? { v: 'unknown' } : { v: 'dead' };
 }
 
 // ---------- generator ----------

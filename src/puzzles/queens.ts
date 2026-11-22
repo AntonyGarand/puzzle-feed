@@ -62,7 +62,8 @@ export const queens: PuzzleDef = {
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
     const n = byLevel(d, [4, 5, 6, 7, 8]);
-    const sol = rng.pick(allSolutions(n));
+    const sols = allSolutions(n);
+    const sol = rng.pick(sols);
     // One locked queen gives every board a different starting point.
     const lockedRow = rng.int(0, n - 1);
     const q: (number | null)[] = Array.from({ length: n }, (_, r) => (r === lockedRow ? sol[r] : null));
@@ -166,7 +167,7 @@ export const queens: PuzzleDef = {
         }
       }
       // No forced square: follow a full solution that fits the queens already placed.
-      const fit = allSolutions(n).find((cand) => q.every((x, r) => x == null || x === cand[r]));
+      const fit = sols.find((cand) => q.every((x, r) => x == null || x === cand[r]));
       if (!fit) return null;
       const r = free.reduce((a, b) =>
         [...Array(n).keys()].filter((c) => safe(b, c)).length < [...Array(n).keys()].filter((c) => safe(a, c)).length ? b : a,
@@ -182,6 +183,53 @@ export const queens: PuzzleDef = {
         play: () => tap(r, c),
       };
     };
-    return { snapshot: () => ({ q }), hint };
+    /** A queen to take back: one that attacks another, else one no solution can keep. */
+    const check = (): Hint | null => {
+      const fix = (r: number, text: string, why: number[]): Hint => ({
+        kind: 'fix',
+        text,
+        why: why.map((i) => cells[i]),
+        at: [cells[r * n + q[r]!]],
+        action: L('Remove it', 'L’enlever'),
+        play: () => {
+          if (q[r] != null) tap(r, q[r]!);
+        },
+      });
+      const fits = (qq: (number | null)[]) => sols.some((cand) => qq.every((x, r) => x == null || x === cand[r]));
+      for (let a = 0; a < n; a++)
+        for (let b = a + 1; b < n; b++) {
+          if (q[a] == null || q[b] == null || !attacks(a, q[a]!, b, q[b]!)) continue;
+          // Remove the one that isn't fixed, preferring the one no solution keeps.
+          const mine = [a, b].filter((r) => r !== lockedRow);
+          const r = mine.find((m) => !fits(q.map((x, rr) => (rr === m ? x : rr === lockedRow ? x : null)))) ?? mine[mine.length - 1];
+          const o = r === a ? b : a;
+          const how = q[a] === q[b] ? L('the same column', 'la même colonne') : L('a diagonal', 'une diagonale');
+          return fix(
+            r,
+            L(
+              `The queens in rows ${a + 1} and ${b + 1} attack each other: they share ${how}. Remove the one in row ${r + 1}.`,
+              `Les dames des rangées ${a + 1} et ${b + 1} se menacent : elles partagent ${how}. Enlevez celle de la rangée ${r + 1}.`,
+            ),
+            [o * n + q[o]!],
+          );
+        }
+      if (fits(q)) return null;
+      // No attack, but no full solution keeps all these queens: take back one that frees a solution.
+      const mine = [...Array(n).keys()].filter((r) => r !== lockedRow && q[r] != null);
+      const r =
+        mine.find((m) => fits(q.map((x, rr) => (rr === m ? null : x)))) ??
+        mine.find((m) => !fits(q.map((x, rr) => (rr === m || rr === lockedRow ? x : null)))) ??
+        mine[mine.length - 1];
+      if (r == null) return null;
+      return fix(
+        r,
+        L(
+          `The queen in row ${r + 1} attacks no one yet, but it leads to a dead end: no way of finishing the board keeps it there.`,
+          `La dame de la rangée ${r + 1} ne menace encore personne, mais elle mène à une impasse : aucune façon de finir la grille ne la garde là.`,
+        ),
+        [],
+      );
+    };
+    return { snapshot: () => ({ q }), hint, check };
   },
 };

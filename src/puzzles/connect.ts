@@ -347,8 +347,103 @@ export const connect: PuzzleDef = {
       return null;
     };
 
+    /**
+     * Visible dead ends only (the stored solution isn't the only one): a pair of dots that lines wall
+     * apart, or empty cells that no unfinished line can reach. The fix cuts back a line where it left
+     * the stored solution, starting with one next to the trouble.
+     */
+    const checkHint = (): Hint | null => {
+      if (finished) return null;
+      recompute();
+      const free = (i: number) => owner[i] < 0 && dot[i] < 0;
+      const comp = new Int32Array(N).fill(-1);
+      const regions: number[][] = [];
+      for (let i = 0; i < N; i++) {
+        if (!free(i) || comp[i] >= 0) continue;
+        const reg = [i];
+        comp[i] = regions.length;
+        for (let t = 0; t < reg.length; t++)
+          for (const j of nbrs(reg[t], n, n))
+            if (free(j) && comp[j] < 0) {
+              comp[j] = regions.length;
+              reg.push(j);
+            }
+        regions.push(reg);
+      }
+      /** Free regions touching cell i. */
+      const touching = (i: number) =>
+        new Set(
+          nbrs(i, n, n)
+            .map((j) => comp[j])
+            .filter((x) => x >= 0),
+        );
+      const route = (c: number) => (paths[c].length && paths[c][0] !== sol[c][0] ? [...sol[c]].reverse() : sol[c]);
+      const ends = (c: number) => {
+        const r = route(c);
+        return { head: paths[c].length ? paths[c][paths[c].length - 1] : r[0], target: r[r.length - 1] };
+      };
+      let trouble: { cells: number[]; why: number[]; text: string } | null = null;
+      for (let c = 0; c < k && !trouble; c++) {
+        if (complete(c)) continue;
+        const { head, target } = ends(c);
+        if (adjacent(head, target, n)) continue;
+        const a = touching(head),
+          b = touching(target);
+        if ([...a].some((x) => b.has(x))) continue;
+        trouble = {
+          cells: sol[c],
+          why: [head, target],
+          text: L(
+            'These two dots can’t be joined any more: other lines wall them apart.',
+            'Ces deux points ne peuvent plus être reliés : d’autres lignes les séparent.',
+          ),
+        };
+      }
+      if (!trouble) {
+        const open = [...Array(k).keys()].filter((c) => !complete(c)).map(ends);
+        const reg = regions.find((_, x) => !open.some((o) => touching(o.head).has(x) && touching(o.target).has(x)));
+        if (reg)
+          trouble = {
+            cells: reg,
+            why: reg,
+            text: L(
+              'No line can reach these empty cells any more, and every cell must be filled.',
+              'Aucune ligne ne peut plus atteindre ces cases vides, et toutes les cases doivent être remplies.',
+            ),
+          };
+      }
+      if (!trouble) return null;
+      // Lines that left the stored solution, closest to the trouble first.
+      const near = new Set(trouble.cells.flatMap((i) => [i, ...nbrs(i, n, n)]));
+      let pick: { c: number; m: number; score: number } | null = null;
+      for (let c = 0; c < k; c++) {
+        const p = paths[c],
+          r = route(c);
+        let m = 0;
+        while (m < p.length && p[m] === r[m]) m++;
+        if (m >= p.length) continue;
+        const score = p.slice(m).filter((i) => near.has(i)).length;
+        if (!pick || score > pick.score) pick = { c, m, score };
+      }
+      if (!pick) return null;
+      const { c, m } = pick;
+      const back = route(c)[Math.max(0, m - 1)];
+      return {
+        kind: 'fix',
+        text: `${trouble.text} ${L('Cut back this line.', 'Coupez cette ligne.')}`,
+        why: trouble.why.map((i) => cells[i]),
+        at: paths[c].slice(m).map((i) => cells[i]),
+        action: L('Cut it back', 'La couper'),
+        play: () => {
+          start(back);
+          active = -1;
+        },
+      };
+    };
+
     return {
       hint,
+      check: checkHint,
       snapshot: () => ({ paths }),
     };
   },

@@ -3,7 +3,7 @@ import { L } from '../core/i18n';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { edgeClasses, entryGame, entryHelpSteps } from './sudokukit/entry';
 import { jigsawRegions, regionTints } from './sudokukit/regions';
-import { entryPlace, entryVals, lineHUnits, makeHint } from './sudokukit/hint';
+import { entryPlace, entryVals, lineHUnits, makeCheck, makeHint, type HintOpts } from './sudokukit/hint';
 import { digHoles, lineUnits, solve, type Problem } from './sudokukit/solver';
 
 export const jigsawSudoku: PuzzleDef = {
@@ -87,7 +87,7 @@ export const jigsawSudoku: PuzzleDef = {
       cellClass: (i) => `${edgeClasses(region, n, n, i)} t${tint[region[i]] % 4}`,
       decorate: (el, i) => (cells[i] = el),
     });
-    inst.hint = makeHint({
+    const assist: HintOpts = {
       n,
       givens: puzzle,
       sol,
@@ -103,7 +103,9 @@ export const jigsawSudoku: PuzzleDef = {
       vals: entryVals(inst),
       place: entryPlace(inst, cells),
       scope: ['its row, column and shape', 'sa rangée, sa colonne et sa forme'],
-    });
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck(assist);
     return inst;
   },
 };

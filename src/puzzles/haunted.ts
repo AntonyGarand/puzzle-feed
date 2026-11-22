@@ -256,23 +256,72 @@ export const haunted: PuzzleDef = {
     const R = { paths, clue, on, totals };
     let lastKind = '';
     let taught = false;
-    const hint = (): Hint | null => {
+    /** A wrong monster (the answer is unique): a broken total or edge number first, else a dead end. */
+    const check = (): Hint | null => {
       if (done) return null;
-      const wrong = open.find((c) => vals[c] && vals[c] !== sol[c] && !givens[c]);
-      if (wrong !== undefined) {
-        const v = vals[wrong];
+      const wrongs = open.filter((c) => vals[c] && vals[c] !== sol[c] && !givens[c]);
+      if (!wrongs.length) return null;
+      const fix = (c: number, text: string, why: Element[] = []): Hint => {
+        const v = vals[c];
         return {
-          text: L(
-            `This ${kindName(v)} can’t stay: with it, the edge numbers and totals can no longer all work out. Clear it.`,
-            `Ce ${kindName(v)} ne peut pas rester : avec lui, les nombres du bord et les totaux ne peuvent plus tous être respectés. Effacez-le.`,
-          ),
-          at: [cells[wrong]],
+          kind: 'fix',
+          text,
+          why,
+          at: [cells[c]],
+          action: L(`Clear the ${kindName(v)}`, `Effacer le ${kindName(v)}`),
           play: () => {
-            select(wrong);
-            input(v);
+            select(c);
+            if (vals[c] === v) input(v);
           },
         };
+      };
+      for (const v of [GHOST, VAMPIRE, ZOMBIE]) {
+        const have = placed(v);
+        const c = wrongs.find((x) => vals[x] === v);
+        if (have > totals[v - 1] && c !== undefined)
+          return fix(
+            c,
+            L(
+              `There are ${have} ${kindPlural(v)} on the board, but only ${totals[v - 1]} in all.`,
+              `Il y a ${have} ${kindPlural(v)} sur la grille, mais seulement ${totals[v - 1]} en tout.`,
+            ),
+            [keyEls[v - 1]],
+          );
       }
+      const dom = domains();
+      for (let k = 0; k < clue.length; k++) {
+        if (!on[k]) continue;
+        const [lo, hi] = pathRange(paths[k], dom);
+        const t = clue[k];
+        const c = wrongs.find((x) => paths[k].cells.includes(x));
+        if ((t >= lo && t <= hi) || c === undefined) continue;
+        return fix(
+          c,
+          t < lo
+            ? L(
+                `This ${t} can no longer be met: its line already shows at least ${lo}.`,
+                `Ce ${t} ne peut plus être respecté : sa ligne en montre déjà au moins ${lo}.`,
+              )
+            : L(
+                `This ${t} can no longer be met: its line can show at most ${hi}.`,
+                `Ce ${t} ne peut plus être respecté : sa ligne en montre au plus ${hi}.`,
+              ),
+          [clueEls[k]],
+        );
+      }
+      const c = wrongs[0];
+      return fix(
+        c,
+        L(
+          `This ${kindName(vals[c])} breaks no rule yet, but it leads to a dead end: the edge numbers and totals can’t all work out with it.`,
+          `Ce ${kindName(vals[c])} ne brise encore aucune règle, mais il mène à une impasse : les nombres du bord et les totaux ne peuvent pas tous être respectés avec lui.`,
+        ),
+      );
+    };
+    const hint = (): Hint | null => {
+      if (done) return null;
+      const wrong = check();
+      if (wrong) return wrong;
       const base = domains();
       const cands: { kind: string; hint: Hint }[] = [];
       const shown = clue.flatMap((_, k) => (on[k] ? [k] : []));
@@ -428,6 +477,7 @@ export const haunted: PuzzleDef = {
     return {
       snapshot: () => ({ vals, sel, lit }),
       hint,
+      check,
       onKey(e) {
         const v = KEYS[e.key.toLowerCase()];
         if (v) {

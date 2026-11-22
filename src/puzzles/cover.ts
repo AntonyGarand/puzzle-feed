@@ -264,6 +264,33 @@ export const cover: PuzzleDef = {
       for (let j = 0; j < N; j++) if (!claimed(j) && adjacent(cols, i, j)) c++;
       return c;
     };
+    /** A trace in progress that no hidden word follows: mixed tiles of two words, or letters out of order. */
+    const check = (): Hint | null => {
+      if (won || !path.length) return null;
+      const k = owner[path[0]];
+      const w = path.map((i) => letters[i]).join('');
+      if (path.every((i) => owner[i] === k) && words[k].startsWith(w)) return null;
+      const bad = path.findIndex((i, j) => owner[i] !== k || words[k][j] !== letters[i]);
+      return {
+        kind: 'fix',
+        text:
+          bad === 0
+            ? L(
+                `No hidden word starts with this ${up(letters[path[0]])}. Let go and start from another tile.`,
+                `Aucun mot caché ne commence par ce ${up(letters[path[0]])}. Relâchez et partez d’une autre tuile.`,
+              )
+            : L(
+                `No hidden word runs ${up(w.slice(0, bad + 1))}: from the ${up(letters[path[bad - 1]])}, the word goes elsewhere. Start this trace over.`,
+                `Aucun mot caché ne suit ${up(w.slice(0, bad + 1))} : après le ${up(letters[path[bad - 1]])}, le mot va ailleurs. Recommencez ce tracé.`,
+              ),
+        at: path.map((i) => cells[i]),
+        action: L('Clear', 'Effacer'),
+        play: () => {
+          path = [];
+          render();
+        },
+      };
+    };
     const used = new Map<string, number>();
     let lastRule = '';
     const hint = (): Hint | null => {
@@ -359,6 +386,7 @@ export const cover: PuzzleDef = {
 
     let typed = '';
     return {
+      check,
       hint,
       snapshot: () => ({ f: found, r: shown, p: path }),
       onKey(e) {

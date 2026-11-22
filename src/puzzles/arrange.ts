@@ -357,9 +357,177 @@ export const arrange: PuzzleDef = {
         .join(' ');
     const solCells = (p: number) => pieces[p].shape.map(([r, c]) => (pieces[p].r + r) * cols + pieces[p].c + c);
     let lastRule = '';
+    /** A placed piece sits where the stored solution has it (same turn). */
+    const atHome = (p: number) => {
+      const o = place[p];
+      return !!o && o[0] === pieces[p].r && o[1] === pieces[p].c && shapeKey(shapeOf(p)) === shapeKey(pieces[p].shape);
+    };
+    const around = (j: number) => {
+      const r = Math.floor(j / cols),
+        c = j % cols;
+      return [r > 0 ? j - cols : -1, r < rows - 1 ? j + cols : -1, c > 0 ? j - 1 : -1, c < cols - 1 ? j + 1 : -1].filter((x) => x >= 0);
+    };
+    /** Connected groups of cells where `free` holds. */
+    const gaps = (free: (i: number) => boolean) => {
+      const seen = new Uint8Array(N);
+      const out: number[][] = [];
+      for (let i = 0; i < N; i++) {
+        if (!free(i) || seen[i]) continue;
+        const reg = [i];
+        seen[i] = 1;
+        for (let t = 0; t < reg.length; t++)
+          for (const x of around(reg[t]))
+            if (free(x) && !seen[x]) {
+              seen[x] = 1;
+              reg.push(x);
+            }
+        out.push(reg);
+      }
+      return out;
+    };
+    type Spot = { p: number; rot: number; r: number; c: number };
+    /**
+     * Fill the empty cells with the pieces left (turning them when allowed), placed pieces staying put.
+     * `capped`: ran out of budget, so null means "don't know".
+     */
+    const solveFill = (budget: number): { sol: Spot[] | null; capped: boolean } => {
+      recompute();
+      const occ = Array.from(owner, (o) => o >= 0);
+      const left = pieces.map((_, p) => p).filter((p) => !place[p]);
+      const forms = left.map((p) => {
+        const keys = new Set<string>();
+        const out: { rot: number; sh: Shape }[] = [];
+        for (const k of P.rotate ? [0, 1, 2, 3] : [rot[p]]) {
+          const sh = rotated(pieces[p].shape, k);
+          const key = shapeKey(sh);
+          if (keys.has(key)) continue;
+          keys.add(key);
+          out.push({ rot: k, sh });
+        }
+        return out;
+      });
+      const minSize = Math.min(...left.map((p) => pieces[p].shape.length));
+      const used = new Uint8Array(left.length);
+      const out: Spot[] = [];
+      let nodes = 0;
+      let capped = false;
+      const rec = (): boolean => {
+        const i = occ.indexOf(false);
+        if (i < 0) return true;
+        if (++nodes > budget) {
+          capped = true;
+          return false;
+        }
+        if (gaps((x) => !occ[x]).some((g) => g.length < minSize)) return false;
+        const R = Math.floor(i / cols),
+          C = i % cols;
+        const tried = new Set<string>();
+        for (let k = 0; k < left.length; k++) {
+          if (used[k]) continue;
+          for (const f of forms[k]) {
+            const key = shapeKey(f.sh);
+            if (tried.has(key)) continue;
+            tried.add(key);
+            const r0 = R - f.sh[0][0],
+              c0 = C - f.sh[0][1];
+            const ix = f.sh.map(([r, c]) => (r0 + r >= 0 && r0 + r < rows && c0 + c >= 0 && c0 + c < cols ? (r0 + r) * cols + c0 + c : -1));
+            if (ix.some((x) => x < 0 || occ[x])) continue;
+            for (const x of ix) occ[x] = true;
+            used[k] = 1;
+            out.push({ p: left[k], rot: f.rot, r: r0, c: c0 });
+            if (rec()) return true;
+            out.pop();
+            used[k] = 0;
+            for (const x of ix) occ[x] = false;
+            if (capped) return false;
+          }
+        }
+        return false;
+      };
+      const ok = rec();
+      return { sol: ok ? out : null, capped: !ok && capped };
+    };
+    /** Solver result for the current placement, kept until something moves or turns. */
+    let memo: { key: string; sol: Spot[] | null; capped: boolean } | null = null;
+    const solveHere = () => {
+      const key = JSON.stringify([place, P.rotate ? 0 : rot]);
+      if (memo?.key !== key) memo = { key, ...solveFill(4000) };
+      return memo;
+    };
+    const sendBack = (p: number) => () => {
+      if (finished || !place[p]) return;
+      ctx.touch();
+      place[p] = null;
+      settle();
+    };
+    /** Placed pieces that leave the empty cells impossible to fill: say why, and send one back. */
+    const check = (): Hint | null => {
+      if (finished) return null;
+      recompute();
+      const off = pieces.map((_, p) => p).filter((p) => place[p] && !atHome(p));
+      if (!off.length) return null;
+      const res = solveHere();
+      if (res.sol || res.capped) return null;
+      const left = pieces.map((_, p) => p).filter((p) => !place[p]);
+      const minSize = Math.min(...left.map((p) => pieces[p].shape.length));
+      // The smallest empty gap, and the misplaced piece that touches it most.
+      const gap = gaps((i) => owner[i] < 0).sort((a, b) => a.length - b.length)[0] ?? [];
+      const touch = (p: number) => gap.filter((i) => around(i).some((x) => owner[x] === p)).length;
+      const p = [...off].sort((a, b) => touch(b) - touch(a))[0];
+      const small = gap.length > 0 && gap.length < minSize;
+      return {
+        kind: 'fix',
+        text: small
+          ? L(
+              `This ${gap.length}-cell gap is smaller than every piece left: nothing can fill it. Send this piece back to the tray.`,
+              `Ce trou de ${gap.length} case${gap.length > 1 ? 's' : ''} est plus petit que toutes les pièces restantes : rien ne peut le remplir. Renvoyez cette pièce au bac.`,
+            )
+          : L(
+              'The pieces left can’t fill the gaps around this one: it leads to a dead end. Send it back to the tray.',
+              'Les pièces restantes ne peuvent pas remplir les trous autour de celle-ci : elle mène à une impasse. Renvoyez-la au bac.',
+            ),
+        why: small ? gap.map((i) => cells[i]) : [],
+        at: cells.filter((_, i) => owner[i] === p),
+        action: L('Send it back', 'La renvoyer'),
+        play: sendBack(p),
+      };
+    };
+    /** The board left the stored solution but can still be finished: follow the solver's way. */
+    const altHint = (sol: Spot[]): Hint | null => {
+      const sp = sol[0];
+      if (!sp) return null;
+      const sh = rotated(pieces[sp.p].shape, sp.rot);
+      if (shapeKey(shapeOf(sp.p)) !== shapeKey(sh))
+        return {
+          text: L(
+            'This piece has to turn to fit the next gap: tap it in the tray to rotate it a quarter turn.',
+            'Cette pièce doit tourner pour entrer dans le prochain trou : touchez-la dans le bac pour lui faire faire un quart de tour.',
+          ),
+          at: [trayEls[sp.p]],
+          play: () => turnPiece(sp.p),
+        };
+      return {
+        text: L(
+          'This piece fits the top-left gap and still leaves room for every other piece. Drag it in.',
+          'Cette pièce entre dans le trou en haut à gauche et laisse encore de la place à toutes les autres. Glissez-la dedans.',
+        ),
+        why: [trayEls[sp.p]],
+        at: sh.map(([r, c]) => cells[(sp.r + r) * cols + sp.c + c]),
+        play: () => {
+          if (finished) return;
+          ctx.touch();
+          place[sp.p] = [sp.r, sp.c];
+          settle();
+        },
+      };
+    };
     const hint = (): Hint | null => {
       if (finished) return null;
       recompute();
+      if (pieces.some((_, p) => place[p] && !atHome(p))) {
+        const res = solveHere();
+        if (res.sol) return altHint(res.sol);
+      }
       for (let p = 0; p < K; p++) {
         const o = place[p];
         if (!o) continue;
@@ -367,15 +535,11 @@ export const arrange: PuzzleDef = {
         const own = cells.filter((_, i) => owner[i] === p);
         return {
           text: L(
-            'This piece leaves gaps no other piece can fill. Tap it to send it back to the tray.',
-            'Cette pièce laisse des trous qu’aucune autre ne peut combler. Touchez-la pour la renvoyer au bac.',
+            'This piece is hard to work around where it is. Tap it to send it back to the tray, and the other pieces will fall into place.',
+            'Cette pièce gêne là où elle est. Touchez-la pour la renvoyer au bac : les autres trouveront leur place.',
           ),
           at: own,
-          play: () => {
-            ctx.touch();
-            place[p] = null;
-            settle();
-          },
+          play: sendBack(p),
         };
       }
       const left = pieces.map((_, p) => p).filter((p) => !place[p]);
@@ -493,6 +657,7 @@ export const arrange: PuzzleDef = {
     render();
     return {
       hint,
+      check,
       snapshot: () => ({ rot, place }),
       onKey(e) {
         if (!P.rotate || finished || (e.key !== 'r' && e.key !== 'R')) return false;

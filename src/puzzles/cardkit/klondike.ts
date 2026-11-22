@@ -204,6 +204,84 @@ export function hasProgress(s0: KState, r: KRules, cap = 3000): boolean {
   return rec(cloneK(s0));
 }
 
+/** Does a card the talon will show (now or after more draws) play somewhere right away? */
+export function talonPlays(s: KState, r: KRules): boolean {
+  return talonTops(s, r).some((c) => fitsFound(s, c) || s.tab.some((col) => fitsCol(col, c)));
+}
+
+/** A tableau move: card at pile `p` / index `i` (and its cover) to `to`. */
+export interface KMove {
+  p: string;
+  i: number;
+  to: string;
+}
+
+/** What the shuffles of a plan set up: a card going home, a hidden card turning over, or a talon card playing. */
+export type KGoal = 'home' | 'flip' | 'talon';
+
+/**
+ * Shortest series of tableau / foundation→tableau shuffles after which real progress is possible (the
+ * moves hasProgress explores), breadth first so following it one move at a time never loops. Cards in
+ * `keep` may not go home as the goal (they were just taken down from a foundation for the plan).
+ * Null when none is found within `cap` positions.
+ */
+export function progressPlan(
+  s0: KState,
+  r: KRules,
+  keep: ReadonlySet<Card> = new Set(),
+  cap = 3000,
+): { line: KMove[]; goal: KGoal } | null {
+  const tops = talonTops(s0, r);
+  const goal = (s: KState): KGoal | null => {
+    for (let a = 0; a < 7; a++) {
+      const col = s.tab[a];
+      if (!col.u.length) continue;
+      const c = col.u[col.u.length - 1];
+      // A card taken down from a foundation on the way doesn't count when it goes straight back.
+      if (fitsFound(s, c) && !keep.has(c) && rank(c) > s0.found[suit(c)]) return 'home';
+      if (col.d.length) for (let b = 0; b < 7; b++) if (b !== a && fitsCol(s.tab[b], col.u[0])) return 'flip';
+    }
+    for (const c of tops) if (fitsFound(s, c) || s.tab.some((col) => fitsCol(col, c))) return 'talon';
+    return null;
+  };
+  type Node = { s: KState; up: Node | null; m: KMove | null };
+  const start: Node = { s: cloneK(s0), up: null, m: null };
+  const seen = new Set<string>([keyK(start.s)]);
+  const queue: Node[] = [start];
+  for (let q = 0; q < queue.length && q < cap; q++) {
+    const node = queue[q];
+    const s = node.s;
+    const g = q ? goal(s) : null;
+    if (g) {
+      const line: KMove[] = [];
+      for (let x: Node | null = node; x?.m; x = x.up) line.push(x.m);
+      return { line: line.reverse(), goal: g };
+    }
+    const kid = (p: string, i: number, to: string) => {
+      const n = cloneK(s);
+      moveK(n, p, i, to);
+      const k = keyK(n);
+      if (seen.has(k)) return;
+      seen.add(k);
+      queue.push({ s: n, up: node, m: { p, i, to } });
+    };
+    for (let a = 0; a < 7; a++) {
+      const col = s.tab[a];
+      for (let j = 0; j < col.u.length; j++)
+        for (let b = 0; b < 7; b++) {
+          if (b === a || !fitsCol(s.tab[b], col.u[j])) continue;
+          if (!s.tab[b].u.length && j === 0) continue;
+          kid('t' + a, col.d.length + j, 't' + b);
+        }
+    }
+    for (let su = 0; su < 4; su++) {
+      if (!s.found[su]) continue;
+      for (let b = 0; b < 7; b++) if (fitsCol(s.tab[b], su * 13 + s.found[su] - 1)) kid('f' + su, 0, 't' + b);
+    }
+  }
+  return null;
+}
+
 /** All face-down cards revealed and the talon empty: the rest is mechanical. */
 export const trivialK = (s: KState) => !s.stock.length && !s.waste.length && s.tab.every((t) => !t.d.length);
 

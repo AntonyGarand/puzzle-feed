@@ -4,7 +4,7 @@ import { L } from '../core/i18n';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { h } from '../core/ui';
 import { entryGame, entryHelpSteps } from './sudokukit/entry';
-import { entryPlace, entryVals, makeHint } from './sudokukit/hint';
+import { entryPlace, entryVals, makeCheck, makeHint, type HintOpts } from './sudokukit/hint';
 import { revealUntilUnique, solve, type Problem, type Unit } from './sudokukit/solver';
 
 interface Run {
@@ -188,7 +188,7 @@ export const crossSums: PuzzleDef = {
         });
       },
     });
-    inst.hint = makeHint({
+    const assist: HintOpts = {
       n: 9,
       givens: puzzle,
       sol,
@@ -197,7 +197,9 @@ export const crossSums: PuzzleDef = {
       vals: entryVals(inst),
       place: entryPlace(inst, cellEls),
       scope: ['its two runs', 'ses deux segments'],
-    });
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck(assist);
     return inst;
   },
 };

@@ -4,7 +4,7 @@ import type { Rng } from '../core/rng';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { h } from '../core/ui';
 import { latinEntry, latinEntrySteps } from './latinkit/entry';
-import { and, cap, entryPlace, entryVals, isAre, lineHUnits, makeHint, or } from './sudokukit/hint';
+import { and, cap, entryPlace, entryVals, isAre, lineHUnits, makeCheck, makeHint, or, type Broken, type HintOpts } from './sudokukit/hint';
 import { latinConflicts, latinUnique, randomLatin, revealLatin, type Table } from './latinkit/solver';
 
 type Op = '+' | '−' | '×' | '÷' | '';
@@ -221,7 +221,59 @@ export const mathCages: PuzzleDef = {
       const sorted = [...vs].sort((a, b) => (c.op === '−' || c.op === '÷' ? b - a : a - b));
       return sorted.join(` ${c.op} `);
     };
-    inst.hint = makeHint({
+    /** A cage that misses its target, or can no longer reach it with the numbers already in it. */
+    const broken = (vals: number[]): Broken | null => {
+      for (let ci = 0; ci < cages.length; ci++) {
+        const c = cages[ci];
+        const vs = c.cells.map((i) => vals[i]);
+        const filled = c.cells.filter((i) => vals[i] > 0);
+        if (!filled.length) continue;
+        const why = [cellEls[c.cells[0]]];
+        if (c.op === '') {
+          if (vs[0] === c.target) continue;
+          return {
+            text: L(
+              `This cage is just “${c.target}”: its cell is ${c.target}.`,
+              `Cette cage affiche seulement « ${c.target} » : sa case vaut ${c.target}.`,
+            ),
+            why,
+            at: c.cells,
+          };
+        }
+        if (filled.length === c.cells.length) {
+          if (hits(c.op, c.target, vs)) continue;
+          const [a, b] = [Math.max(...vs), Math.min(...vs)];
+          const res =
+            c.op === '+' ? vs.reduce((x, y) => x + y, 0) : c.op === '×' ? vs.reduce((x, y) => x * y, 1) : c.op === '−' ? a - b : a / b;
+          const whole = Number.isInteger(res);
+          return {
+            text: L(
+              `${label(c)} needs ${c.target}, but ${show(c, vs)}${whole ? ` = ${res}` : ' isn’t a whole number'}.`,
+              `${label(c)} doit donner ${c.target}, mais ${show(c, vs)}${whole ? ` = ${res}` : ' ne tombe pas juste'}.`,
+            ),
+            why,
+            at: c.cells,
+          };
+        }
+        const m = c.cells.length;
+        const { tuples } = tables[ci];
+        let ok = false;
+        for (let t = 0; t < tuples.length && !ok; t += m) ok = c.cells.every((i, p) => !vals[i] || vals[i] === tuples[t + p]);
+        if (ok) continue;
+        const have = filled.map((i) => vals[i]);
+        const left = m - filled.length;
+        return {
+          text: L(
+            `${label(c)} needs ${c.target}: with ${and(have)} in it, no number${left > 1 ? 's' : ''} in the other cell${left > 1 ? 's' : ''} can get there.`,
+            `${label(c)} doit donner ${c.target} : avec ${and(have)}, aucun chiffre dans ${left > 1 ? 'les autres cases' : 'l’autre case'} ne peut y arriver.`,
+          ),
+          why,
+          at: filled,
+        };
+      }
+      return null;
+    };
+    const assist: HintOpts = {
       n,
       givens,
       sol,
@@ -296,7 +348,9 @@ export const mathCages: PuzzleDef = {
           return null;
         },
       },
-    });
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck({ ...assist, rules: [broken] });
     return inst;
   },
 };

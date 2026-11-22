@@ -3,7 +3,7 @@ import { L } from '../core/i18n';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { h, s } from '../core/ui';
 import { entryGame, entryHelpSteps } from './sudokukit/entry';
-import { and, entryPlace, entryVals, isAre, lineHUnits, makeHint } from './sudokukit/hint';
+import { and, entryPlace, entryVals, isAre, lineHUnits, makeCheck, makeHint, type HintOpts } from './sudokukit/hint';
 import { isUnique, lineUnits, revealUntilUnique, solve, type Problem } from './sudokukit/solver';
 
 export const unequal: PuzzleDef = {
@@ -85,7 +85,7 @@ export const unequal: PuzzleDef = {
       puzzle[c] = sol[c];
     }
 
-    const signsAt: [string, string, string][][] = Array.from({ length: n * n }, () => []);
+    const signsAt: [string, string, string, number][][] = Array.from({ length: n * n }, () => []);
     pairs.forEach(([a, b], k) => {
       if (!on[k]) return;
       const p = Math.min(a, b),
@@ -94,11 +94,12 @@ export const unequal: PuzzleDef = {
       const pSmaller = a === p;
       // chevron points towards the smaller cell
       const pts = across ? (pSmaller ? '66,14 30,50 66,86' : '34,14 70,50 34,86') : pSmaller ? '14,66 50,30 86,66' : '14,34 50,70 86,34';
-      signsAt[p].push([across ? 'r' : 'd', pts, across ? (pSmaller ? '<' : '>') : pSmaller ? '^' : 'v']);
+      signsAt[p].push([across ? 'r' : 'd', pts, across ? (pSmaller ? '<' : '>') : pSmaller ? '^' : 'v', k]);
     });
     const problem = prob();
     const lt = problem.lt ?? [];
     const cells: Element[] = [];
+    const signEls: Element[] = [];
     const inst = entryGame({
       ctx,
       cols: n,
@@ -107,9 +108,13 @@ export const unequal: PuzzleDef = {
       puzzle,
       boardClass: 'unequal',
       decorate(el, i) {
-        for (const [dir, pts, label] of signsAt[i]) {
+        for (const [dir, pts, label, k] of signsAt[i]) {
           el.append(
-            h('span', { class: `sg ${dir}`, 'data-sign': label }, s('svg', { viewBox: '0 0 100 100' }, s('polyline', { points: pts }))),
+            (signEls[k] = h(
+              'span',
+              { class: `sg ${dir}`, 'data-sign': label },
+              s('svg', { viewBox: '0 0 100 100' }, s('polyline', { points: pts })),
+            )),
           );
         }
         cells[i] = el;
@@ -124,7 +129,7 @@ export const unequal: PuzzleDef = {
         lo[b] = Math.max(lo[b], lo[a] + 1);
         hi[a] = Math.min(hi[a], hi[b] - 1);
       }
-    inst.hint = makeHint({
+    const assist: HintOpts = {
       n,
       givens: puzzle,
       sol,
@@ -204,6 +209,28 @@ export const unequal: PuzzleDef = {
           return null;
         },
       },
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck({
+      ...assist,
+      rules: [
+        // A sign that doesn't hold.
+        (vals) => {
+          for (let k = 0; k < pairs.length; k++) {
+            const [a, b] = pairs[k];
+            if (!on[k] || vals[a] <= 0 || vals[b] <= 0 || vals[a] < vals[b]) continue;
+            return {
+              text: L(
+                `The sign points at the smaller number, so ${vals[a]} should be smaller than ${vals[b]} here, and it isn’t.`,
+                `Le signe pointe vers le plus petit chiffre : ici, ${vals[a]} devrait être plus petit que ${vals[b]}, et ce n’est pas le cas.`,
+              ),
+              why: [signEls[k]],
+              at: [a, b],
+            };
+          }
+          return null;
+        },
+      ],
     });
     return inst;
   },

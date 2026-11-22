@@ -2041,3 +2041,51 @@ dialog.sheet::backdrop {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+/* In-game hint: outlines on the live board + a bubble over the footer. */
+.card {
+  position: relative;
+}
+.stage {
+  position: relative;
+}
+.hint-layer {
+  z-index: 3;
+}
+.icon-btn.hint-btn.on {
+  background: var(--accent);
+  color: var(--on-tone);
+}
+.hint-pop {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  animation: guide-in 0.2s ease-out both;
+}
+.hint-pop.fix,
+.hint-pop.stuck {
+  border-color: var(--bad);
+  box-shadow: var(--sh) var(--sh) 0 var(--bad);
+}
+.hint-pop p {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.hint-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}

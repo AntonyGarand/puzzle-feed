@@ -308,17 +308,61 @@ export const echo: PuzzleDef = {
       act(dir);
     });
 
-    /** The full recording for the current run in a working plan, or null if there's none any more. */
+    /** Search results per position (all runs so far), so check() and hint() don't search twice. */
+    const memo = new Map<string, string | null>();
+    /**
+     * The full recording for the current run in a working plan, or null if there's none (proven when
+     * `proven()` says so: the searches cover the last two runs; earlier ones only follow the stored plan).
+     */
     const plan = (): string | null => {
       const cur = runs.length - 1,
         mine = runs[cur];
       const onTrack = runs.slice(0, cur).every((r, k) => trimWaits(r) === room.sol[k]);
       if (onTrack && (room.sol[cur].startsWith(mine) || trimWaits(mine) === room.sol[cur])) return room.sol[cur];
       if (cur === R - 2) {
-        const f = search(room, tracks, T, true, mine);
-        return f ? trimWaits(f.echo) : null;
+        const key = runs.join('|');
+        if (!memo.has(key)) {
+          if (memo.size > 100) memo.clear();
+          const f = search(room, tracks, T, true, mine);
+          memo.set(key, f ? trimWaits(f.echo) : null);
+        }
+        return memo.get(key)!;
       }
       return null;
+    };
+    /** No way out is proven for the last two runs; an earlier run off the stored plan proves nothing. */
+    const proven = () => runs.length >= R - 1;
+    /** Dead end: no timing reaches the exit any more (proven by search). `play()` undoes a turn. */
+    const check = (): Hint | null => {
+      if (done || (runs.length === 1 && !runs[0])) return null;
+      const cur = runs.length - 1,
+        t = runs[cur].length,
+        pos = me[t];
+      const el = (i: number) => els.get(i)!;
+      const stuck = (text: string): Hint => ({ kind: 'stuck', text, at: [el(pos)], action: L('Undo', 'Annuler'), play: undo });
+      if (cur === R - 1) {
+        if (walk(room, tracks, pos, t, exit, T) != null) return null;
+        if (t >= T)
+          return stuck(
+            L(
+              `All ${T} turns of this run are used up and you aren’t at the exit. Undo a few turns.`,
+              `Les ${T} tours de cette boucle sont écoulés et vous n’êtes pas à la sortie. Annulez quelques tours.`,
+            ),
+          );
+        return stuck(
+          L(
+            `With ${T - t} ${T - t === 1 ? 'turn' : 'turns'} left, no route reaches the exit: your ${R > 2 ? 'echoes don’t' : 'echo doesn’t'} hold the plates when you get to the doors. Undo, and if that’s not enough, undo into the earlier run.`,
+            `Avec ${T - t} ${T - t === 1 ? 'tour restant' : 'tours restants'}, aucun trajet n’atteint la sortie : ${R > 2 ? 'vos échos ne tiennent' : 'votre écho ne tient'} pas les plaques quand vous arrivez aux portes. Annulez, et au besoin revenez dans la boucle précédente.`,
+          ),
+        );
+      }
+      if (!proven() || plan() != null) return null;
+      return stuck(
+        L(
+          'Whatever you do next in this run, your echo can’t hold the plates at the turns you’ll need them in the next one. Undo a turn and try another timing.',
+          'Quoi que vous fassiez ensuite dans cette boucle, votre écho ne pourra pas tenir les plaques aux tours où vous en aurez besoin à la suivante. Annulez un tour et essayez un autre minutage.',
+        ),
+      );
     };
     const hint = (): Hint | null => {
       if (done) return null;
@@ -326,14 +370,26 @@ export const echo: PuzzleDef = {
         t = runs[cur].length,
         pos = me[t];
       const el = (i: number) => els.get(i)!;
-      const back: Hint = {
-        text: L(
-          'From here, no timing gets the doors open when you need them. Undo a turn and try another timing.',
-          'À partir d’ici, aucun minutage n’ouvre les portes au bon moment. Annulez un tour et essayez un autre minutage.',
-        ),
-        at: [el(pos)],
-        play: undo,
-      };
+      const back: Hint = proven()
+        ? {
+            kind: 'stuck',
+            text: L(
+              'From here, no timing gets the doors open when you need them. Undo a turn and try another timing.',
+              'À partir d’ici, aucun minutage n’ouvre les portes au bon moment. Annulez un tour et essayez un autre minutage.',
+            ),
+            at: [el(pos)],
+            action: L('Undo', 'Annuler'),
+            play: undo,
+          }
+        : {
+            text: L(
+              'This run has left the plan that works for your later echoes. Undo this turn and follow it again.',
+              'Cette boucle s’écarte du plan qui fonctionne pour vos échos suivants. Annulez ce tour et reprenez-le.',
+            ),
+            at: [el(pos)],
+            action: L('Undo', 'Annuler'),
+            play: undo,
+          };
       /** Play a stretch of actions as one guide step. */
       const run = (acts: string) => () => {
         for (const ch of acts) if (!act(ACTS.indexOf(ch))) break;
@@ -481,6 +537,7 @@ export const echo: PuzzleDef = {
 
     return {
       snapshot: () => ({ r: runs }),
+      check,
       hint,
       activate: draw,
       destroy: () => ro.disconnect(),

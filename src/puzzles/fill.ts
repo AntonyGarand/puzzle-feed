@@ -233,26 +233,61 @@ export const fill: PuzzleDef = {
       endStroke();
     };
 
-    const hint = (): Hint | null => {
+    /** A wrong number (the answer is unique): one in a broken group first, with the rule it breaks. */
+    const check = (): Hint | null => {
       if (done) return null;
-      // A wrong number first: nothing else can be trusted until it's gone.
-      const wrong = vals.findIndex((v, i) => v > 0 && !given[i] && v !== sol[i]);
-      if (wrong >= 0) {
-        const v = vals[wrong];
+      const wrongs = vals.flatMap((v, i) => (v > 0 && !given[i] && v !== sol[i] ? [i] : []));
+      if (!wrongs.length) return null;
+      const rg = regions(n, vals);
+      // A red group of right numbers is boxed in by a wrong neighbour.
+      const boxer = wrongs.find((i) => !bad.has(i) && nb4(i, n, n).some((j) => bad.has(j) && vals[j] === sol[j] && vals[j] !== vals[i]));
+      const wrong = wrongs.find((i) => bad.has(i)) ?? boxer ?? wrongs[0];
+      const v = vals[wrong];
+      const group = rg.cells[rg.id[wrong]];
+      const size = group.length;
+      if (wrong === boxer) {
+        const j = nb4(wrong, n, n).find((x) => bad.has(x) && vals[x] === sol[x] && vals[x] !== v)!;
+        const w = vals[j];
         return {
-          text: bad.has(wrong)
-            ? L(
-                `This ${v} is in a group that can’t be ${v} cells: clear it and think again.`,
-                `Ce ${v} est dans un groupe qui ne peut pas compter ${v} cases : effacez-le et réfléchissez de nouveau.`,
-              )
-            : L(
-                `This ${v} leaves the numbers around it no way to finish their groups: clear it.`,
-                `Ce ${v} empêche les nombres autour de compléter leurs groupes : effacez-le.`,
-              ),
+          kind: 'fix',
+          text: L(
+            `This ${v} boxes in the group of ${w}s next to it before it reaches ${w} cells.`,
+            `Ce ${v} enferme le groupe de ${w} voisin avant qu’il atteigne ${w} cases.`,
+          ),
+          why: els(rg.cells[rg.id[j]]),
           at: [cells[wrong]],
+          action: L(`Clear the ${v}`, `Effacer le ${v}`),
           play: place(wrong, v),
         };
       }
+      return {
+        kind: 'fix',
+        text: !bad.has(wrong)
+          ? L(
+              `This ${v} breaks no rule yet, but it leads to a dead end: the numbers around it can’t all finish their groups.`,
+              `Ce ${v} ne brise encore aucune règle, mais il mène à une impasse : les nombres autour ne peuvent pas tous compléter leurs groupes.`,
+            )
+          : size > v
+            ? L(
+                `This group of ${v}s has ${size} cells: a ${v} groups exactly ${v} cells.`,
+                `Ce groupe de ${v} compte ${size} cases : un ${v} regroupe exactement ${v} cases.`,
+              )
+            : L(
+                `This group of ${v}s is boxed in at ${size} ${size === 1 ? 'cell' : 'cells'}: it can never reach ${v}.`,
+                `Ce groupe de ${v} est enfermé à ${size} case${size > 1 ? 's' : ''} : il ne pourra jamais atteindre ${v}.`,
+              ),
+        why: bad.has(wrong) ? els(group) : [],
+        at: [cells[wrong]],
+        action: L(`Clear the ${v}`, `Effacer le ${v}`),
+        play: place(wrong, v),
+      };
+    };
+
+    const hint = (): Hint | null => {
+      if (done) return null;
+      // A wrong number first: nothing else can be trusted until it's gone.
+      const fix = check();
+      if (fix) return fix;
       const rg = regions(n, vals);
       const { cand, join: jn, room } = candidates(n, max, vals, rg);
       const fresh = vals.every((v, i) => !v || given[i]);
@@ -398,6 +433,7 @@ export const fill: PuzzleDef = {
     return {
       snapshot: () => ({ vals, sel }),
       hint,
+      check,
       onKey(e) {
         const k = Number(e.key);
         if (k >= 1 && k <= max) {

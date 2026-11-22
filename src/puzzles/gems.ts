@@ -276,35 +276,67 @@ export const gems: PuzzleDef = {
       }
       if (hasMines && Number.isInteger(sv.boom)) boom = Math.max(0, Math.min(LIVES - 1, sv.boom as number));
     }
-    /** Shortest safe plan from the current spot and gems (BFS over position × collected mask). */
+    /** Shortest safe plan from the current spot and gems, kept until the position changes. */
+    let memo: { key: string; p: number[] | null } | null = null;
     const plan = (): number[] | null => {
-      const full = (1 << G) - 1;
-      const bit = (x: number) => (gemIdx.has(x) ? 1 << gemIdx.get(x)! : 0);
-      let m0 = 0;
-      for (const g of got) m0 |= bit(g);
-      const key = (i: number, m: number) => m * N + i;
-      const prev = new Map<number, [number, number]>([[key(at, m0), [-1, -1]]]);
-      const q = [key(at, m0)];
-      for (let qi = 0; qi < q.length; qi++) {
-        const st = q[qi];
-        const m = Math.floor(st / N),
-          i = st % N;
-        if (m === full) {
-          const out: number[] = [];
-          for (let x = st; prev.get(x)![0] >= 0; x = prev.get(x)![0]) out.push(prev.get(x)![1]);
-          return out.reverse();
-        }
+      const key = `${at}:${[...got].sort((x, y) => x - y).join(',')}`;
+      if (memo?.key !== key) memo = { key, p: solveGems(n, cell, at, P.gems, got) };
+      return memo.p;
+    };
+    /** Gems no slide from here can ever pass over (every spot the token can still reach is tried). */
+    const unreachable = () => {
+      const seen = new Set([at]);
+      const q = [at];
+      const passed = new Set<number>();
+      for (let k = 0; k < q.length; k++)
         for (let dir = 0; dir < 8; dir++) {
-          const s = slide(n, cell, i, dir);
+          const s = slide(n, cell, q[k], dir);
           if (!s.length || cell[s[s.length - 1]] === MINE) continue;
-          const ns = key(
-            s[s.length - 1],
-            s.reduce((a, x) => a | bit(x), m),
-          );
-          if (prev.has(ns)) continue;
-          prev.set(ns, [st, dir]);
-          q.push(ns);
+          for (const x of s) passed.add(x);
+          const e = s[s.length - 1];
+          if (!seen.has(e)) {
+            seen.add(e);
+            q.push(e);
+          }
         }
+      return P.gems.filter((g) => !got.has(g) && !passed.has(g));
+    };
+    /** Dead ends: a gem out of reach, or more slides needed than moves left. `play()` undoes a move. */
+    const check = (): Hint | null => {
+      if (finished || got.size === G || !hist.length) return null;
+      const p = plan();
+      const stuck = (text: string, why: Element[]): Hint => ({
+        kind: 'stuck',
+        text,
+        why,
+        at: [token],
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      });
+      if (!p) {
+        const far = unreachable();
+        return stuck(
+          far.length
+            ? L(
+                `From here no slide can ever reach ${far.length === 1 ? 'the outlined gem' : `the ${far.length} outlined gems`}: rocks and mines cut ${far.length === 1 ? 'it' : 'them'} off. Undo a move.`,
+                `D’ici, aucune glissade ne peut plus atteindre ${far.length === 1 ? 'la gemme encadrée' : `les ${far.length} gemmes encadrées`} : les rochers et les mines ${far.length === 1 ? 'la coupent' : 'les coupent'} de vous. Annulez un coup.`,
+              )
+            : L(
+                'From here no order of slides picks up every gem left. Undo a move.',
+                'D’ici, aucun ordre de glissades ne ramasse toutes les gemmes restantes. Annulez un coup.',
+              ),
+          far.map((g) => cells[g]),
+        );
+      }
+      if (limit && hist.length + p.length > limit) {
+        const left = limit - hist.length;
+        return stuck(
+          L(
+            `The ${G - got.size} gems left need at least ${p.length} more slides from here, but you only have ${left} ${left === 1 ? 'move' : 'moves'} left. Undo a move.`,
+            `Les ${G - got.size} gemmes restantes demandent encore au moins ${p.length} glissades d’ici, mais il ne vous reste que ${left} ${left === 1 ? 'coup' : 'coups'}. Annulez un coup.`,
+          ),
+          P.gems.filter((g) => !got.has(g)).map((g) => cells[g]),
+        );
       }
       return null;
     };
@@ -390,6 +422,7 @@ export const gems: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ v: 2, hist, boom }),
+      check,
       hint,
       onKey(e) {
         if (e.key === 'Backspace' || e.key === 'u' || e.key === 'U') {

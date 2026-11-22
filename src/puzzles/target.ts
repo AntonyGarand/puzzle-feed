@@ -161,7 +161,7 @@ export const target: PuzzleDef = {
           shake(chipRow);
           ctx.status(L('Not quite — undo and try again', 'Raté — annulez et réessayez'));
         }
-      } else if (!plan()) ctx.status(L('Target out of reach — undo', 'Cible hors d’atteinte — annulez'));
+      } else if (!reachable()) ctx.status(L('Target out of reach — undo', 'Cible hors d’atteinte — annulez'));
     };
     const tapOp = (o: Op) => {
       if (sel === null) return;
@@ -224,10 +224,44 @@ export const target: PuzzleDef = {
         [],
       );
     };
+    /** Whether the numbers left can still make the goal (memoised per multiset: check() then hint()). */
+    const reach = new Map<string, boolean>();
+    const reachable = () => {
+      const key = chips
+        .map((c) => c.v)
+        .sort((a, b) => a - b)
+        .join(',');
+      let ok = reach.get(key);
+      if (ok === undefined) reach.set(key, (ok = chips.length === 1 ? chips[0].v === goal : !!plan()));
+      return ok;
+    };
     const chipEl = (id: number) => chipRow.children[chips.findIndex((c) => c.id === id)];
+    /** Dead end: the numbers left can't make the goal any more. Undo the last merge (or reset). */
+    const check = (): Hint | null => {
+      if (!history.length || reachable()) return null;
+      const vals = chips.map((c) => c.v).join(', ');
+      return {
+        kind: 'stuck',
+        text:
+          chips.length === 1
+            ? L(
+                `The last number is ${chips[0].v}, not ${goal}. Undo and try another merge.`,
+                `Le dernier nombre est ${chips[0].v}, pas ${goal}. Annulez et essayez une autre fusion.`,
+              )
+            : L(
+                `No combination of ${vals} makes ${goal} any more. Undo the last merge.`,
+                `Aucune combinaison de ${vals} ne donne plus ${goal}. Annulez la dernière fusion.`,
+              ),
+        why: [goalEl],
+        at: [...chipRow.children],
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      };
+    };
     const opEl = (o: Op) => opRow.children[allOps.indexOf(o)];
     const hint = (): Hint | null => {
       if (chips.length < 2) return null;
+      if (!reachable()) return check();
       const p = plan(sel, op);
       if (!p) {
         // The current selection leads nowhere: drop it (same as tapping the selected number again).
@@ -301,6 +335,7 @@ export const target: PuzzleDef = {
 
     return {
       snapshot: () => ({ chips, history, nextId, sel }),
+      check,
       hint,
       onKey(e) {
         const map: Record<string, Op> = { '+': '+', '-': '−', '*': '×', x: '×', '/': '÷' };

@@ -51,6 +51,16 @@ export interface Hint {
   at: Element[];
   /** Make the move exactly as a player would (same code path as a tap). */
   play(): void;
+  /**
+   * What the hint is about (default `step`):
+   * - `step`: the next logical move.
+   * - `fix`: a mistake already on the board (a wrong entry, a broken rule). `play()` undoes it.
+   * - `stuck`: a dead end, no solution is reachable from here (boxed in, out of moves). `play()`
+   *   backs out of it (an undo, or a restart when there's no undo).
+   */
+  kind?: 'step' | 'fix' | 'stuck';
+  /** Label of the button that calls `play()` in the in-game hint bubble (default per kind). Use L(). */
+  action?: string;
 }
 
 export interface PuzzleCtx {
@@ -88,6 +98,14 @@ export interface PuzzleInstance {
    * Powers the step-by-step guide, so prefer moves a person can deduce (not just "the answer is X").
    */
   hint?(): Hint | null;
+  /**
+   * What's wrong with the current position, explained; null when the board is still on track.
+   * Return a `fix` hint for a mistake (a wrong entry, a broken rule: say which rule when it's visible,
+   * otherwise "this leads to a dead end") or a `stuck` hint when no solution is reachable any more.
+   * The in-game hint button asks `check()` first and only then `hint()`, so `hint()` may assume
+   * the board holds no mistake. Must be fast (well under 100 ms) and never change the board.
+   */
+  check?(): Hint | null;
   /** Serializable progress, restored through `ctx.saved`. */
   snapshot?(): unknown;
   destroy?(): void;

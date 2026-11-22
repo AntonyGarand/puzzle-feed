@@ -228,6 +228,106 @@ export const lightUp: PuzzleDef = {
         play: fill([j], 1),
       };
     };
-    return { snapshot: () => ({ st }), destroy: cleanup, hint };
+    /** A mark that breaks a visible rule, else one off the unique solution. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const sol = p.sol;
+      const wrongAt = (j: number) => !black[j] && ((st[j] === 1 && !sol[j]) || (st[j] === 2 && sol[j]));
+      const lit = (i: number) => sight[i].some((j) => st[j] === 1);
+      const fix = (i: number, text: string, why: number[] = []): Hint => ({
+        kind: 'fix',
+        text,
+        why: why.map((j) => cells[j]),
+        at: [cells[i]],
+        action: st[i] === 1 ? L('Remove the bulb', 'Retirer l’ampoule') : L('Clear the dot', 'Effacer le point'),
+        play: () => st[i] && set(i, 0),
+      });
+      // Two bulbs shining on each other.
+      for (let i = 0; i < n * n; i++) {
+        if (black[i] || st[i] !== 1) continue;
+        const j = sight[i].find((k) => k !== i && st[k] === 1);
+        if (j === undefined) continue;
+        const bad = wrongAt(i) ? i : wrongAt(j) ? j : -1;
+        if (bad >= 0)
+          return fix(
+            bad,
+            L(
+              'These two bulbs shine on each other, which is never allowed. This one has to go.',
+              'Ces deux ampoules s’éclairent l’une l’autre, ce qui est interdit. Celle-ci doit partir.',
+            ),
+            [i, j],
+          );
+      }
+      // A number with too many bulbs, or that can no longer get enough.
+      for (let c = 0; c < n * n; c++) {
+        if (!black[c] || num[c] < 0) continue;
+        const nb = nb4(c, n).filter((j) => !black[j]);
+        const k = num[c];
+        const bulbs = nb.filter((j) => st[j] === 1);
+        if (bulbs.length > k) {
+          const i = bulbs.find(wrongAt);
+          if (i !== undefined)
+            return fix(
+              i,
+              L(
+                `This ${k} touches ${bulbs.length} bulbs, more than ${k}. This bulb is one too many.`,
+                `Ce ${k} touche ${bulbs.length} ampoules, plus que ${k}. Cette ampoule est de trop.`,
+              ),
+              [c],
+            );
+        }
+        const room = nb.filter((j) => st[j] === 1 || (st[j] === 0 && !lit(j))).length;
+        if (room < k) {
+          // A dot on a side that needs a bulb, or a bulb lighting that side from afar.
+          const side = nb.find((j) => sol[j] && st[j] !== 1)!;
+          const i = st[side] === 2 ? side : sight[side].find((j) => st[j] === 1 && wrongAt(j));
+          if (i !== undefined)
+            return fix(
+              i,
+              st[i] === 2
+                ? L(
+                    `This ${k} can no longer get ${k} bulbs: too few of its sides are free. This dot is the mistake.`,
+                    `Ce ${k} ne peut plus recevoir ${k} ampoules : trop peu de ses côtés sont libres. Ce point est l’erreur.`,
+                  )
+                : L(
+                    `This ${k} can no longer get ${k} bulbs: this bulb lights one of its sides, which needs a bulb itself.`,
+                    `Ce ${k} ne peut plus recevoir ${k} ampoules : cette ampoule éclaire un de ses côtés, qui doit en avoir une.`,
+                  ),
+              [c],
+            );
+        }
+      }
+      // A dark cell that nothing can light any more.
+      for (let i = 0; i < n * n; i++) {
+        if (black[i] || lit(i) || sight[i].some((j) => st[j] === 0 && !lit(j))) continue;
+        const src = sight[i].find((j) => sol[j])!;
+        const j = st[src] === 2 ? src : sight[src].find((k) => st[k] === 1 && wrongAt(k));
+        if (j !== undefined)
+          return fix(
+            j,
+            L(
+              'The outlined cell can no longer be lit: every cell that sees it is dotted or lit by another bulb. This mark is the mistake.',
+              'La case encadrée ne peut plus être éclairée : toutes les cases qui la voient ont un point ou sont éclairées par une autre ampoule. Cette marque est l’erreur.',
+            ),
+            [i],
+          );
+      }
+      if (!p.unique) return null;
+      const i = st.findIndex((_, j) => wrongAt(j));
+      if (i < 0) return null;
+      return fix(
+        i,
+        st[i] === 1
+          ? L(
+              'This bulb breaks no rule yet, but it leads to a dead end: no bulb goes here. Remove it.',
+              'Cette ampoule ne brise encore aucune règle, mais elle mène à une impasse : aucune ampoule ne va ici. Retirez-la.',
+            )
+          : L(
+              'This dot breaks no rule yet, but it leads to a dead end: this cell needs a bulb. Clear it.',
+              'Ce point ne brise encore aucune règle, mais il mène à une impasse : cette case doit avoir une ampoule. Effacez-le.',
+            ),
+      );
+    };
+    return { snapshot: () => ({ st }), destroy: cleanup, hint, check };
   },
 };

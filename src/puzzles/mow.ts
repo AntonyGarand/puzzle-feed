@@ -3,6 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, shake } from '../core/ui';
 import { nb4, nb8 } from './logickit/kit';
 import { explain, explainCount } from './sweepkit/explain';
+import { wrongFlag } from './sweepkit/check';
 import { cellOf, gridPress } from './sweepkit/press';
 import { genField, pair, single, type Con, type Deduction } from './sweepkit/solve';
 import './sweepkit/kit.css';
@@ -270,10 +271,27 @@ export const mow: PuzzleDef = {
       return null;
     };
 
+    // A flag on grass without a mine is the only mistake that stays on the board (a mine hit ends in place).
+    const check = (): Hint | null =>
+      over
+        ? null
+        : wrongFlag({
+            flag,
+            mine,
+            count,
+            nbs,
+            cells,
+            open: (i) => mown[i],
+            known: (i) => boom[i],
+            name: (i) => String(count[i]),
+            unflag: toggleFlag,
+          });
+
     const list = (a: boolean[]) => a.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
     return {
       snapshot: () => ({ pos, mown: list(mown), flag: list(flag), boom: list(boom), mode: flagMode }),
       hint,
+      check,
       onKey(e) {
         const dir = KEYS[e.key];
         if (dir != null) {

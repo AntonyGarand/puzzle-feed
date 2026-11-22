@@ -309,6 +309,94 @@ export const dominoes: PuzzleDef = {
         play: lay(i, j),
       };
     };
-    return { snapshot: () => ({ mate, sel }), hint };
+    /** A domino that breaks the set (a pair twice), boxes a cell in or leaves a pair no spot, else one off the unique tiling. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const sol = p.mate;
+      const wrongAt = (i: number) => mate[i] >= 0 && mate[i] !== sol[i];
+      const name = (a: number, b: number) => `${Math.min(val[a], val[b])}-${Math.max(val[a], val[b])}`;
+      const fix = (i: number, text: string, why: Element[] = []): Hint => {
+        const j = mate[i];
+        return {
+          kind: 'fix',
+          text,
+          why,
+          at: [cells[i], cells[j]],
+          action: L('Remove it', 'L’enlever'),
+          play: () => {
+            if (mate[i] === j) toggle(i, j);
+          },
+        };
+      };
+      // The same pair placed twice.
+      const seen = new Map<number, number>();
+      for (let i = 0; i < N; i++) {
+        if (mate[i] < i) continue;
+        const k = pairIndex(val[i], val[mate[i]], n);
+        const o = seen.get(k);
+        if (o === undefined) {
+          seen.set(k, i);
+          continue;
+        }
+        const bad = wrongAt(i) ? i : wrongAt(o) ? o : -1;
+        if (bad >= 0)
+          return fix(
+            bad,
+            L(
+              `The ${name(i, mate[i])} is placed twice, but each pair is used once. This one is the wrong one.`,
+              `Le ${name(i, mate[i])} est posé deux fois, mais chaque paire ne sert qu’une fois. Celui-ci est le mauvais.`,
+            ),
+            [chips[k], cells[i], cells[mate[i]], cells[o], cells[mate[o]]],
+          );
+      }
+      const nbs = (i: number) => [i - cols, i + 1, i + cols, i - 1].filter((j) => adjacent(i, j) && j < N);
+      // A free cell whose neighbours are all taken: the domino on its partner-to-be is wrong.
+      for (let i = 0; i < N; i++) {
+        if (mate[i] >= 0 || nbs(i).some((j) => mate[j] < 0)) continue;
+        if (!wrongAt(sol[i])) continue;
+        return fix(
+          sol[i],
+          L(
+            `This ${val[i]} is boxed in: every neighbour is already in a domino, so it can never be paired. Remove this domino.`,
+            `Ce ${val[i]} est enfermé : toutes ses voisines sont déjà dans un domino, il ne pourra jamais être jumelé. Enlevez ce domino.`,
+          ),
+          [cells[i]],
+        );
+      }
+      // A pair not placed yet with no free spot left.
+      for (let i = 0; i < N; i++) {
+        const j = sol[i];
+        if (j < i || mate[i] === j) continue;
+        const k = pairIndex(val[i], val[j], n);
+        if (seen.has(k)) continue;
+        let spot = false;
+        for (let a = 0; a < N && !spot; a++)
+          if (mate[a] < 0)
+            for (const b of [a + 1, a + cols])
+              if (adjacent(a, b) && b < N && mate[b] < 0 && pairIndex(val[a], val[b], n) === k) spot = true;
+        if (spot) continue;
+        const bad = wrongAt(i) ? i : j;
+        if (!wrongAt(bad)) continue;
+        return fix(
+          bad,
+          L(
+            `The ${name(i, j)} has no free spot left on the board, but every pair must be placed. This domino takes its last spot.`,
+            `Le ${name(i, j)} n’a plus aucune place libre, mais chaque paire doit être posée. Ce domino lui prend sa dernière place.`,
+          ),
+          [chips[k]],
+        );
+      }
+      if (!p.unique) return null;
+      const i = mate.findIndex((_, x) => wrongAt(x));
+      if (i < 0) return null;
+      return fix(
+        i,
+        L(
+          `This ${name(i, mate[i])} breaks no rule yet, but it leads to a dead end: with it there, the other dominoes can’t all be placed. Remove it.`,
+          `Ce ${name(i, mate[i])} ne brise encore aucune règle, mais il mène à une impasse : s’il reste là, les autres dominos ne peuvent pas tous être placés. Enlevez-le.`,
+        ),
+      );
+    };
+    return { snapshot: () => ({ mate, sel }), hint, check };
   },
 };

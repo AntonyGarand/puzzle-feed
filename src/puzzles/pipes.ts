@@ -153,8 +153,11 @@ export const pipes: PuzzleDef = {
       return lit.size === n * n && loose === 0;
     };
     let done = false;
+    /** Tiles the player (or the guide) has turned: the scramble itself is never a mistake. */
+    const turned = new Set<number>();
     const turn = (i: number, k: number) => {
       ctx.touch();
+      turned.add(i);
       turns[i] += k;
       if (render()) {
         done = true;
@@ -295,10 +298,32 @@ export const pipes: PuzzleDef = {
         play: play(j, base[j]),
       };
     };
+    /** A tile you turned so a pipe points off the board: that can never be right. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      for (const i of turned) {
+        const sd = [0, 1, 2, 3].find((x) => cur(i) & DIRS[x].bit && nb(i, x) < 0);
+        if (sd == null) continue;
+        const k = turnsTo(i, base[i]);
+        return {
+          kind: 'fix',
+          text: L(
+            `This tile points ${['up', 'right', 'down', 'left'][sd]}, off the board: no pipe may lead out of the grid.`,
+            `Cette tuile pointe ${['vers le haut', 'vers la droite', 'vers le bas', 'vers la gauche'][sd]}, hors de la grille : aucun tuyau ne peut en sortir.`,
+          ),
+          at: [cells[i]],
+          action: L('Turn it', 'La tourner'),
+          play: () => {
+            for (let t = 0; t < Math.abs(k); t++) turn(i, Math.sign(k));
+          },
+        };
+      }
+      return null;
+    };
     const sv = ctx.saved as { turns?: number[] } | undefined;
     if (sv?.turns?.length === turns.length) sv.turns.forEach((t, i) => (turns[i] = t));
     root.append(grid);
     render();
-    return { hint, snapshot: () => ({ turns }) };
+    return { hint, check, snapshot: () => ({ turns }) };
   },
 };

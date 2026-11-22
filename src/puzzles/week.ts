@@ -593,56 +593,236 @@ export const week: PuzzleDef = {
       el.addEventListener('pointercancel', (e) => endDrag(e, true));
     }
 
-    /** Guide: follows the built plan, most hemmed-in open slot first. */
-    const hint = (): Hint | null => {
-      if (over) return null;
-      const own = owners();
-      const solCells = (j: number) => cellsAt(j, tasks[j].sol, 0);
-      const key = (cs: number[]) =>
-        cs
-          .slice()
-          .sort((a, b) => a - b)
-          .join(',');
-      const slotKeys = new Map<string, number>();
-      tasks.forEach((t, j) => {
-        if (t.sol >= 0) slotKeys.set(`${t.col}:${key(solCells(j))}`, j);
-      });
-      // A placed task off the plan: take it back.
+    // ---- Guide ----
+    type Put = { k: number; r: number; top: number; cells: number[] };
+    const sortKey = (cs: number[]) =>
+      cs
+        .slice()
+        .sort((a, b) => a - b)
+        .join(',');
+    /** The built plan's slots, by colour and cells: any task of that colour and shape fits a slot. */
+    const slotKeys = new Set<string>();
+    tasks.forEach((t, j) => {
+      if (t.sol >= 0) slotKeys.add(`${t.col}:${sortKey(cellsAt(j, t.sol, 0))}`);
+    });
+    /** Placed tasks that aren't on a slot of the built plan. */
+    const offPlan = () => pos.flatMap((p, k) => (p >= 0 && !slotKeys.has(`${tasks[k].col}:${sortKey(cellsAt(k, p))}`) ? [k] : []));
+    /** The rest of the built plan: each open slot with a tray task of its colour and shape (and the turn it needs). */
+    const planRest = (own: number[]): Put[] | null => {
+      const used = new Set<number>();
+      const out: Put[] = [];
+      for (const [j, t] of tasks.entries()) {
+        if (t.sol < 0) continue;
+        const cells = cellsAt(j, t.sol, 0);
+        if (cells.some((i) => own[i] >= 0)) continue;
+        let put: Put | null = null;
+        for (const x of [j, ...tasks.keys()]) {
+          if (pos[x] >= 0 || used.has(x) || tasks[x].col !== t.col) continue;
+          const r = [0, 1, 2, 3].find((q) => same(turn(tasks[x].shape, q), t.shape));
+          if (r !== undefined) {
+            put = { k: x, r, top: t.sol, cells };
+            break;
+          }
+        }
+        if (!put) return null;
+        used.add(put.k);
+        out.push(put);
+      }
+      return out;
+    };
+    /**
+     * A way to reach the target that keeps every placed task where it is: fills the hours in reading
+     * order, each with a tray task or left empty, pruned by the best score still possible. 'capped' when
+     * the search budget runs out (no proof either way), null when there is none.
+     */
+    const search = (own0: number[], budget = 8000): Put[] | null | 'capped' => {
+      const own = own0.map((k, i) => (busy[i] ? -3 : k));
+      // Tray tasks grouped by colour and shape (interchangeable), each with its distinct turns.
+      type Turn = { r: number; s: Shape; c0: number; e: { h: number; w: number }; off: number[] };
+      const groups: { ids: number[]; turns: Turn[] }[] = [];
+      const byKey = new Map<string, number>();
       for (let k = 0; k < T; k++) {
-        if (pos[k] < 0) continue;
+        if (pos[k] >= 0) continue;
+        const turns = [0, 1, 2, 3].map((r) => ({ r, s: turn(tasks[k].shape, r) }));
+        const gk = `${tasks[k].col}:${turns.map((x) => JSON.stringify(x.s)).sort()[0]}`;
+        const g = byKey.get(gk);
+        if (g != null) {
+          groups[g].ids.push(k);
+          continue;
+        }
+        byKey.set(gk, groups.length);
+        const uniq = turns.filter((x, q) => turns.findIndex((y) => same(y.s, x.s)) === q);
+        groups.push({ ids: [k], turns: uniq.map((x) => ({ ...x, c0: x.s[0][1], e: ext(x.s), off: x.s.map(([dr, dc]) => dr * C + dc) })) });
+      }
+      // Bigger tasks first: they are the hardest to fit later.
+      groups.sort((a, b) => b.turns[0].s.length - a.turns[0].s.length);
+      const left = groups.map((g) => g.ids.length);
+      // Running totals, updated cell by cell: placed hours, bonus edges, and edges that could still
+      // become a bonus (one end open, the other open or placed). Best score still possible = all three
+      // plus the open hours.
+      const colOf = (k: number) => tasks[k].col;
+      let placed = 0,
+        open = 0,
+        bonus = 0,
+        maybe = 0;
+      const bon = (x: number, y: number) => (x >= 0 && y >= 0 && x !== y && colOf(x) === colOf(y) ? 1 : 0);
+      const pot = (x: number, y: number) => ((x === -1 && (y >= 0 || y === -1)) || (y === -1 && x >= 0) ? 1 : 0);
+      const around = (i: number) => [i >= C ? i - C : -1, i + C < N ? i + C : -1, i % C ? i - 1 : -1, (i + 1) % C ? i + 1 : -1];
+      const nbrs = Array.from({ length: N }, (_, i) => around(i).filter((x) => x >= 0));
+      const count = (i: number, sign: number) => {
+        const x = own[i];
+        if (x >= 0) placed += sign;
+        else if (x === -1) open += sign;
+        for (const n of nbrs[i]) {
+          bonus += sign * bon(x, own[n]);
+          maybe += sign * pot(x, own[n]);
+        }
+      };
+      const set = (i: number, v: number) => {
+        count(i, -1);
+        own[i] = v;
+        count(i, 1);
+      };
+      for (let i = 0; i < N; i++) {
+        if (own[i] >= 0) placed++;
+        else if (own[i] === -1) open++;
+        for (const n of nbrs[i])
+          if (n > i) {
+            bonus += bon(own[i], own[n]);
+            maybe += pot(own[i], own[n]);
+          }
+      }
+      const path: (Put & { s: Shape })[] = [];
+      let nodes = 0;
+      const dfs = (from: number): boolean | 'capped' => {
+        if (++nodes > budget) return 'capped';
+        if (placed + bonus >= target) return true;
+        if (placed + bonus + open + maybe < target) return false;
+        let i = from;
+        while (i < N && own[i] !== -1) i++;
+        if (i >= N) return false;
+        const r0 = Math.floor(i / C);
+        for (let g = 0; g < groups.length; g++) {
+          if (!left[g]) continue;
+          const k = groups[g].ids[groups[g].ids.length - left[g]];
+          for (const t of groups[g].turns) {
+            const tc = (i % C) - t.c0;
+            if (tc < 0 || tc + t.e.w > C || r0 + t.e.h > R) continue;
+            const top = r0 * C + tc;
+            let free = true;
+            for (const o of t.off) if (own[top + o] !== -1) free = false;
+            if (!free) continue;
+            const cells = t.off.map((o) => top + o);
+            for (const x of cells) set(x, k);
+            left[g]--;
+            path.push({ k, r: t.r, s: t.s, top, cells });
+            const res = dfs(i + 1);
+            if (res) return res;
+            path.pop();
+            left[g]++;
+            for (const x of cells) set(x, -1);
+          }
+        }
+        set(i, -2);
+        const res = dfs(i + 1);
+        set(i, -1);
+        return res;
+      };
+      const res = dfs(0);
+      if (res === 'capped') return 'capped';
+      // Same group means same shape, but each task may need its own turn to get it.
+      return res
+        ? path.map(({ k, s, top, cells }) => ({ k, r: [0, 1, 2, 3].find((q) => same(turn(tasks[k].shape, q), s))!, top, cells }))
+        : null;
+    };
+    /** How to finish from here, kept until the board changes (check() then hint() search once). */
+    let memo: { key: string; rest: Put[] | null | 'capped' } | null = null;
+    const finish = () => {
+      const own = owners();
+      const key = own.join(',');
+      if (memo?.key !== key) memo = { key, rest: offPlan().length ? search(own) : planRest(own) };
+      return memo.rest;
+    };
+    /** Open hours next to task `k` that form a pocket too small for any task left in the tray, if any. */
+    const stranded = (k: number) => {
+      const own = owners();
+      const minSize = Math.min(...tasks.flatMap((t, x) => (pos[x] < 0 ? [t.shape.length] : [])));
+      const seen = new Set<number>();
+      const around = (x: number) => [x - C, x + C, x % C ? x - 1 : -1, (x + 1) % C ? x + 1 : -1];
+      for (const i of cellsAt(k, pos[k]))
+        for (const n0 of around(i)) {
+          if (n0 < 0 || n0 >= N || busy[n0] || own[n0] >= 0 || seen.has(n0)) continue;
+          const region = [n0];
+          seen.add(n0);
+          for (let q = 0; q < region.length; q++)
+            for (const y of around(region[q]))
+              if (y >= 0 && y < N && !busy[y] && own[y] < 0 && !seen.has(y)) {
+                seen.add(y);
+                region.push(y);
+              }
+          if (region.length < minSize) return region;
+        }
+      return null;
+    };
+    /**
+     * A placed task that puts the target out of reach (proved by the search, not just "off the guide's
+     * plan": any arrangement that still reaches the target is left alone).
+     */
+    const check = (): Hint | null => {
+      if (over || drag?.active) return null;
+      const off = offPlan();
+      if (!off.length || finish() !== null) return null;
+      const k = off[0];
+      const cs = cellsAt(k, pos[k]);
+      const gap = stranded(k);
+      return {
+        kind: 'fix',
+        text: gap
+          ? L(
+              `This task leaves ${gap.length === 1 ? 'a lone hour' : `a pocket of ${gap.length} hours`} that no task in the tray is small enough to fill, and with it here ${target} points are out of reach. Take it back.`,
+              `Cette tâche laisse ${gap.length === 1 ? 'une heure isolée' : `un trou de ${gap.length} heures`} qu’aucune tâche du bac n’est assez petite pour remplir, et avec elle ici, ${target} points sont hors d’atteinte. Reprenez-la.`,
+            )
+          : L(
+              `This task breaks no rule, but with it here no way of filling the other hours reaches ${target} points. Take it back.`,
+              `Cette tâche ne brise aucune règle, mais avec elle ici, aucune façon de remplir les autres heures n’atteint ${target} points. Reprenez-la.`,
+            ),
+        why: gap ? gap.map((i) => els[i]) : undefined,
+        at: cs.map((i) => els[i]),
+        action: L('Take it back', 'Reprendre'),
+        play: () => {
+          suppressClick = false;
+          tapCell(cs[0]);
+        },
+      };
+    };
+    /** Guide: one task of a way to reach the target from here, the most hemmed-in open slot first. */
+    const hint = (): Hint | null => {
+      if (over || drag?.active) return null;
+      const own = owners();
+      const rest = finish();
+      if (!Array.isArray(rest) || !rest.length) {
+        // The search gave up: take back a task the built plan has no room for (the plan finishes from there).
+        const k = offPlan()[0];
+        if (k == null) return null;
         const cs = cellsAt(k, pos[k]);
-        if (slotKeys.has(`${tasks[k].col}:${key(cs)}`)) continue;
         return {
           text: L(
             'This task blocks a better plan. Tap it to send it back to the tray.',
             'Cette tâche bloque un meilleur plan. Touchez-la pour la renvoyer dans le bac.',
           ),
           at: cs.map((i) => els[i]),
-          play: () => tapCell(cs[0]),
+          play: () => {
+            suppressClick = false;
+            tapCell(cs[0]);
+          },
         };
       }
-      let best: { j: number; k: number; r: number; cells: number[]; free: number; walls: number[] } | null = null;
-      for (const [j, t] of tasks.entries()) {
-        if (t.sol < 0) continue;
-        const cells = solCells(j);
-        if (cells.some((i) => own[i] >= 0)) continue;
-        const shape = t.shape;
-        // A task in the tray with this shape and colour (itself if it's still there).
-        let k = -1,
-          r = 0;
-        for (const x of [j, ...tasks.keys()]) {
-          if (pos[x] >= 0 || tasks[x].col !== t.col) continue;
-          const rr = [0, 1, 2, 3].find((q) => same(turn(tasks[x].shape, q), shape));
-          if (rr !== undefined) {
-            [k, r] = [x, rr];
-            break;
-          }
-        }
-        if (k < 0) continue;
-        const set = new Set(cells);
+      let best: (Put & { free: number; walls: number[] }) | null = null;
+      for (const put of rest) {
+        const set = new Set(put.cells);
         let free = 0;
         const walls: number[] = [];
-        for (const i of cells) {
+        for (const i of put.cells) {
           const ri = Math.floor(i / C),
             ci = i % C;
           for (const [y, x] of [
@@ -658,19 +838,18 @@ export const week: PuzzleDef = {
             else free++;
           }
         }
-        if (!best || free < best.free) best = { j, k, r, cells, free, walls };
+        if (!best || free < best.free) best = { ...put, free, walls };
       }
-      if (!best) return null;
-      const { j, k, r, cells, walls } = best;
-      const top = tasks[j].sol;
+      const { k, r, top, cells, walls } = best!;
       const sz = cells.length;
       const bonus = new Set<string>();
       for (const i of cells)
         for (const n of [i - C, i + C, i % C ? i - 1 : -1, (i + 1) % C ? i + 1 : -1])
           if (n >= 0 && n < N && own[n] >= 0 && tasks[own[n]].col === tasks[k].col) bonus.add(`${i}-${n}`);
       const play = () => {
+        suppressClick = false; // a pending end-of-drag click must not swallow the hint's taps
         if (sel !== k) tapSlot(k);
-        while (rot[k] !== r) rotate();
+        for (let q = 0; q < 4; q++) if (sel === k && rot[k] !== r) rotate();
         place(k, top);
       };
       const nb = bonus.size;
@@ -696,6 +875,7 @@ export const week: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ pos, rot, sel, hist }),
+      check,
       hint,
       onKey(e) {
         if (e.key === 'r' || e.key === 'R') {

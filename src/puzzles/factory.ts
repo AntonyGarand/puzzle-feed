@@ -1,7 +1,7 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h } from '../core/ui';
-import { applyOp, evaluate, genFactory, type Op } from './playkit/factory-gen';
+import { applyOp, canFinish, evaluate, genFactory, type Op } from './playkit/factory-gen';
 import './factory.css';
 
 /** "×2" → "× 2", for sums written out in the guide. */
@@ -288,6 +288,56 @@ export const factory: PuzzleDef = {
       }
       return { lane: r, parts };
     };
+    /** Send the tile in slot s back to the tray, as a tap on it does (dropping any selection first). */
+    const takeBack = (s: number) => {
+      if (sel >= 0) tapKey(sel);
+      tapSlot(s);
+    };
+    let memo: { key: string; ok: boolean | null } | null = null;
+    /** A tile that jams the belt, or one that leaves no way to hit every output. */
+    const check = (): Hint | null => {
+      if (done || place.every((t) => t < 0)) return null;
+      const ops = opsNow();
+      const { vals } = evaluate(F, ops);
+      for (let s = 0; s < slots.length; s++) {
+        const op = ops[s];
+        const i = slots[s];
+        const vin = i % cols ? vals[i - 1] : F.inputs[Math.floor(i / cols)];
+        if (!op || vin == null || applyOp(op, vin) != null) continue;
+        const why =
+          op[0] === '÷'
+            ? L(`${op} needs an even number, and ${vin} is odd`, `${op} demande un nombre pair, et ${vin} est impair`)
+            : op[0] === '−'
+              ? L(`${vin} ${spaced(op)} would go below zero`, `${vin} ${spaced(op)} passerait sous zéro`)
+              : L(`${vin} ${spaced(op)} is more than the belt can carry`, `${vin} ${spaced(op)} dépasse ce que le convoyeur peut porter`);
+        return {
+          kind: 'fix',
+          text: L(
+            `This ${op} jams the belt: ${why}. Send it back to the tray.`,
+            `Ce ${op} bloque le convoyeur : ${why}. Renvoyez-le au bac.`,
+          ),
+          at: [cellEls[i]],
+          action: L('Take back', 'Retirer'),
+          play: () => takeBack(s),
+        };
+      }
+      const key = place.join();
+      if (memo?.key !== key) memo = { key, ok: canFinish(F, ops) };
+      if (memo.ok !== false) return null;
+      const s = ops.findIndex((op, k) => op && op !== want[k]);
+      if (s < 0) return null;
+      return {
+        kind: 'fix',
+        text: L(
+          `This ${ops[s]} jams nothing, but with it here the tiles left can’t bring every output to its number. Send it back to the tray.`,
+          `Ce ${ops[s]} ne bloque rien, mais avec lui ici, les tuiles restantes ne peuvent pas amener chaque sortie à son nombre. Renvoyez-le au bac.`,
+        ),
+        why: outEls.filter((el): el is HTMLElement => !!el),
+        at: [cellEls[slots[s]]],
+        action: L('Take back', 'Retirer'),
+        play: () => takeBack(s),
+      };
+    };
     const hint = (): Hint | null => {
       if (done) return null;
       const s = slots.findIndex((_, k) => place[k] < 0 || tray[place[k]] !== want[k]);
@@ -306,7 +356,7 @@ export const factory: PuzzleDef = {
           ),
           why: [cellEls[i]],
           at: [at],
-          play: () => tapSlot(k),
+          play: () => takeBack(k),
         };
       }
       const { vals } = evaluate(F, opsNow());
@@ -334,6 +384,7 @@ export const factory: PuzzleDef = {
     };
 
     return {
+      check,
       hint,
       snapshot: () => ({ place, sel }),
       destroy() {

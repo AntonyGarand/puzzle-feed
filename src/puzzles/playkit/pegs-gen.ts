@@ -161,3 +161,61 @@ export function genPegs(rng: Rng, d: Difficulty): PegsPuzzle {
   }
   return best ?? cross();
 }
+
+/** What the solver knows about a position. */
+export type PegVerdict = { status: 'win'; next: Jump | null } | { status: 'dead' } | { status: 'capped' };
+
+/**
+ * Peg solver with memory: positions proven solvable keep their next jump, positions proven hopeless
+ * are remembered, and a search that runs out of budget proves nothing (it is never cached as dead).
+ */
+export function pegSolver(P: Pick<PegsPuzzle, 'cols' | 'rows' | 'holes' | 'diag' | 'goal'>) {
+  const win = new Map<string, Jump | null>();
+  const dead = new Set<string>();
+  const N = P.cols * P.rows;
+  const key = (p: boolean[]) => {
+    let s = '';
+    for (let i = 0; i < N; i += 30) {
+      let v = 0;
+      for (let j = i; j < Math.min(N, i + 30); j++) v = v * 2 + (p[j] ? 1 : 0);
+      s += `${v.toString(36)},`;
+    }
+    return s;
+  };
+  const won = (p: boolean[]) => {
+    let c = 0;
+    for (const v of p) if (v) c++;
+    return c === 1 && (P.goal < 0 || p[P.goal]);
+  };
+  return (peg: boolean[], budget: number): PegVerdict => {
+    let nodes = 0;
+    let capped = false;
+    const go = (p: boolean[]): boolean => {
+      if (won(p)) return true;
+      const k = key(p);
+      if (win.has(k)) return true;
+      if (dead.has(k)) return false;
+      if (++nodes > budget) {
+        capped = true;
+        return false;
+      }
+      for (const j of jumps(P, p)) {
+        p[j.from] = p[j.over] = false;
+        p[j.to] = true;
+        const ok = go(p);
+        p[j.from] = p[j.over] = true;
+        p[j.to] = false;
+        if (ok) {
+          win.set(k, j);
+          return true;
+        }
+        if (capped) return false;
+      }
+      dead.add(k);
+      return false;
+    };
+    const p = peg.slice();
+    if (go(p)) return { status: 'win', next: won(p) ? null : (win.get(key(p)) ?? null) };
+    return capped ? { status: 'capped' } : { status: 'dead' };
+  };
+}

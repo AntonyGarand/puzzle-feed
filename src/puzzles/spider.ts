@@ -3,7 +3,20 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, h, shake } from '../core/ui';
 import { cardEl, elAt, fan, label, leCard, pileEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
-import { bestDestS, canDealS, dealRow, genS, hasMoveS, moveS, pickedS, progressS, wonS, type SState } from './cardkit/spider';
+import {
+  bestDestS,
+  canDealS,
+  dealRow,
+  genS,
+  hasMoveS,
+  moveS,
+  pickedS,
+  progressPlanS,
+  progressS,
+  runStartS,
+  wonS,
+  type SState,
+} from './cardkit/spider';
 import { bindTable, History } from './cardkit/table';
 
 const TOP = 1.7;
@@ -85,7 +98,9 @@ export const spider: PuzzleDef = {
     ]);
     const runs = cfg.suits.length * cfg.copies;
     // Always winnable: dealt by playing a winning game (see genS).
-    let s = genS(rng, cfg.suits, cfg.copies, cfg.cols, cfg.dealt, cfg.help).s;
+    const built = genS(rng, cfg.suits, cfg.copies, cfg.cols, cfg.dealt, cfg.help);
+    built.s = structuredClone(built.s);
+    let s = structuredClone(built.s);
     const hist = new History<SState>(60);
     const sv = ctx.saved as { s?: unknown; hist?: unknown } | undefined;
     if (sv && validState(sv.s, cfg)) {
@@ -100,6 +115,7 @@ export const spider: PuzzleDef = {
       ctx.status(`${L('Runs', 'Suites')} ${s.done.length}/${runs} · ${L('Deals', 'Donnes')} ${deals} · ${L('Moves', 'Coups')} ${s.moves}`);
     };
 
+    const colCache: ({ key: string; el: HTMLElement } | undefined)[] = [];
     const render = () => {
       const kids: HTMLElement[] = [];
       const sp = pileEl('s', 0, 0);
@@ -113,7 +129,15 @@ export const spider: PuzzleDef = {
       s.done.forEach((su, k) => dp.append(cardEl(su * 13 + 12, true, 'done', k, `--dx:${k * 0.32}`, 'lock')));
       kids.push(dp);
       s.cols.forEach((col, k) => {
+        // Columns a move didn't touch keep their elements (most of the table, most of the time).
+        const key = col.d.length + ':' + col.u.join('.');
+        const kept = colCache[k];
+        if (kept?.key === key) {
+          kids.push(kept.el);
+          return;
+        }
         const tp = pileEl('t' + k, k, TOP, cfg.tab);
+        colCache[k] = { key, el: tp };
         tp.append(slotEl('t' + k));
         const ys = fan(col.d.length, col.u.length, cfg.tab, 0.18, 0.42);
         col.d.forEach((c, i) => tp.append(cardEl(c, false, 't' + k, i, `--y:${ys[i]}`)));
@@ -123,6 +147,8 @@ export const spider: PuzzleDef = {
       table.replaceChildren(...kids);
     };
 
+    /** Set while the guide plays a move of the deal's winning line: the position stays winnable, no need to check. */
+    let onWinningLine = false;
     const after = () => {
       render();
       if (wonS(s)) {
@@ -137,7 +163,7 @@ export const spider: PuzzleDef = {
         return;
       }
       // No deal left and no way to turn a card or finish a run: shuffling runs around can't win.
-      if (!hasMoveS(s) || !progressS(s)) {
+      if (!onWinningLine && (!hasMoveS(s) || !progressS(s))) {
         over = true;
         ctx.status(L('No useful moves left', 'Plus aucun coup utile'));
         ctx.failed();
@@ -147,7 +173,7 @@ export const spider: PuzzleDef = {
     };
 
     const bump = (p: string, i: number) => {
-      const el = table.querySelector(`[data-p="${p}"][data-i="${i}"]`);
+      const el = elAt(table, p, i);
       if (el) shake(el);
     };
 
@@ -209,64 +235,74 @@ export const spider: PuzzleDef = {
     render();
     status();
 
-    let lastRule = '';
-    const hint = (): Hint | null => {
-      if (over) return null;
-      type M = { a: number; i: number; b: number; rule: string; rank: number };
-      const moves: M[] = [];
+    /** Fast deep copy of a position. */
+    const copy = (x: SState): SState => ({
+      cols: x.cols.map((c) => ({ d: c.d.slice(), u: c.u.slice() })),
+      stock: x.stock.slice(),
+      done: x.done.slice(),
+      moves: x.moves,
+    });
+    /** Exact position key (column order matters to replay a line). */
+    const keyOf = (x: SState) => JSON.stringify([x.cols, x.stock.length, x.done.length]);
+    type Mv = [number, number, number] | null;
+    /**
+     * A line the guide follows while the player stays on it, with the position expected before each
+     * move: first the deal's own winning line, later a short series of shuffles toward a turned card.
+     */
+    let deal0: { keys: string[]; line: Mv[] } | null = null;
+    let plan: { keys: string[]; line: Mv[] } | null = null;
+    const follow = (l: { keys: string[]; line: Mv[] } | null): Mv | undefined => {
+      const at = l ? l.keys.indexOf(keyOf(s)) : -1;
+      return at >= 0 ? l!.line[at] : undefined;
+    };
+    const lineFrom = (x0: SState, line: Mv[]) => {
+      const keys: string[] = [];
+      const x = copy(x0);
+      for (const m of line) {
+        keys.push(keyOf(x));
+        if (m) moveS(x, 't' + m[0], m[1], 't' + m[2]);
+        else dealRow(x);
+      }
+      return { keys, line };
+    };
+    /** Face-down cards, stock and unfinished cards: drops with every real step forward. */
+    const measure = () => s.stock.length + s.cols.reduce((a, c) => a + c.d.length, 0) - s.done.length * 100;
+
+    /** Kind of move, for the lesson: completes a run, turns a card, joins same suits, or just makes room. */
+    const ruleOf = (a: number, i: number, b: number) => {
+      const src = s.cols[a];
+      const k = i - src.d.length;
+      const c = src.u[k];
+      const reveals = k === 0 && src.d.length > 0;
+      const dst = s.cols[b].u[s.cols[b].u.length - 1];
+      const same = dst != null && suit(dst) === suit(c);
+      const sim = copy(s);
+      moveS(sim, 't' + a, i, 't' + b);
+      if (sim.done.length > s.done.length) return 'done';
+      if (dst == null) return reveals ? 'empty' : s.stock.length && !canDealS(s) && canDealS(sim) ? 'fill' : 'room';
+      if (reveals) return same ? 'reveal' : 'mixed';
+      if (same && k === 0 && !src.d.length) return 'clear';
+      if (same && k > 0 && (suit(src.u[k - 1]) !== suit(c) || rank(src.u[k - 1]) !== rank(c) + 1)) return 'build';
+      return 'shift';
+    };
+
+    const dealHint = (): Hint => {
       const n = s.cols.length;
-      for (let a = 0; a < n; a++) {
-        const src = s.cols[a];
-        for (let k = 0; k < src.u.length; k++) {
-          const i = src.d.length + k;
-          if (!pickedS(s, 't' + a, i)) continue;
-          const c = src.u[k];
-          const reveals = k === 0 && src.d.length > 0;
-          for (let b = 0; b < n; b++) {
-            if (b === a || !moveS(s, 't' + a, i, 't' + b, true)) continue;
-            const dst = s.cols[b].u[s.cols[b].u.length - 1];
-            const same = dst != null && suit(dst) === suit(c);
-            // Would this finish a K→A run?
-            const sim: typeof s = { ...s, cols: s.cols.map((x) => ({ d: x.d.slice(), u: x.u.slice() })), done: s.done.slice() };
-            moveS(sim, 't' + a, i, 't' + b);
-            const completes = sim.done.length > s.done.length;
-            let rule = '';
-            if (completes) rule = 'done';
-            else if (dst == null) rule = reveals ? 'empty' : '';
-            else if (reveals) rule = same ? 'reveal' : 'mixed';
-            else if (same && k === 0 && !src.d.length) rule = 'clear';
-            else if (same && k > 0 && (suit(src.u[k - 1]) !== suit(c) || rank(src.u[k - 1]) !== rank(c) + 1)) rule = 'build';
-            if (rule)
-              moves.push({
-                a,
-                i,
-                b,
-                rule,
-                rank: ['done', 'reveal', 'clear', 'mixed', 'build', 'empty'].indexOf(rule) * 100 - src.d.length,
-              });
-          }
-        }
-      }
-      moves.sort((x, y) => x.rank - y.rank);
-      if (!moves.length) {
-        if (!canDealS(s)) return null;
-        lastRule = 'deal';
-        return {
-          text: L(
-            `No useful move left: tap the stock to deal a new row, one card on every column. ${s.stock.length / n === 1 ? 'This is the last one.' : `The stock holds ${s.stock.length / n}.`}`,
-            `Plus de coup utile : touchez la pioche pour donner une nouvelle rangée, une carte par colonne. ${s.stock.length / n === 1 ? 'C’est la dernière.' : `La pioche en contient ${s.stock.length / n}.`}`,
-          ),
-          at: [topEl(table, 's')!],
-          play: deal,
-        };
-      }
-      // Best move first; vary the lesson only between moves that also turn a card over.
-      const m = moves.find((x) => x.rule !== lastRule && x.rank < moves[0].rank + 300 && x.rule !== 'build') ?? moves[0];
-      lastRule = m.rule;
-      const src = s.cols[m.a];
-      const c = src.u[m.i - src.d.length];
-      const cnt = src.u.length - (m.i - src.d.length);
-      const dst = s.cols[m.b].u[s.cols[m.b].u.length - 1];
+      return {
+        text: L(
+          `No useful move left: tap the stock to deal a new row, one card on every column. ${s.stock.length / n === 1 ? 'This is the last one.' : `The stock holds ${s.stock.length / n}.`}`,
+          `Plus de coup utile : touchez la pioche pour donner une nouvelle rangée, une carte par colonne. ${s.stock.length / n === 1 ? 'C’est la dernière.' : `La pioche en contient ${s.stock.length / n}.`}`,
+        ),
+        at: [topEl(table, 's')!],
+        play: deal,
+      };
+    };
+
+    const moveHint = (a: number, i: number, b: number, rule = ruleOf(a, i, b)): Hint => {
+      const src = s.cols[a];
+      const c = src.u[i - src.d.length];
+      const cnt = src.u.length - (i - src.d.length);
+      const dst = s.cols[b].u[s.cols[b].u.length - 1];
       const what =
         cnt > 1 ? L(`the ${label(c)} run (${cnt} cards)`, `la suite du ${label(c)} (${cnt} cartes)`) : L(`the ${label(c)}`, leCard(c));
       const dn = dst != null ? label(dst) : '';
@@ -295,13 +331,205 @@ export const spider: PuzzleDef = {
           `An empty column takes any card: move ${what} there and turn over the hidden card it covered.`,
           `Une colonne vide accepte n’importe quelle carte : déplacez-y ${what} et retournez la carte cachée qu’elle couvrait.`,
         ),
+        fill: L(
+          `You can only deal when every column holds a card: move ${what} into the empty column.`,
+          `On ne peut donner que si chaque colonne a une carte : déplacez ${what} dans la colonne vide.`,
+        ),
+        room: L(
+          `An empty column takes any card: park ${what} there to make room for the next useful move.`,
+          `Une colonne vide accepte n’importe quelle carte : placez-y ${what} pour faire de la place au prochain coup utile.`,
+        ),
+        shift: L(
+          `Move ${what} onto the ${dn} (one lower): it makes room for the next useful move.`,
+          `Déplacez ${what} sur le ${dn} (une valeur de moins) : ça fait de la place au prochain coup utile.`,
+        ),
       };
       return {
-        text: texts[m.rule],
-        why: Array.from({ length: cnt }, (_, j) => elAt(table, 't' + m.a, m.i + j)!),
-        at: [topEl(table, 't' + m.b)!],
-        play: () => go('t' + m.a, m.i, 't' + m.b),
+        text: texts[rule],
+        why: Array.from({ length: cnt }, (_, j) => elAt(table, 't' + a, i + j)!),
+        at: [topEl(table, 't' + b)!],
+        play: () => go('t' + a, i, 't' + b),
       };
+    };
+    /**
+     * The deal's line wanders (it was found by a greedy player): when one move reaches a position
+     * further along it, take that move instead.
+     */
+    let lineAt: Map<string, number> | null = null;
+    const shortcut = (): [number, number, number] | null => {
+      if (!deal0) return null;
+      if (!lineAt) {
+        lineAt = new Map();
+        deal0.keys.forEach((k, j) => lineAt!.set(k, j));
+      }
+      const here = lineAt.get(keyOf(s)) ?? -1;
+      let best: [number, number, number] | null = null;
+      let far = here + 1;
+      s.cols.forEach((col, a) => {
+        for (let k = runStartS(col.u); k < col.u.length; k++)
+          for (let b = 0; b < s.cols.length; b++) {
+            const i = col.d.length + k;
+            if (b === a || !moveS(s, 't' + a, i, 't' + b, true)) continue;
+            const x = copy(s);
+            moveS(x, 't' + a, i, 't' + b);
+            const j = lineAt!.get(keyOf(x)) ?? -1;
+            if (j > far) {
+              far = j;
+              best = [a, i, b];
+            }
+          }
+      });
+      return best;
+    };
+    const lineHint = (m: [number, number, number] | null) => (m ? moveHint(...m) : dealHint());
+
+    /** Hints given since the last real step forward, give-ups since the best position, and the best. */
+    let idle = 0;
+    let lastMeasure = NaN;
+    let giveUps = 0;
+    let best = Infinity;
+    /** Is some position in the undo history on the deal's winning line? */
+    const lineBehind = () => {
+      shortcut(); // builds lineAt
+      return !!lineAt?.size && hist.stack.some((j) => lineAt!.has(keyOf(JSON.parse(j) as SState)));
+    };
+    /** Undoing back to the deal's winning line, after the guide got stuck off it. */
+    let rewinding = false;
+    const stuckHint = (): Hint | null => {
+      rewinding = lineBehind();
+      if (rewinding)
+        return {
+          kind: 'stuck',
+          text: L(
+            'The guide finds no useful move from here. Undo back to the last position it knows how to win from.',
+            'Le guide ne trouve aucun coup utile d’ici. Annulez jusqu’à la dernière position d’où il sait gagner.',
+          ),
+          at: [topEl(table, 's')!],
+          action: L('Undo', 'Annuler'),
+          play: () => {
+            // Several undos at once, drawn once.
+            for (let prev = hist.pop(); prev; prev = lineAt?.has(keyOf(prev)) ? null : hist.pop()) s = prev;
+            ctx.touch();
+            render();
+            status();
+          },
+        };
+      return hist.size && ++giveUps <= 3
+        ? {
+            kind: 'stuck',
+            text: L(
+              'The guide finds no useful move from here: no card can be turned over, no run finished and no row dealt. Undo a few moves and try another way.',
+              'Le guide ne trouve aucun coup utile d’ici : aucune carte à retourner, aucune suite à finir ni rangée à donner. Annulez quelques coups et essayez autrement.',
+            ),
+            at: [topEl(table, 's')!],
+            action: L('Undo', 'Annuler'),
+            play: undo,
+          }
+        : null;
+    };
+
+    /** Would this move (null: a deal) end the game without a win? The guide never suggests that. */
+    const loses = (m: Mv) => {
+      const x = copy(s);
+      if (m) moveS(x, 't' + m[0], m[1], 't' + m[2]);
+      else dealRow(x);
+      return !wonS(x) && (!hasMoveS(x) || !progressS(x));
+    };
+    /** Positions where no shuffle leads to a turned card (searched once). */
+    const noPlan = new Set<string>();
+    let lastRule = '';
+    const hint = (): Hint | null => {
+      if (over) return null;
+      const now = measure();
+      if (now !== lastMeasure) {
+        lastMeasure = now;
+        idle = 0;
+      }
+      if (now < best) {
+        best = now;
+        giveUps = 0;
+      }
+      // The deal's own winning line, as long as the player is on it.
+      deal0 ??= built.line ? lineFrom(built.s, built.line) : { keys: [], line: [] };
+      const onLine = follow(deal0);
+      if (onLine !== undefined) {
+        rewinding = false;
+        const step = lineHint(shortcut() ?? onLine);
+        return {
+          ...step,
+          play: () => {
+            onWinningLine = true;
+            try {
+              step.play();
+            } finally {
+              onWinningLine = false;
+            }
+          },
+        };
+      }
+      if (rewinding) return stuckHint();
+      // Going round in circles: say so (a few times at most) instead of shuffling forever.
+      if (giveUps >= 3) return null;
+      if (++idle > 60) {
+        idle = 0;
+        return stuckHint();
+      }
+      const onPlan = follow(plan);
+      if (onPlan !== undefined && !loses(onPlan)) return lineHint(onPlan);
+      // Moves that turn a card over or finish a run: always a step forward.
+      type M = { a: number; i: number; b: number; rule: string; rank: number };
+      const moves: M[] = [];
+      const n = s.cols.length;
+      for (let a = 0; a < n; a++) {
+        const src = s.cols[a];
+        for (let k = 0; k < src.u.length; k++) {
+          const i = src.d.length + k;
+          if (!pickedS(s, 't' + a, i)) continue;
+          for (let b = 0; b < n; b++) {
+            if (b === a || !moveS(s, 't' + a, i, 't' + b, true)) continue;
+            const rule = ruleOf(a, i, b);
+            const r = ['done', 'reveal', 'mixed', 'empty'].indexOf(rule);
+            if (r >= 0 && !loses([a, i, b])) moves.push({ a, i, b, rule, rank: r * 100 - src.d.length });
+          }
+        }
+      }
+      moves.sort((x, y) => x.rank - y.rank);
+      if (moves.length) {
+        // Best move first; vary the lesson only between moves that also turn a card over.
+        const m = moves.find((x) => x.rule !== lastRule && x.rank < moves[0].rank + 300) ?? moves[0];
+        lastRule = m.rule;
+        return moveHint(m.a, m.i, m.b, m.rule);
+      }
+      // Shuffle runs toward a card that can turn over (shortest way first).
+      const k = keyOf(s);
+      const pl = noPlan.has(k) ? null : progressPlanS(s);
+      if (!pl) noPlan.add(k);
+      if (pl && !loses(pl[0])) {
+        plan = lineFrom(s, pl);
+        lastRule = 'plan';
+        return moveHint(...pl[0]);
+      }
+      if (canDealS(s) && !loses(null)) {
+        lastRule = 'deal';
+        return dealHint();
+      }
+      // Dealing needs every column filled: move the top run off a column that keeps a card face up.
+      if (s.stock.length) {
+        const e = s.cols.findIndex((c) => !c.u.length);
+        let fill = -1;
+        let size = Infinity;
+        for (let a = 0; a < n; a++) {
+          const u = s.cols[a].u;
+          const r = runStartS(u);
+          if (r > 0 && u.length - r < size) {
+            fill = a;
+            size = u.length - r;
+          }
+        }
+        if (e >= 0 && fill >= 0 && !loses([fill, s.cols[fill].d.length + s.cols[fill].u.length - size, e]))
+          return moveHint(fill, s.cols[fill].d.length + s.cols[fill].u.length - size, e, 'fill');
+      }
+      return stuckHint();
     };
 
     return {

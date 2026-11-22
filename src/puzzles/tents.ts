@@ -140,6 +140,98 @@ export const tents: PuzzleDef = {
         for (let t = 0; t < 2 && st[i] !== 2; t++) tap(i);
       });
 
+    const solTent = new Set(p.tents);
+    /** Undo the mark on cell `i` with the same taps a player would use. */
+    const clearCell = (i: number) => () => {
+      for (let t = 0; t < 2 && st[i] !== 0; t++) tap(i);
+    };
+    const fixHint = (i: number, text: string, why: HTMLElement[] = []): Hint => ({
+      kind: 'fix',
+      text,
+      why,
+      at: els([i]),
+      action: st[i] === 2 ? L('Remove the tent', 'Enlever la tente') : L('Remove the grass', 'Enlever le gazon'),
+      play: clearCell(i),
+    });
+    /** What's wrong on the board: a broken rule first, then a tent or grass that leads to a dead end. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const tentsOn = all.filter((i) => st[i] === 2);
+      /** The tent to remove among `ix`: one off the solution if possible. */
+      const worst = (ix: number[]) => ix.find((i) => !solTent.has(i)) ?? ix[0];
+      for (const a of tentsOn) {
+        const b = nb8(a, n, n).find((j) => st[j] === 2);
+        if (b != null)
+          return fixHint(
+            worst([b, a]),
+            L(
+              'These two tents touch: tents never touch, not even at a corner.',
+              'Ces deux tentes se touchent : jamais de contact, même en coin.',
+            ),
+            els([a, b]),
+          );
+        if (!nb4(a, n, n).some((j) => isTree[j]))
+          return fixHint(a, L('This tent has no tree right beside it.', 'Cette tente n’a aucun arbre juste à côté.'));
+      }
+      for (const row of [true, false])
+        for (let k = 0; k < n; k++) {
+          const ix = all.filter((i) => lineOf(row, i) === k && !isTree[i]);
+          const want = (row ? p.rows : p.cols)[k];
+          const clue = (row ? rowEls : colEls)[k];
+          const on = ix.filter((i) => st[i] === 2);
+          if (on.length > want)
+            return fixHint(
+              worst(on),
+              L(
+                `${lineName(row, k)} needs ${want} ${want === 1 ? 'tent' : 'tents'} but has ${on.length}.`,
+                `${lineName(row, k)} demande ${want} ${want === 1 ? 'tente' : 'tentes'}, mais en a ${on.length}.`,
+              ),
+              [clue],
+            );
+          const room = ix.filter((i) => st[i] !== 1).length;
+          const g = ix.find((i) => st[i] === 1 && solTent.has(i));
+          if (room < want && g != null)
+            return fixHint(
+              g,
+              L(
+                `${lineName(row, k)} needs ${want} ${want === 1 ? 'tent' : 'tents'}, but the grass leaves room for only ${room}.`,
+                `${lineName(row, k)} demande ${want} ${want === 1 ? 'tente' : 'tentes'}, mais le gazon ne laisse de place que pour ${room}.`,
+              ),
+              [clue],
+            );
+        }
+      for (const t of p.trees) {
+        const nb = nb4(t, n, n).filter((j) => !isTree[j]);
+        if (nb.some((j) => st[j] !== 1)) continue;
+        const g = nb.find((j) => solTent.has(j)) ?? nb[0];
+        if (g != null)
+          return fixHint(
+            g,
+            L(
+              'This tree is boxed in by grass: there’s no room left for its tent.',
+              'Cet arbre est entouré de gazon : plus de place pour sa tente.',
+            ),
+            els([t]),
+          );
+      }
+      const wrongTent = tentsOn.find((i) => !solTent.has(i));
+      if (wrongTent != null)
+        return fixHint(
+          wrongTent,
+          L(
+            'This tent breaks no rule yet, but it leads to a dead end: the other trees can’t all get their tents.',
+            'Cette tente ne brise encore aucune règle, mais elle mène à une impasse : les autres arbres ne peuvent pas tous avoir leur tente.',
+          ),
+        );
+      const wrongGrass = all.find((i) => st[i] === 1 && solTent.has(i));
+      if (wrongGrass != null)
+        return fixHint(
+          wrongGrass,
+          L('This grass leads to a dead end: a tent has to go here.', 'Ce gazon mène à une impasse : une tente doit aller ici.'),
+        );
+      return null;
+    };
+
     let last = -1;
     /** The next deduction for the guide, from the clues, trees, tents and grass on the board. */
     const hint = (): Hint | null => {
@@ -283,6 +375,6 @@ export const tents: PuzzleDef = {
         play: pitch([i]),
       };
     };
-    return { snapshot: () => ({ st }), hint };
+    return { snapshot: () => ({ st }), hint, check };
   },
 };

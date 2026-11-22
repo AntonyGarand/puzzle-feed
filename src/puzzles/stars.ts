@@ -2,7 +2,7 @@ import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h } from '../core/ui';
 import { colourRegions, edgeClasses, nb8, regionAdjacency, tint } from './logickit/kit';
-import { genStars } from './logickit/starsgen';
+import { genStars, solveStars } from './logickit/starsgen';
 import './stars.css';
 
 export const stars: PuzzleDef = {
@@ -46,7 +46,7 @@ export const stars: PuzzleDef = {
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
     const n = byLevel(d, [5, 6, 7, 8, 9]);
-    const { region, sol } = genStars(n, rng);
+    const { region, sol, unique } = genStars(n, rng);
     // Distinct colours while the palette lasts; otherwise neighbours differ.
     const colour =
       n <= 8 ? rng.shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, n) : colourRegions(n, regionAdjacency(region, n, n, n), rng.int(0, 7));
@@ -126,9 +126,113 @@ export const stars: PuzzleDef = {
           ? L(`column ${u.k + 1}`, `la colonne ${u.k + 1}`)
           : L('this region', 'cette région');
     const els = (ix: number[]) => ix.map((i) => cells[i]);
+    const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
     const cross = (ix: number[]) => () => ix.forEach((i) => st[i] === 0 && tap(i));
     const place = (i: number) => () => {
       for (let t = 0; t < 2 && st[i] !== 2; t++) tap(i);
+    };
+
+    /**
+     * The solution the board is heading for: the stored one when the puzzle is unique (or the board
+     * agrees with it), else one that keeps the player's stars and ✕ marks, or null if none does.
+     */
+    let memo: { key: string; cols: number[] | null } | null = null;
+    const target = (): number[] | null => {
+      const key = st.join('');
+      if (memo?.key === key) return memo.cols;
+      const fits = (cols: number[]) => st.every((v, i) => (v === 2 ? cols[rowOf(i)] === colOf(i) : v !== 1 || cols[rowOf(i)] !== colOf(i)));
+      let cols: number[] | null = fits(sol) ? sol : null;
+      if (!cols && !unique) {
+        const mine = all.filter((i) => st[i] === 2);
+        const allow = (i: number) =>
+          st[i] !== 1 && mine.every((j) => j === i || (rowOf(j) !== rowOf(i) && colOf(j) !== colOf(i) && region[j] !== region[i]));
+        const { sols } = solveStars(n, region, 1, 20000, allow);
+        cols = sols.find(fits) ?? null;
+      }
+      memo = { key, cols };
+      return cols;
+    };
+    const isSol = (cols: number[], i: number) => cols[rowOf(i)] === colOf(i);
+    /** Undo the mark on cell `i` with the same taps a player would use. */
+    const clearCell = (i: number) => () => {
+      for (let t = 0; t < 2 && st[i] !== 0; t++) tap(i);
+    };
+    const fixHint = (i: number, text: string, why: number[] = []): Hint => ({
+      kind: 'fix',
+      text,
+      why: els(why),
+      at: els([i]),
+      action: st[i] === 2 ? L('Remove the star', 'Enlever l’étoile') : L('Remove the ✕', 'Enlever le ✕'),
+      play: clearCell(i),
+    });
+    /** What's wrong on the board: a broken rule first, then a mark that leads to a dead end. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const cols = target() ?? sol;
+      const placed = all.filter((i) => st[i] === 2);
+      // Pick the star to remove from a clashing pair: one off the solution if possible.
+      const pickStar = (a: number, b: number) => (isSol(cols, a) && !isSol(cols, b) ? b : a);
+      for (const a of placed)
+        for (const b of placed) {
+          if (a >= b) continue;
+          const i = pickStar(b, a);
+          if (nb8(a, n, n).includes(b))
+            return fixHint(
+              i,
+              L(
+                'These two stars touch: stars never touch, not even at a corner.',
+                'Ces deux étoiles se touchent : jamais collées, même en coin.',
+              ),
+              [a, b],
+            );
+          const u =
+            rowOf(a) === rowOf(b)
+              ? unitName({ kind: 'row', k: rowOf(a) })
+              : colOf(a) === colOf(b)
+                ? unitName({ kind: 'col', k: colOf(a) })
+                : region[a] === region[b]
+                  ? unitName({ kind: 'region', k: region[a] })
+                  : '';
+          if (u)
+            return fixHint(
+              i,
+              L(`${cap(u)} has two stars, but it gets exactly one.`, `${cap(u)} a deux étoiles, mais n’en reçoit qu’une.`),
+              [a, b],
+            );
+        }
+      // A row, column or region whose every cell is crossed out.
+      for (const u of units()) {
+        if (!u.cells.every((i) => st[i] === 1)) continue;
+        const i = u.cells.find((j) => isSol(cols, j)) ?? u.cells[0];
+        const name = unitName(u);
+        return fixHint(
+          i,
+          L(
+            `Every cell of ${name} is crossed out, but it needs a star.`,
+            `Toutes les cases de ${name} sont barrées, mais il lui faut une étoile.`,
+          ),
+          u.cells,
+        );
+      }
+      const star = placed.find((i) => !isSol(cols, i));
+      if (star != null)
+        return fixHint(
+          star,
+          L(
+            'This star breaks no rule yet, but it leads to a dead end: some row, column or region would be left with no room.',
+            'Cette étoile ne brise encore aucune règle, mais elle mène à une impasse : une rangée, une colonne ou une région n’aurait plus de place.',
+          ),
+        );
+      const x = all.find((i) => st[i] === 1 && isSol(cols, i));
+      if (x != null)
+        return fixHint(
+          x,
+          L(
+            'This ✕ leads to a dead end: the star of this row has to go here.',
+            'Ce ✕ mène à une impasse : l’étoile de cette rangée doit aller ici.',
+          ),
+        );
+      return null;
     };
 
     let last = -1;
@@ -233,9 +337,10 @@ export const stars: PuzzleDef = {
         }
       }
       // Nothing simple: follow the solution for the first row still missing its star.
-      const r = sol.findIndex((c, rr) => st[rr * n + c] !== 2);
+      const cols = target() ?? sol;
+      const r = cols.findIndex((c, rr) => st[rr * n + c] !== 2);
       if (r < 0) return null;
-      const i = r * n + sol[r];
+      const i = r * n + cols[r];
       last = -1;
       return {
         text: L(
@@ -246,6 +351,6 @@ export const stars: PuzzleDef = {
         play: place(i),
       };
     };
-    return { snapshot: () => ({ st }), hint };
+    return { snapshot: () => ({ st }), hint, check };
   },
 };

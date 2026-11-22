@@ -4,7 +4,7 @@ import { byLevel, type PuzzleDef } from '../core/types';
 import { h } from '../core/ui';
 import { edgeClasses, entryGame, entryHelpSteps } from './sudokukit/entry';
 import { neighbours } from './sudokukit/regions';
-import { entryPlace, entryVals, lineHUnits, makeHint, type HUnit } from './sudokukit/hint';
+import { entryPlace, entryVals, lineHUnits, makeCheck, makeHint, type HUnit, type HintOpts } from './sudokukit/hint';
 import { lineUnits, revealUntilUnique, solve, type Problem, type Unit } from './sudokukit/solver';
 
 const BOX: Record<number, [number, number]> = { 4: [2, 2], 6: [2, 3], 9: [3, 3] };
@@ -133,7 +133,7 @@ export const killerSudoku: PuzzleDef = {
         cellEls[i] = el;
       },
     });
-    inst.hint = makeHint({
+    const assist: HintOpts = {
       n,
       givens: puzzle,
       sol,
@@ -146,7 +146,9 @@ export const killerSudoku: PuzzleDef = {
       vals: entryVals(inst),
       place: entryPlace(inst, cellEls),
       scope: ['its row, column, box and cage', 'sa rangée, sa colonne, son bloc et sa cage'],
-    });
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck(assist);
     return inst;
   },
 };

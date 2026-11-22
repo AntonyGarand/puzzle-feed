@@ -104,8 +104,7 @@ function apply(s: Pos, m: number): Pos {
 const count = (s: Pos) => s.type.reduce((a, p) => a + (p ? 1 : 0), 0);
 
 /** Can `s` still be cleared down to one piece? Memoised DFS; null if the node budget runs out. */
-function solver(g: Game, budget: number) {
-  const memo = new Map<string, boolean>();
+function solver(g: Game, budget: number, memo = new Map<string, boolean>()) {
   let left = budget;
   const key = (s: Pos) => String.fromCharCode(...s.type.map((p, i) => p * 4 + s.used[i] + 48));
   const wins = (s: Pos): boolean | null => {
@@ -465,6 +464,56 @@ export const captureChess: PuzzleDef = {
     }
 
     // ---- Guide ----
+    /** Proven results by position, shared by check() and hint() (positions never change meaning). */
+    const memo = new Map<string, boolean>();
+    /** The capture that turned a clearable board into one that can't be cleared (fix: undo back to before it). */
+    const check = (): Hint | null => {
+      if (over || !done.length || done.every((m, i) => m === g.line[i])) return null;
+      const wins = solver(g, 30000, memo);
+      if (wins(cur) !== false) return null;
+      let s = g.start;
+      let k = 0;
+      for (; k < done.length - 1; k++) {
+        const nx = apply(s, done[k]);
+        if (wins(nx) === false) break;
+        s = nx;
+      }
+      const m = done[k];
+      const f = mFrom(m),
+        t = mTo(m);
+      const pf = NAME()[s.type[f]],
+        pt = NAME()[s.type[t]];
+      const after = apply(s, m);
+      const back = done.length - k;
+      const left = count(after);
+      const why = !moves(g, after).length
+        ? L(
+            `after it no piece can capture anything, with ${left} pieces still on the board`,
+            `après elle, aucune pièce ne peut plus rien prendre, et il en reste ${left}`,
+          )
+        : L(
+            'from there, every order of captures leaves some piece that nothing can reach',
+            'à partir de là, tout ordre de prises laisse une pièce que rien ne peut atteindre',
+          );
+      return {
+        kind: 'fix',
+        text:
+          back === 1
+            ? L(
+                `Taking the ${pt} on ${sqName(t)} with your ${pf} was a mistake: ${why}. Undo it.`,
+                `Prendre ${LE(s.type[t])} ${pt} en ${sqName(t)} avec votre ${pf} était une erreur : ${why}. Annulez ce coup.`,
+              )
+            : L(
+                `Your ${pf} taking the ${pt} on ${sqName(t)}, ${back} moves ago, was the mistake: ${why}. Undo back to before it.`,
+                `La prise de ${LE(s.type[t])} ${pt} en ${sqName(t)} par votre ${pf}, il y a ${back} coups, était l’erreur : ${why}. Annulez jusqu’avant ce coup.`,
+              ),
+        at: [cells[t]],
+        action: L('Undo', 'Annuler'),
+        play: () => {
+          for (let i = 0; i < back; i++) undo();
+        },
+      };
+    };
     let lastKind = '';
     const hint = (): Hint | null => {
       if (over) return null;
@@ -482,11 +531,20 @@ export const captureChess: PuzzleDef = {
           play: undo,
         };
       }
-      const wins = solver(g, 30000);
       const onLine = done.every((m, i) => m === g.line[i]);
-      const verdict = all.map((m) => wins(apply(cur, m)));
+      // On the generator's line its next move is known to win: the solver only sizes up the others,
+      // within a small budget. Off the line, stop at the first capture proven to keep a win.
+      const wins = solver(g, onLine ? 4000 : 30000, memo);
+      const verdict: (boolean | null)[] = [];
+      for (const m of all) {
+        if (onLine && m === g.line[done.length]) verdict.push(true);
+        else if (!onLine && verdict.includes(true)) verdict.push(null);
+        else verdict.push(wins(apply(cur, m)));
+      }
       let good = all.filter((_, i) => verdict[i]);
       if (!good.length && onLine) good = [g.line[done.length]];
+      // Out of budget isn't proof of a dead end: try a capture the solver couldn't rule out.
+      if (!good.length) good = all.filter((_, i) => verdict[i] == null).slice(0, 1);
       if (!good.length) {
         const t = mTo(done[done.length - 1]);
         return {
@@ -584,6 +642,7 @@ export const captureChess: PuzzleDef = {
     return {
       snapshot: () => ({ moves: [...done], sel }),
       hint,
+      check,
       onKey(e) {
         const k = e.key.toLowerCase();
         if (k === 'z' || k === 'backspace') undo();

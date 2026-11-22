@@ -3,7 +3,7 @@ import { L } from '../core/i18n';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { board, h } from '../core/ui';
 import { latinEntry, latinEntrySteps } from './latinkit/entry';
-import { entryPlace, entryVals, lineHUnits, makeHint } from './sudokukit/hint';
+import { entryPlace, entryVals, lineHUnits, makeCheck, makeHint, type Broken, type HintOpts } from './sudokukit/hint';
 import { latinConflicts, latinUnique, randomLatin, revealLatin, type Table } from './latinkit/solver';
 
 /** Buildings seen from the start of `line` (taller ones hide shorter ones behind them). */
@@ -188,7 +188,58 @@ export const skyscrapers: PuzzleDef = {
     const shown = clue.flatMap((_, k) => (on[k] ? [k] : []));
     const cellsWord = (m: number) =>
       L(m === 1 ? 'first cell' : `first ${m} cells`, m === 1 ? 'la première case' : `les ${m} premières cases`);
-    inst.hint = makeHint({
+    /** An edge clue a full line gets wrong, or a line whose heights can no longer fit its clues. */
+    const broken = (vals: number[]): Broken | null => {
+      for (const c of shown) {
+        const line = clueLines[c];
+        const vs = line.map((i) => vals[i]);
+        if (vs.some((v) => !v)) continue;
+        const seen = visible(vs);
+        if (seen === clue[c]) continue;
+        return {
+          text: L(
+            `From this clue you see ${seen} building${seen > 1 ? 's' : ''}, not ${clue[c]}: taller ones hide the shorter ones behind them.`,
+            `De cet indice, on voit ${seen} immeuble${seen > 1 ? 's' : ''}, pas ${clue[c]} : les plus hauts cachent les plus bas derrière eux.`,
+          ),
+          why: [clueEls[c]],
+          at: line,
+        };
+      }
+      for (let lane = 0; lane < 2 * n; lane++) {
+        const row = lane < n,
+          p = lane % n;
+        const ks = (row ? [3 * n + p, n + p] : [p, 2 * n + p]).filter((k) => on[k]);
+        if (!ks.length) continue;
+        const line = clueLines[ks[0]];
+        const vs = line.map((i) => vals[i]);
+        if (vs.every((v) => v > 0) || !vs.some((v) => v > 0) || new Set(vs.filter((v) => v > 0)).size < vs.filter((v) => v > 0).length)
+          continue;
+        let ok = false;
+        for (let q = 0; q < P.fwd.length && !ok; q++) {
+          const perm = P.flat.subarray(q * n, q * n + n);
+          if (!vs.every((v, t) => !v || v === perm[t])) continue;
+          ok = ks.every((k) => visible(clueLines[k].map((i) => perm[line.indexOf(i)])) === clue[k]);
+        }
+        if (ok) continue;
+        const name = row ? L(`row ${p + 1}`, `la rangée ${p + 1}`) : L(`column ${p + 1}`, `la colonne ${p + 1}`);
+        return {
+          text:
+            ks.length > 1
+              ? L(
+                  `With the heights already in ${name}, no way of filling the rest matches both its clues.`,
+                  `Avec les hauteurs déjà dans ${name}, aucune façon de compléter ne respecte ses deux indices.`,
+                )
+              : L(
+                  `With the heights already in ${name}, no way of filling the rest lets you see ${clue[ks[0]]} from its clue.`,
+                  `Avec les hauteurs déjà dans ${name}, aucune façon de compléter ne permet de voir ${clue[ks[0]]} depuis son indice.`,
+                ),
+          why: ks.map((k) => clueEls[k]),
+          at: line.filter((i) => vals[i] > 0),
+        };
+      }
+      return null;
+    };
+    const assist: HintOpts = {
       n,
       givens,
       sol,
@@ -276,9 +327,14 @@ export const skyscrapers: PuzzleDef = {
             const ks = shown.filter((o) => clueLines[o].every((i) => line.includes(i)));
             const fits: number[][] = [];
             const P0 = perms(n);
+            // Heights each cell of the line may hold, as bitmasks (computed once, not per order).
+            const allow = line.map((i) => (k.vals[i] ? 1 << k.vals[i] : k.free(i).reduce((m, v) => m | (1 << v), 0)));
             for (let q = 0; q < P0.fwd.length; q++) {
-              const p = Array.from(P0.flat.subarray(q * n, q * n + n));
-              if (!line.every((i, t) => (k.vals[i] ? k.vals[i] === p[t] : k.free(i).includes(p[t])))) continue;
+              const base = q * n;
+              let fitsLine = true;
+              for (let t = 0; t < n && fitsLine; t++) fitsLine = ((allow[t] >> P0.flat[base + t]) & 1) === 1;
+              if (!fitsLine) continue;
+              const p = Array.from(P0.flat.subarray(base, base + n));
               if (!ks.every((o) => visible(clueLines[o].map((i) => p[line.indexOf(i)])) === clue[o])) continue;
               fits.push(p);
             }
@@ -300,7 +356,9 @@ export const skyscrapers: PuzzleDef = {
           return null;
         },
       },
-    });
+    };
+    inst.hint = makeHint(assist);
+    inst.check = makeCheck({ ...assist, rules: [broken] });
     return inst;
   },
 };

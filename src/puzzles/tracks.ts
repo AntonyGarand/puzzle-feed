@@ -1,6 +1,7 @@
 import { L } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, s } from '../core/ui';
+import { solveTracks, tracksDead, type TracksSolve } from './pathkit/tracks-solve';
 import { adjacent, capture, cellAt, stepsToward } from './pathkit/grid';
 import { genTracks } from './pathkit/tracks-gen';
 import './tracks.css';
@@ -211,9 +212,88 @@ export const tracks: PuzzleDef = {
     const rowOf = (i: number) => Math.floor(i / n);
     const colOf = (i: number) => i % n;
     let lastReason = '';
+    const R = { n, b, rowCounts: P.rowCounts, colCounts: P.colCounts, givens: P.givens };
+    const BUDGET = 2000;
+    /** Solver result for the current trail, kept while the trail follows it. */
+    let memo: (TracksSolve & { key: string }) | null = null;
+    const solveHere = (): TracksSolve => {
+      if (memo?.path && trail.every((c, k) => memo!.path![k] === c)) return memo;
+      const key = trail.join(',');
+      if (memo?.key !== key) memo = { key, ...solveTracks(R, trail, BUDGET, P.path) };
+      return memo;
+    };
+    const cutTo = (i: number) => {
+      press(i);
+      dragTo(i);
+      drawing = false;
+    };
+    /** A trail that can't be finished any more: say why, and cut it back to where it still can. */
+    const checkHint = (): Hint | null => {
+      if (finished) return null;
+      let k0 = 0;
+      while (k0 < trail.length && trail[k0] === P.path[k0]) k0++;
+      if (k0 === trail.length) return null;
+      const res = solveHere();
+      if (res.path || res.capped) return null;
+      let k = trail.length - 1;
+      const t0 = performance.now();
+      while (k > k0 && (performance.now() - t0 > 25 || !solveTracks(R, trail.slice(0, k), BUDGET, P.path).path)) k--;
+      const dead = tracksDead(R, trail);
+      const lineEl = (row: boolean, l: number) => (row ? rowEls[l] : colEls[l]);
+      const name = (row: boolean, l: number) => L(`${row ? 'Row' : 'Column'} ${l + 1}`, `${row ? 'La rangée' : 'La colonne'} ${l + 1}`);
+      const atB = trail[trail.length - 1] === b;
+      let text: string;
+      let why: Element[] = [];
+      if (!dead)
+        text = L(
+          'This track leads to a dead end: no way to match every count from here.',
+          'Ce tracé mène à une impasse : impossible de respecter tous les chiffres d’ici.',
+        );
+      else if (dead.kind === 'over') {
+        text = L(
+          `${name(dead.row, dead.line)} needs ${dead.want} track cells, but the track has ${dead.have} in it.`,
+          `${name(dead.row, dead.line)} demande ${dead.want} cases, mais le tracé en a ${dead.have}.`,
+        );
+        why = [lineEl(dead.row, dead.line)];
+      } else if (dead.kind === 'short') {
+        text = atB
+          ? L(
+              `The track reached B, but ${name(dead.row, dead.line).toLowerCase()} has only ${dead.have} of its ${dead.want} cells.`,
+              `Le tracé a atteint B, mais ${name(dead.row, dead.line).toLowerCase()} n’a que ${dead.have} de ses ${dead.want} cases.`,
+            )
+          : L(
+              `${name(dead.row, dead.line)} needs ${dead.want} cells, but the track can no longer reach enough of them.`,
+              `${name(dead.row, dead.line)} demande ${dead.want} cases, mais le tracé ne peut plus en atteindre assez.`,
+            );
+        why = [lineEl(dead.row, dead.line)];
+      } else {
+        const toB = dead.cells.includes(b);
+        text = atB
+          ? L('The track reached B without passing through this marked cell.', 'Le tracé a atteint B sans passer par cette case marquée.')
+          : toB
+            ? L(
+                'The track can no longer reach B: full rows and columns wall it off.',
+                'Le tracé ne peut plus atteindre B : des rangées et des colonnes pleines le bloquent.',
+              )
+            : L(
+                'The track can no longer reach this marked cell: full rows and columns wall it off.',
+                'Le tracé ne peut plus atteindre cette case marquée : des rangées et des colonnes pleines le bloquent.',
+              );
+        why = (toB ? [b] : dead.cells).map((i) => cells[i]);
+      }
+      const back = trail[k - 1];
+      return {
+        kind: 'fix',
+        text: `${text} ${L('Cut it back.', 'Coupez-le.')}`,
+        why,
+        at: trail.slice(k).map((i) => cells[i]),
+        action: L('Cut it back', 'Le couper'),
+        play: () => cutTo(back),
+      };
+    };
     const hint = (): Hint | null => {
       if (finished) return null;
-      const sol = P.path;
+      const sol = solveHere().path ?? P.path;
       let k = 0;
       while (k < trail.length && trail[k] === sol[k]) k++;
       if (k < trail.length) {
@@ -225,11 +305,7 @@ export const tracks: PuzzleDef = {
           ),
           why: trail.slice(k).map((i) => cells[i]),
           at: [cells[back]],
-          play: () => {
-            press(back);
-            dragTo(back);
-            drawing = false;
-          },
+          play: () => cutTo(back),
         };
       }
       const from = sol[k - 1];
@@ -368,6 +444,6 @@ export const tracks: PuzzleDef = {
         play,
       };
     };
-    return { hint, snapshot: () => ({ trail }) };
+    return { hint, check: checkHint, snapshot: () => ({ trail }) };
   },
 };

@@ -281,9 +281,12 @@ export const lawn: PuzzleDef = {
     };
     const passes = (n: number) => P(n, ['pass', 'passes'], ['passage', 'passages']);
     /** The rest of a known solution from here (the generated walk while we follow it), or null/undefined. */
+    let memo: { key: string; sol: number[] | null | undefined } | null = null;
     const solution = () => {
       if (hist.every((x, k) => walk[k] === x)) return walk.slice(hist.length);
-      return solveMow(w, adj, g, pos, 250000);
+      const key = hist.join(',');
+      if (memo?.key !== key) memo = { key, sol: solveMow(w, adj, g, pos, 40000) };
+      return memo.sol;
     };
     const after = (j: number): Blocker | null => {
       g[j]--;
@@ -325,10 +328,70 @@ export const lawn: PuzzleDef = {
           };
       }
     };
+    /** Back out of a dead end: undo a move (there's always one: the start can be finished). */
+    const stuckHint = (text: string, why: number[]): Hint => ({
+      kind: 'stuck',
+      text,
+      why: why.map((i) => cells[i]),
+      at: [cells[pos]],
+      action: L('Undo', 'Annuler'),
+      play: undo,
+    });
+    /** Dead ends: boxed in, a reason the grass can't all be cut, or the solver proving it. */
+    const check = (): Hint | null => {
+      if (done || !hist.length) return null;
+      if (stuck())
+        return stuckHint(
+          L(
+            `The mower is boxed in: every patch next to it is already cut, and ${passes(left())} are still to do. Undo.`,
+            `La tondeuse est coincée : toutes les cases voisines sont tondues, et il reste ${passes(left())} à faire. Annulez.`,
+          ),
+          [],
+        );
+      const b = blocker(w, adj, g, pos);
+      if (b?.kind === 'cut')
+        return stuckHint(
+          L(
+            `${b.cells.length === 1 ? 'This patch is' : `These ${b.cells.length} patches are`} walled off behind cut grass: the mower can never reach ${b.cells.length === 1 ? 'it' : 'them'} again. Undo.`,
+            `${b.cells.length === 1 ? 'Cette case est isolée' : `Ces ${b.cells.length} cases sont isolées`} derrière de l’herbe tondue : la tondeuse ne pourra plus ${b.cells.length === 1 ? 'l’atteindre' : 'les atteindre'}. Annulez.`,
+          ),
+          b.cells,
+        );
+      if (b?.kind === 'starved')
+        return stuckHint(
+          L(
+            `This patch still needs ${passes(g[b.cell])}, but the grass around it can’t bring the mower back that often. Undo.`,
+            `Cette case demande encore ${passes(g[b.cell])}, mais l’herbe autour ne permet plus d’y revenir aussi souvent. Annulez.`,
+          ),
+          [b.cell],
+        );
+      if (b?.kind === 'ends')
+        return stuckHint(
+          b.cells.length > 1
+            ? L(
+                'These patches have become dead ends: the mower couldn’t get back out of either, but it can only finish in one of them. Undo.',
+                'Ces cases sont devenues des culs-de-sac : la tondeuse ne pourrait ressortir d’aucune, mais elle ne peut finir que dans une seule. Annulez.',
+              )
+            : L(
+                'This patch has become a dead end that the mower can’t finish on. Undo.',
+                'Cette case est devenue un cul-de-sac où la tondeuse ne peut pas finir. Annulez.',
+              ),
+          b.cells,
+        );
+      if (b?.kind === 'parity' || solution() === null)
+        return stuckHint(
+          L(
+            'No order of moves finishes the lawn from here any more. Undo and try another way.',
+            'Plus aucun ordre de déplacements ne termine la pelouse d’ici. Annulez et essayez autrement.',
+          ),
+          [],
+        );
+      return null;
+    };
     const hint = (): Hint | null => {
       if (done) return null;
       const sol = solution();
-      if (!sol) {
+      if (sol === null) {
         // Off track: back up to where the moves last matched the generated walk.
         let k = 0;
         while (k < hist.length && walk[k] === hist[k]) k++;
@@ -378,7 +441,8 @@ export const lawn: PuzzleDef = {
           play: () => go(j),
         };
       }
-      const j = sol[0];
+      const j = sol?.[0] ?? good[0] ?? opts[0];
+      if (j == null) return null;
       // Patches with a single grassy neighbour left are dead ends: keep them for later.
       const trap = opts.find((o) => o !== j && adj[o].filter((y) => y !== pos && g[y] > 0).length === 0 && g[o] === 1);
       if (trap != null)
@@ -412,6 +476,7 @@ export const lawn: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ m: hist }),
+      check,
       hint,
       onKey(e) {
         const k = keyDir(e);

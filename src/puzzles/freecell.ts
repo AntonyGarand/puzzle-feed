@@ -2,8 +2,8 @@ import './freecell.css';
 import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { btn, shake } from '../core/ui';
-import { cap, cardEl, elAt, fan, isRed, label, leCard, pileEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
-import { autoF, bestDestF, genF, moveF, pickedF, solveF, wonF, type FState } from './cardkit/freecell';
+import { cap, cardEl, elAt, fan, isRed, label, leCard, pileEl, pilesEl, rank, slotEl, suit, SUITS, tableEl, topEl } from './cardkit/cards';
+import { autoF, bestDestF, genF, moveF, pickedF, searchF, solveF, wonF, type FMove, type FState } from './cardkit/freecell';
 import { bindTable, History } from './cardkit/table';
 
 const TAB_H = 7.5;
@@ -78,9 +78,20 @@ export const freecell: PuzzleDef = {
     let over = false;
 
     /** Proven unwinnable from here, though moves remain (undo can still save it). */
+    /** Exact position key (cell order and column order matter to replay a line). */
+    const keyOf = (x: FState) => x.cells.join(',') + '|' + x.found.join(',') + '|' + x.cas.map((c) => c.join('.')).join('/');
+    /** Winning line the guide is following, with the position expected before each of its moves. */
+    let plan: { keys: string[]; line: FMove[] } | null = null;
     let doomed = false;
+    /** Proven dead ends, by position (undo and the hint button come back to the same ones). */
+    const dead = new Map<string, boolean>();
     const judge = () => {
-      doomed = solveF(s, 1500, true) === 'dead';
+      const k = keyOf(s);
+      if (plan?.keys.includes(k)) doomed = false;
+      else {
+        if (!dead.has(k)) dead.set(k, solveF(s, 1500, true) === 'dead');
+        doomed = dead.get(k)!;
+      }
     };
 
     const status = () => {
@@ -150,7 +161,7 @@ export const freecell: PuzzleDef = {
     };
 
     const bump = (p: string, i: number) => {
-      const el = table.querySelector(`[data-p="${p}"][data-i="${i}"]`);
+      const el = elAt(table, p, i);
       if (el) shake(el);
     };
 
@@ -205,160 +216,177 @@ export const freecell: PuzzleDef = {
     if (sv) judge();
     status();
 
-    let lastRule = '';
+    /** Positions the solver could not crack within its budget (don't search them twice). */
+    const unknown = new Set<string>();
+
+    /** Next move of a winning line from here, planned once and followed as long as the player does. */
+    const planned = (): FMove | null => {
+      const k = keyOf(s);
+      const at = plan ? plan.keys.indexOf(k) : -1;
+      if (plan && at >= 0) return plan.line[at];
+      if (unknown.has(k)) return null;
+      const r = searchF(s, 2500);
+      if (r.v !== 'win' || !r.line.length) {
+        unknown.add(k);
+        return null;
+      }
+      const keys: string[] = [];
+      const x = structuredClone(s);
+      for (const m of r.line) {
+        keys.push(keyOf(x));
+        moveF(x, m.p, m.i, m.to);
+        autoF(x);
+      }
+      plan = { keys, line: r.line };
+      return r.line[0];
+    };
+
+    /** The next card a foundation needs, buried under index i of cascade a (or null). */
+    const neededUnder = (a: number, i: number): number | null => {
+      const col = s.cas[a];
+      for (let j = i - 1; j >= 0; j--) if (s.found[suit(col[j])] === rank(col[j]) - 1) return col[j];
+      return null;
+    };
+
+    /** Explain a solver move the way a player would think about it. */
+    const describe = (m: FMove): Hint => {
+      const el = (p: string, i: number) => elAt(table, p, i)!;
+      const cards = pickedF(s, m.p, m.i)!;
+      const c = cards[0];
+      const n = cards.length;
+      const from = m.p[0] === 't' ? Number(m.p.slice(1)) : -1;
+      const need = from >= 0 ? neededUnder(from, m.i) : null;
+      const dig =
+        need == null
+          ? ''
+          : s.cas[from][m.i - 1] === need
+            ? L(` That uncovers the ${label(need)} for its foundation.`, ` Ça découvre ${leCard(need)} pour sa fondation.`)
+            : L(` That digs toward the ${label(need)}, which a foundation needs.`, ` Ça dégage ${leCard(need)}, attendu sur sa fondation.`);
+      const why = [el(m.p, m.i)];
+      if (need != null) why.push(el(m.p, s.cas[from].indexOf(need)));
+      const play = () => go(m.p, m.i, m.to);
+      if (m.to === 'f')
+        return {
+          text:
+            rank(c) === 1
+              ? L(
+                  `The ${label(c)} starts its foundation. Each suit builds up there from ace to king.`,
+                  `${cap(leCard(c))} commence sa fondation. Chaque sorte s’y empile de l’as au roi.`,
+                )
+              : L(
+                  `The ${label(c)} goes home on the ${label(c - 1)}: foundations build up by suit.`,
+                  `${cap(leCard(c))} monte sur ${leCard(c - 1)} : les fondations montent par sorte.`,
+                ),
+          why,
+          at: [topEl(table, 'f' + suit(c))!],
+          play,
+        };
+      if (m.to[0] === 'c')
+        return {
+          text:
+            L(
+              `Park the ${label(c)} in a free cell: each cell holds one card.`,
+              `Rangez ${leCard(c)} dans une cellule libre : une carte par cellule.`,
+            ) + dig,
+          why,
+          at: [el('c' + Math.max(0, s.cells.indexOf(-1)), -1)],
+          play,
+        };
+      const t = Number(m.to.slice(1));
+      const dst = s.cas[t];
+      if (!dst.length)
+        return {
+          text:
+            (n > 1
+              ? L(
+                  `An empty column takes any card: move these ${n} cards there.`,
+                  `Une colonne vide accepte n’importe quelle carte : déplacez-y ces ${n} cartes.`,
+                )
+              : L(
+                  `An empty column takes any card: move the ${label(c)} there.`,
+                  `Une colonne vide accepte n’importe quelle carte : déplacez-y ${leCard(c)}.`,
+                )) + (m.p[0] === 'c' ? L(' That frees the cell.', ' Ça libère la cellule.') : dig),
+          why,
+          at: [topEl(table, m.to)!],
+          play,
+        };
+      const top = dst[dst.length - 1];
+      const fit = L(
+        `one lower, ${isRed(top) ? 'black on red' : 'red on black'}`,
+        `une valeur de moins, ${isRed(top) ? 'noir sur rouge' : 'rouge sur noir'}`,
+      );
+      return {
+        text:
+          (m.p[0] === 'c'
+            ? L(
+                `The ${label(c)} can leave its cell for the ${label(top)} (${fit}). Free cells are precious; empty them when you can.`,
+                `${cap(leCard(c))} peut quitter sa cellule pour ${leCard(top)} (${fit}). Videz les cellules dès que possible.`,
+              )
+            : n > 1
+              ? L(
+                  `Move these ${n} cards at once onto the ${label(top)} (${fit}): free cells and empty columns let a run move together.`,
+                  `Déplacez ces ${n} cartes d’un coup sur ${leCard(top)} (${fit}) : les cellules et colonnes libres permettent de bouger une suite.`,
+                )
+              : L(`Stack the ${label(c)} on the ${label(top)}: ${fit}.`, `Empilez ${leCard(c)} sur ${leCard(top)} : ${fit}.`)) + dig,
+        why,
+        at: [el(m.to, dst.length - 1)],
+        play,
+      };
+    };
+
+    /** Positions the guide has already been through (its fallback never walks back into one). */
+    const seenByGuide = new Set<string>();
+    /** No line from the solver: what a tap would do with some card, avoiding positions already seen. */
+    const fallback = (): FMove | null => {
+      const tries: { p: string; i: number }[] = [];
+      for (let k = 0; k < nc; k++) if (s.cells[k] >= 0) tries.push({ p: 'c' + k, i: 0 });
+      s.cas.forEach((col, a) => {
+        for (let i = col.length - 1; i >= 0 && pickedF(s, 't' + a, i); i--) tries.push({ p: 't' + a, i });
+      });
+      for (const m of tries) {
+        const to = bestDestF(s, m.p, m.i);
+        if (!to) continue;
+        const x = structuredClone(s);
+        moveF(x, m.p, m.i, to);
+        autoF(x);
+        const k = keyOf(x);
+        if (seenByGuide.has(k)) continue;
+        if (!dead.has(k)) dead.set(k, solveF(x, 1500, true) === 'dead');
+        if (!dead.get(k)) return { ...m, to };
+      }
+      return null;
+    };
+
     const hint = (): Hint | null => {
       if (over) return null;
-      const el = (p: string, i: number) => elAt(table, p, i)!;
-      const topOf = (t: number) => s.cas[t][s.cas[t].length - 1];
-      const cands: { rule: string; h: Hint }[] = [];
-      // Home: a card that fits its foundation (the safe ones already went up on their own).
-      const home = (p: string, i: number, c: number) =>
-        cands.push({
-          rule: 'home',
-          h: {
-            text:
-              rank(c) === 1
-                ? L(
-                    `The ${label(c)} starts its foundation. Each suit builds up there from ace to king.`,
-                    `${cap(leCard(c))} commence sa fondation. Chaque sorte s’y empile de l’as au roi.`,
-                  )
-                : L(
-                    `The ${label(c)} goes home on the ${label(c - 1)}: foundations build up by suit.`,
-                    `${cap(leCard(c))} monte sur ${leCard(c - 1)} : les fondations montent par sorte.`,
-                  ),
-            why: [el(p, i)],
-            at: [topEl(table, 'f' + suit(c))!],
-            play: () => go(p, i, 'f'),
-          },
-        });
-      for (let k = 0; k < nc; k++) if (s.cells[k] >= 0 && moveF(s, 'c' + k, 0, 'f', true)) home('c' + k, 0, s.cells[k]);
-      s.cas.forEach((col, a) => {
-        if (col.length && moveF(s, 't' + a, col.length - 1, 'f', true)) home('t' + a, col.length - 1, col[col.length - 1]);
-      });
-      // Dig: uncover the next card a foundation needs, shallowest first.
-      const needs: { a: number; j: number; c: number }[] = [];
-      for (let su = 0; su < 4; su++) {
-        if (s.found[su] === 13) continue;
-        const c = su * 13 + s.found[su];
-        s.cas.forEach((col, a) => {
-          const j = col.indexOf(c);
-          if (j >= 0 && j < col.length - 1) needs.push({ a, j, c });
-        });
-      }
-      needs.sort((x, y) => s.cas[x.a].length - x.j - (s.cas[y.a].length - y.j) || rank(x.c) - rank(y.c));
-      // First try stacking what covers a needed card elsewhere; park in a cell only as a last resort.
-      dig: for (const { a, j, c } of needs) {
-        const col = s.cas[a];
-        const p = 't' + a;
-        for (let i = j + 1; i < col.length; i++) {
-          if (!pickedF(s, p, i)) continue;
-          for (let t = 0; t < 8; t++) {
-            if (t === a || !s.cas[t].length || !moveF(s, p, i, 't' + t, true)) continue;
-            const n = col.length - i;
-            const dst = topOf(t);
-            cands.push({
-              rule: n === 1 ? 'dig' : 'run',
-              h: {
-                text:
-                  n === 1
-                    ? L(
-                        `Dig toward the ${label(c)}: the ${label(col[i])} fits on the ${label(dst)}, one lower and ${isRed(dst) ? 'black on red' : 'red on black'}.`,
-                        `Dégagez ${leCard(c)} : ${leCard(col[i])} va sur ${leCard(dst)}, une valeur de moins et ${isRed(dst) ? 'noir sur rouge' : 'rouge sur noir'}.`,
-                      )
-                    : L(
-                        `Dig toward the ${label(c)}: move these ${n} cards onto the ${label(dst)} at once. Free cells and empty columns let runs move together.`,
-                        `Dégagez ${leCard(c)} : déplacez ces ${n} cartes d’un coup sur ${leCard(dst)}. Les cellules et colonnes libres permettent de bouger une suite entière.`,
-                      ),
-                why: [el(p, j), el(p, i)],
-                at: [el('t' + t, s.cas[t].length - 1)],
-                play: () => go(p, i, 't' + t),
-              },
-            });
-            break dig;
-          }
-        }
-      }
-      // Nothing to stack on: park a lone card in a free cell, if that soon frees the needed card.
-      const freeN = s.cells.filter((c) => c < 0).length;
-      if (!cands.some((x) => x.rule === 'dig' || x.rule === 'run'))
-        for (const { a, j, c } of needs) {
-          const col = s.cas[a];
-          const p = 't' + a;
-          const top = col[col.length - 1];
-          const free = s.cells.indexOf(-1);
-          if (free < 0 || col.length - 1 - j > freeN || pickedF(s, p, col.length - 2) != null) continue;
-          cands.push({
-            rule: 'cell',
-            h: {
-              text: L(
-                `The ${label(top)} has nowhere to go and covers the ${label(c)}. Park it in a free cell: each cell holds one card.`,
-                `${cap(leCard(top))} n’a pas de place et couvre ${leCard(c)}. Rangez-le dans une cellule libre : une carte par cellule.`,
-              ),
-              why: [el(p, j), el(p, col.length - 1)],
-              at: [el('c' + free, -1)],
-              play: () => go(p, col.length - 1, 'c'),
-            },
-          });
-          break;
-        }
-      // Back: bring a parked card down from its cell so the cell is free again.
-      back: for (let k = 0; k < nc; k++) {
-        const c = s.cells[k];
-        if (c < 0) continue;
-        for (let t = 0; t < 8; t++) {
-          if (!s.cas[t].length || !moveF(s, 'c' + k, 0, 't' + t, true)) continue;
-          const dst = topOf(t);
-          cands.push({
-            rule: 'back',
-            h: {
-              text: L(
-                `The ${label(c)} can leave its cell for the ${label(dst)}: one lower, opposite colour. Free cells are precious; empty them when you can.`,
-                `${cap(leCard(c))} peut quitter sa cellule pour ${leCard(dst)} : une valeur de moins, couleur opposée. Videz les cellules dès que possible.`,
-              ),
-              why: [el('c' + k, 0)],
-              at: [el('t' + t, s.cas[t].length - 1)],
-              play: () => go('c' + k, 0, 't' + t),
-            },
-          });
-          break back;
-        }
-      }
-      // Fallback: what a tap would do with some exposed card.
-      for (let a = 0; a < 8 && !cands.length; a++) {
-        const col = s.cas[a];
-        if (!col.length) continue;
-        const i = col.length - 1;
-        const to = bestDestF(s, 't' + a, i);
-        if (!to || to[0] !== 't') continue;
-        const n = Number(to.slice(1));
-        const dst = s.cas[n].length ? topOf(n) : -1;
-        cands.push({
-          rule: 'any',
-          h: {
-            text:
-              dst >= 0
-                ? L(
-                    `Stack the ${label(col[i])} on the ${label(dst)}: one lower, opposite colour.`,
-                    `Empilez ${leCard(col[i])} sur ${leCard(dst)} : une valeur de moins, couleur opposée.`,
-                  )
-                : L(
-                    `An empty column takes any card: move the ${label(col[i])} there.`,
-                    `Une colonne vide accepte n’importe quelle carte : déplacez-y ${leCard(col[i])}.`,
-                  ),
-            why: [el('t' + a, i)],
-            at: [topEl(table, to)!],
-            play: () => go('t' + a, i, to),
-          },
-        });
-      }
-      if (!cands.length) return null;
-      const pick = cands.find((x) => x.rule !== lastRule) ?? cands[0];
-      lastRule = pick.rule;
-      return pick.h;
+      seenByGuide.add(keyOf(s));
+      const m = planned() ?? fallback();
+      return m ? describe(m) : null;
+    };
+
+    /** Dead end: the solver went through every position reachable from here without finding a win. */
+    const check = (): Hint | null => {
+      if (over || !doomed) return null;
+      return {
+        kind: 'stuck',
+        text: s.cells.every((c) => c >= 0)
+          ? L(
+              'No way to win from here: the free cells are full and no series of moves frees the cards the foundations need. Undo.',
+              'Impossible de gagner d’ici : les cellules sont pleines et aucune suite de coups ne libère les cartes attendues. Annulez.',
+            )
+          : L(
+              'No way to win from here: every series of moves runs dry before the foundations are complete. Undo.',
+              'Impossible de gagner d’ici : toutes les suites de coups s’épuisent avant que les fondations soient complètes. Annulez.',
+            ),
+        at: pilesEl(table, 'f'),
+        action: L('Undo', 'Annuler'),
+        play: undo,
+      };
     };
 
     return {
       hint,
+      check,
       snapshot: () => ({ s, hist: hist.stack }),
       onKey(e) {
         if (e.key === 'z' || e.key === 'Backspace') {

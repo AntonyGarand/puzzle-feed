@@ -2,7 +2,7 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, shake } from '../core/ui';
 import { anim } from './movekit/kit';
-import { genPegs, jumps, type Jump } from './playkit/pegs-gen';
+import { genPegs, jumps, pegSolver, type Jump, type PegVerdict } from './playkit/pegs-gen';
 import './pegs.css';
 
 export const pegs: PuzzleDef = {
@@ -200,28 +200,13 @@ export const pegs: PuzzleDef = {
       if (Number.isInteger(sv.sel) && peg[sv.sel as number]) sel = sv.sel as number;
     }
     // ---- Guide ----
-    const won = (p: boolean[]) => p.filter(Boolean).length === 1 && (goal < 0 || p[goal]);
-    /** Can this position still be cleared? Memoised depth-first search with a node budget. */
-    const memo = new Map<string, boolean>();
-    let budget = 0;
-    const solvable = (p: boolean[]): boolean => {
-      if (won(p)) return true;
-      const key = p.map((v) => (v ? 1 : 0)).join('');
-      const m = memo.get(key);
-      if (m != null) return m;
-      if (--budget < 0) return false;
-      let ok = false;
-      for (const j of jumps(B, p)) {
-        const q = p.slice();
-        q[j.from] = q[j.over] = false;
-        q[j.to] = true;
-        if (solvable(q)) {
-          ok = true;
-          break;
-        }
-      }
-      memo.set(key, ok);
-      return ok;
+    /** Solver with memory across calls (solved and hopeless positions stay known). */
+    const solver = pegSolver(B);
+    let memo: { key: string; v: PegVerdict } | null = null;
+    const verdict = () => {
+      const key = peg.map((v) => (v ? 1 : 0)).join('');
+      if (memo?.key !== key) memo = { key, v: solver(peg, 150000) };
+      return memo.v;
     };
     const after = (j: Jump) => {
       const q = peg.slice();
@@ -245,15 +230,42 @@ export const pegs: PuzzleDef = {
           return i;
         })
         .filter((i) => i >= 0);
+    /** Back out of a dead end: undo a jump, or restart when there's none to undo. */
+    const backOut = () => (done.length ? undo() : restart());
+    /** Dead end: the solver proved that no sequence of jumps leaves a single peg any more. */
+    const check = (): Hint | null => {
+      if (over || !done.length || verdict().status !== 'dead') return null;
+      const left = count();
+      const lone = alone(peg);
+      return {
+        kind: 'stuck',
+        text: lone.length
+          ? L(
+              `No sequence of jumps clears these ${left} pegs down to one${goal >= 0 ? ' in the centre' : ''}: the outlined ${lone.length === 1 ? 'peg is' : 'pegs are'} cut off from the rest. Undo a jump.`,
+              `Aucune suite de sauts ne réduit ces ${left} billes à une seule${goal >= 0 ? ' au centre' : ''} : ${lone.length === 1 ? 'la bille encadrée est isolée' : 'les billes encadrées sont isolées'} du reste. Annulez un saut.`,
+            )
+          : L(
+              `No sequence of jumps clears these ${left} pegs down to one${goal >= 0 ? ' in the centre' : ''} any more. Undo a jump and try another.`,
+              `Plus aucune suite de sauts ne réduit ces ${left} billes à une seule${goal >= 0 ? ' au centre' : ''}. Annulez un saut et essayez-en un autre.`,
+            ),
+        why: lone.map((i) => cells[i]),
+        at: [cells[done[done.length - 1].to]],
+        action: L('Undo', 'Annuler'),
+        play: backOut,
+      };
+    };
     let lastKind = '';
     const hint = (): Hint | null => {
       if (over) return null;
       const all = jumps(B, peg);
       if (!all.length) return null;
-      budget = 200000;
-      const good = all.filter((j) => solvable(after(j)));
-      const bad = all.filter((j) => !good.includes(j));
-      const pick = good[0] ?? all[0];
+      const here = verdict();
+      const after1 = all.map((j) => (here.status === 'win' && here.next === j ? 'win' : solver(after(j), 4000).status));
+      const good = all.filter((_, k) => after1[k] === 'win');
+      const bad = all.filter((_, k) => after1[k] === 'dead');
+      const known = good.length + bad.length === all.length;
+      const pick = (here.status === 'win' ? here.next : null) ?? good[0] ?? all.find((_, k) => after1[k] !== 'dead') ?? all[0];
+      const sure = good.includes(pick);
       const left = count();
       const base = { why: [cells[pick.from], cells[pick.over]], at: [cells[pick.to]], play: () => (tap(pick.from), tap(pick.to)) };
       const kinds: { kind: string; text: string; why?: Element[] }[] = [];
@@ -301,7 +313,7 @@ export const pegs: PuzzleDef = {
               `Certains sauts ne laisseraient plus aucun saut possible, avec encore ${left - 1} billes. Celui-ci garde la partie en vie.`,
             ),
           });
-        else
+        else if (known)
           kinds.push({
             kind: 'plan',
             text: L(
@@ -324,10 +336,15 @@ export const pegs: PuzzleDef = {
         });
       kinds.push({
         kind: 'plain',
-        text: L(
-          'This jump removes a peg and still leaves a way to clear the board down to one.',
-          'Ce saut retire une bille et laisse encore une façon de vider le plateau jusqu’à une seule.',
-        ),
+        text: sure
+          ? L(
+              'This jump removes a peg and still leaves a way to clear the board down to one.',
+              'Ce saut retire une bille et laisse encore une façon de vider le plateau jusqu’à une seule.',
+            )
+          : L(
+              'This jump removes a peg and keeps the pegs close together, so they can keep jumping each other.',
+              'Ce saut retire une bille et garde les billes regroupées, pour qu’elles puissent continuer à se sauter.',
+            ),
       });
       const k = kinds.find((x) => x.kind !== lastKind) ?? kinds[0];
       lastKind = k.kind;
@@ -338,6 +355,7 @@ export const pegs: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ moves: done.map((j) => [j.from, j.to]), sel }),
+      check,
       hint,
       onKey(e) {
         const k = e.key.toLowerCase();

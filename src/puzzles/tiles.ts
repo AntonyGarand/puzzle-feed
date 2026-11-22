@@ -191,6 +191,61 @@ export const tiles: PuzzleDef = {
       taught = true;
       return { ...h0, text: h0.text + L(' Drag from one corner to the opposite one.', ' Glissez d’un coin au coin opposé.') };
     };
+    const solKey = new Set(solRects.map((q) => `${q.r0},${q.c0},${q.r1},${q.c1}`));
+    /** A rectangle that isn't in the (unique) solution: a broken rule first, else a dead end. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const wrongs = rects.filter((q) => !solKey.has(`${q.r0},${q.c0},${q.r1},${q.c1}`));
+      if (!wrongs.length) return null;
+      const fix = (q: Rect, text: string, why: number[] = []): Hint => ({
+        kind: 'fix',
+        text: text + L(' Tap it to remove it.', ' Touchez-le pour l’enlever.'),
+        why: why.map((i) => cells[i]),
+        at: rectCells(q, n).map((i) => cells[i]),
+        action: L('Remove the rectangle', 'Enlever le rectangle'),
+        play: () => {
+          start = cur = q.r0 * n + q.c0;
+          finish();
+        },
+      });
+      for (const q of wrongs) {
+        const nums = rectCells(q, n).filter((i) => clue[i] > 0);
+        const area = (q.r1 - q.r0 + 1) * (q.c1 - q.c0 + 1);
+        if (!nums.length)
+          return fix(
+            q,
+            L(
+              'This rectangle has no number: each one holds exactly one.',
+              'Ce rectangle n’a aucun nombre : chacun en contient exactement un.',
+            ),
+          );
+        if (nums.length > 1)
+          return fix(
+            q,
+            L(
+              `This rectangle holds ${nums.length} numbers: each one holds exactly one.`,
+              `Ce rectangle contient ${nums.length} nombres : chacun en contient exactement un.`,
+            ),
+            nums,
+          );
+        if (area !== clue[nums[0]])
+          return fix(
+            q,
+            L(
+              `This rectangle covers ${area} cells, but its number is ${clue[nums[0]]}.`,
+              `Ce rectangle couvre ${area} cases, mais son nombre est ${clue[nums[0]]}.`,
+            ),
+            nums,
+          );
+      }
+      return fix(
+        wrongs[0],
+        L(
+          'This rectangle breaks no rule yet, but it leads to a dead end: the numbers around it can’t all get their rectangles.',
+          'Ce rectangle ne brise encore aucune règle, mais il mène à une impasse : les nombres autour ne peuvent pas tous avoir leur rectangle.',
+        ),
+      );
+    };
     const hint = (): Hint | null => {
       if (done) return null;
       const owner = ownerMap();
@@ -296,6 +351,6 @@ export const tiles: PuzzleDef = {
         true,
       );
     };
-    return { snapshot: () => ({ rects }), hint };
+    return { snapshot: () => ({ rects }), hint, check };
   },
 };

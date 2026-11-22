@@ -28,8 +28,17 @@ function placeStars(n: number, rng: Rng): number[] {
   return cols;
 }
 
-/** Solutions (up to `cap`) of a region layout, within a node budget. */
-function solveStars(n: number, region: number[], cap: number, budget = 200000): { sols: number[][]; complete: boolean } {
+/**
+ * Solutions (up to `cap`) of a region layout, within a node budget. `allow` limits the cells a star
+ * may take (e.g. to respect a player's stars and ✕ marks).
+ */
+export function solveStars(
+  n: number,
+  region: number[],
+  cap: number,
+  budget = 200000,
+  allow?: (i: number) => boolean,
+): { sols: number[][]; complete: boolean } {
   const sols: number[][] = [];
   const cols: number[] = [];
   let nodes = 0;
@@ -43,7 +52,7 @@ function solveStars(n: number, region: number[], cap: number, budget = 200000): 
     }
     for (let c = 0; c < n; c++) {
       const g = region[r * n + c];
-      if (usedC & (1 << c) || usedR & (1 << g)) continue;
+      if (usedC & (1 << c) || usedR & (1 << g) || (allow && !allow(r * n + c))) continue;
       if (r > 0 && Math.abs(cols[r - 1] - c) < 2) continue;
       cols[r] = c;
       usedC |= 1 << c;

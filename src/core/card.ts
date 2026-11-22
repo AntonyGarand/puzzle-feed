@@ -1,14 +1,15 @@
 import { telemetry } from './analytics';
 import { confetti } from './confetti';
 import { helpButton } from './help';
+import { drawHint } from './hint-overlay';
 import { L, P, wordLocale } from './i18n';
 import { Rng } from './rng';
 import { clearSave, dailySaveKey, putSave, type Save, type Slot } from './saves';
 import { encodeCode, shareSection } from './share';
 import { openSheet } from './sheet';
 import { prefs, record, recordDaily, setLevel, setWeight, getProfile, type RecordOutcome, type Weight } from './store';
-import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type PuzzleDef, type PuzzleInstance } from './types';
-import { btn, cogIcon, fmtTime, h } from './ui';
+import { LEVELS, LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from './types';
+import { btn, bulbIcon, cogIcon, fmtTime, h, s as svg } from './ui';
 
 export interface CardOptions {
   /** Labs mode: fixed levels (doesn't touch feed prefs), no auto-advance, "New puzzle" instead of "Next". */
@@ -52,8 +53,14 @@ export class Card {
   private timerEl!: HTMLElement;
   private levelEl!: HTMLElement;
   private mistakesEl!: HTMLElement;
+  private hintBtn!: HTMLButtonElement;
+  /** The open in-game hint (overlay on the board + bubble over the footer), if any. */
+  private hintUi: { el: HTMLElement; layer: SVGSVGElement; hint: Hint | null } | null = null;
   private inst: PuzzleInstance = {};
-  private resize = new ResizeObserver(() => this.fit());
+  private resize = new ResizeObserver(() => {
+    this.fit();
+    this.drawHint();
+  });
 
   level: Difficulty = 1;
   mounted = false;
@@ -65,6 +72,8 @@ export class Card {
   private elapsed = 0;
   private runningSince = 0;
   private mistakes = 0;
+  /** Hints shown on this puzzle (the hint button gave a step, a fix or a dead end). */
+  private hints = 0;
   private gen = 0;
   /** `gen` of the puzzle already reported as left (scrolled past), so it's reported once. */
   private leftGen = -1;
@@ -124,17 +133,110 @@ export class Card {
       cogIcon(),
     );
     settings.addEventListener('click', () => this.openSettings());
+    this.hintBtn = h(
+      'button',
+      {
+        type: 'button',
+        class: 'icon-btn hint-btn',
+        'data-action': 'hint',
+        title: L('Hint', 'Indice'),
+        'aria-label': L('Hint', 'Indice'),
+      },
+      bulbIcon(),
+    ) as HTMLButtonElement;
+    this.hintBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.hintUi) this.closeHint();
+      else this.showHint();
+    });
     this.el.replaceChildren(
       h(
         'header',
         { class: 'card-head' },
         h('div', { class: 'title' }, h('h2', null, this.def.name), this.levelEl),
-        h('div', { class: 'meta' }, this.mistakesEl, this.timerEl, this.makeHelpButton(), settings),
+        h('div', { class: 'meta' }, this.mistakesEl, this.timerEl, this.hintBtn, this.makeHelpButton(), settings),
       ),
       this.stage,
       this.foot,
     );
     this.resize.observe(this.stage);
+    // Any touch on the board puts the hint away (the touch itself still goes through).
+    this.stage.addEventListener('pointerdown', () => this.closeHint(), { capture: true });
+  }
+
+  /**
+   * In-game hint: first what's wrong with the position (`check()`), otherwise the next step (`hint()`).
+   * The clue and the move are outlined on the live board; a bubble over the footer explains it and
+   * offers to make the move (or undo the mistake).
+   */
+  private showHint() {
+    if (this.done || !this.mounted) return;
+    this.closeHint();
+    let hint: Hint | null = null;
+    try {
+      hint = this.inst.check?.() ?? this.inst.hint?.() ?? null;
+    } catch (err) {
+      console.error(err);
+      hint = null;
+    }
+    if (hint) {
+      this.hints++;
+      this.interacted = true;
+      this.queueSave();
+      telemetry.track('puzzle.hint', { ...this.trackAttrs(), 'hint.kind': hint.kind ?? 'step', 'hint.count': this.hints });
+    }
+    const layer = svg('svg', { class: 'guide-layer hint-layer', 'aria-hidden': 'true' }) as SVGSVGElement;
+    const kind = hint?.kind ?? 'step';
+    const action =
+      hint?.action ?? (kind === 'fix' ? L('Fix it', 'Corriger') : kind === 'stuck' ? L('Undo', 'Annuler') : L('Play it', 'Jouer le coup'));
+    const play = () => {
+      const h0 = this.hintUi?.hint;
+      this.closeHint();
+      if (!h0 || this.done) return;
+      try {
+        h0.play();
+      } catch (err) {
+        console.error(err);
+      }
+      this.interacted = true;
+      this.queueSave();
+    };
+    const el = h(
+      'div',
+      { class: `hint-pop ${kind}`, role: 'status', 'aria-live': 'polite' },
+      h(
+        'p',
+        null,
+        hint
+          ? hint.text
+          : L('No hint here: nothing sure to suggest from this position.', 'Pas d’indice ici : rien de sûr à suggérer pour le moment.'),
+      ),
+      h(
+        'div',
+        { class: 'hint-actions' },
+        hint ? btn(action, play, 'primary') : null,
+        btn('✕', () => this.closeHint(), 'ghost'),
+      ),
+    );
+    this.stage.append(layer);
+    this.el.append(el);
+    this.hintBtn.classList.add('on');
+    this.hintUi = { el, layer, hint };
+    requestAnimationFrame(() => this.drawHint());
+  }
+
+  private drawHint() {
+    const ui = this.hintUi;
+    if (ui) drawHint(ui.layer, this.stage, ui.hint);
+  }
+
+  private closeHint() {
+    const ui = this.hintUi;
+    if (!ui) return;
+    this.hintUi = null;
+    ui.el.remove();
+    ui.layer.remove();
+    this.hintBtn.classList.remove('on');
   }
 
   /** Pause the clock while a sheet (guide/settings) is open. Returns the resume function. */
@@ -342,6 +444,8 @@ export class Card {
     this.reached = resume?.reached ? { ms: resume.elapsed, res: null } : null;
     this.interacted = !!resume;
     this.mistakes = resume?.mistakes ?? 0;
+    this.hints = resume?.hints ?? 0;
+    this.closeHint();
     this.elapsed = resume?.elapsed ?? 0;
     this.runningSince = this.active ? performance.now() : 0;
     this.el.classList.remove('is-solved', 'is-failed', 'is-skipped');
@@ -383,6 +487,7 @@ export class Card {
           if (gen === this.gen) this.controlsEl.append(...els);
         },
       }) || {};
+    this.hintBtn.hidden = !this.inst.hint && !this.inst.check;
     // Any pointer interaction inside the stage counts as starting; progress is saved shortly after.
     root.addEventListener('pointerdown', () => (this.interacted = true), { capture: true });
     root.addEventListener('pointerup', () => this.queueSave());
@@ -420,6 +525,7 @@ export class Card {
         level: this.level,
         elapsed: Math.round(this.time()),
         mistakes: this.mistakes,
+        ...(this.hints ? { hints: this.hints } : {}),
         state,
         at: Date.now(),
         locale: wordLocale(),
@@ -442,6 +548,7 @@ export class Card {
       this.fit();
       this.inst.activate?.();
     } else if (!on) {
+      this.closeHint();
       this.persist();
       if (this.runningSince) this.elapsed += performance.now() - this.runningSince;
       this.runningSince = 0;
@@ -482,7 +589,15 @@ export class Card {
     const daily = this.opts.daily;
     const res = record(
       this.def.id,
-      { d: this.level, o, ms, m: this.mistakes, ...(this.shared ? { sh: true as const } : {}), ...(daily ? { dy: true as const } : {}) },
+      {
+        d: this.level,
+        o,
+        ms,
+        m: this.mistakes,
+        ...(this.hints ? { hn: this.hints } : {}),
+        ...(this.shared ? { sh: true as const } : {}),
+        ...(daily ? { dy: true as const } : {}),
+      },
       this.def.par(this.level) * 1000,
     );
     telemetry.track('puzzle.result', {
@@ -490,6 +605,7 @@ export class Card {
       'puzzle.outcome': o,
       'puzzle.duration_ms': ms,
       'puzzle.mistakes': this.mistakes,
+      'puzzle.hints': this.hints,
       'puzzle.auto_level': !this.opts.lab && !this.shared && !prefs(this.def.id).manual,
       'puzzle.personal_best': !!res.best,
       'puzzle.first_clear': o === 'solved' && res.prevBest == null,
@@ -530,6 +646,7 @@ export class Card {
     if (early) o = 'solved';
     const ms = early ? early.ms : Math.round(this.time());
     this.done = true;
+    this.closeHint();
     clearSave(this.saveId, this.seed, this.slot);
     this.setActive(false);
     this.active = true; // still the visible card; just stop the clock
@@ -546,6 +663,7 @@ export class Card {
     else if (o === 'failed') parts.push(h('strong', { class: 'bad' }, L('Not this time', 'Pas cette fois')));
     else parts.push(h('strong', null, L('Skipped', 'Passé')));
     if (this.mistakes && o !== 'skipped') parts.push(` · ${P(this.mistakes, ['mistake', 'mistakes'], ['erreur', 'erreurs'])}`);
+    if (this.hints && o !== 'skipped') parts.push(` · ${P(this.hints, ['hint', 'hints'], ['indice', 'indices'])}`);
     if (o === 'solved' && known) {
       if (res.best)
         parts.push(

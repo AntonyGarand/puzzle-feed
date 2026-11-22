@@ -251,6 +251,71 @@ export const bridges: PuzzleDef = {
     if (Number.isInteger(sv?.sel) && (sv!.sel as number) >= -1 && (sv!.sel as number) < islands.length) sel = sv!.sel as number;
     root.append(wrap);
     render();
+    /** Too many bridges somewhere (the answer is unique): a broken rule first, else a dead end. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const extra = b.flatMap((v, k) => (v > p.sol[k] ? [k] : []));
+      if (!extra.length) return null;
+      const have = (i: number) => inc[i].reduce((t, k) => t + b[k], 0);
+      const fix = (k: number, text: string, why: Element[]): Hint => {
+        const to = p.sol[k];
+        return {
+          kind: 'fix',
+          text,
+          why,
+          at: [spanEls[k]],
+          action: to === 0 ? L('Remove the bridge', 'Enlever le pont') : L('Make it a single bridge', 'En faire un pont simple'),
+          play: () => {
+            for (let t = 0; t < 3 && b[k] !== to; t++) cycle(k);
+            sel = -1;
+            after();
+          },
+        };
+      };
+      for (let i = 0; i < islands.length; i++) {
+        const got = have(i),
+          need = islands[i].need;
+        const k = extra.find((x) => inc[i].includes(x));
+        if (got > need && k != null)
+          return fix(k, L(`This ${need} has ${got} bridges: one too many.`, `Ce ${need} a ${got} ponts : c’est trop.`), [islEls[i]]);
+      }
+      // A group of complete islands closed off from the rest.
+      const comp = new Array<number>(islands.length).fill(-1);
+      for (let s0 = 0; s0 < islands.length; s0++) {
+        if (comp[s0] >= 0) continue;
+        const members = [s0];
+        comp[s0] = s0;
+        for (let q = 0; q < members.length; q++)
+          for (const k of inc[members[q]]) {
+            const j = edges[k].a === members[q] ? edges[k].b : edges[k].a;
+            if (b[k] && comp[j] < 0) {
+              comp[j] = s0;
+              members.push(j);
+            }
+          }
+        if (members.length === islands.length || !members.every((i) => have(i) === islands[i].need)) continue;
+        const k = extra.find((x) => comp[edges[x].a] === s0);
+        if (k != null)
+          return fix(
+            k,
+            L(
+              'These islands are complete but cut off from the rest: every island must connect to all the others.',
+              'Ces îles sont complètes mais coupées du reste : toutes les îles doivent être reliées entre elles.',
+            ),
+            members.map((i) => islEls[i]),
+          );
+      }
+      const k = extra[0];
+      const e = edges[k];
+      return fix(
+        k,
+        L(
+          `This bridge between the ${islands[e.a].need} and the ${islands[e.b].need} breaks no rule yet, but it leads to a dead end.`,
+          `Ce pont entre le ${islands[e.a].need} et le ${islands[e.b].need} ne brise encore aucune règle, mais il mène à une impasse.`,
+        ),
+        [islEls[e.a], islEls[e.b]],
+      );
+    };
     // Guide: forced bridges from one island's point of view, simplest reason first.
     let lastKind = '';
     const hint = (): Hint | null => {
@@ -398,6 +463,6 @@ export const bridges: PuzzleDef = {
         },
       };
     };
-    return { snapshot: () => ({ b, sel }), hint };
+    return { snapshot: () => ({ b, sel }), hint, check };
   },
 };

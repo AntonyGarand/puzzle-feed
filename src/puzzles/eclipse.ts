@@ -4,7 +4,7 @@ import type { Rng } from '../core/rng';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, h, s } from '../core/ui';
 import { pressable } from './latinkit/entry';
-import { type TakuzuRule, takuzuStep } from './logickit/takuzu-hint';
+import { type TakuzuRule, takuzuCheck, takuzuStep } from './logickit/takuzu-hint';
 
 // Cell values: -1 empty, 0 sun, 1 moon. A row is a bitmask with bit c set for a moon in column c.
 
@@ -308,9 +308,28 @@ export const eclipse: PuzzleDef = {
       return { text, why: st.why.map((i) => cells[i]), at: st.at.map((i) => cells[i]), play: put(st.at, st.vals) };
     };
 
+    /** A broken rule, else an entry off the unique solution; play() clears it (the long-press path). */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const f = takuzuCheck(g, n, sol, given, [
+        [L('This sun', 'Ce soleil'), many(0)],
+        [L('This moon', 'Cette lune'), many(1)],
+      ]);
+      if (!f) return null;
+      const i = f.clear;
+      return {
+        kind: 'fix',
+        text: f.text,
+        at: f.at.map((j) => cells[j]),
+        action: g[i] === 0 ? L('Clear the sun', 'Effacer le soleil') : L('Clear the moon', 'Effacer la lune'),
+        play: () => set(i, -1),
+      };
+    };
+
     const DIRS: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
     return {
       hint,
+      check,
       snapshot: () => ({ g, cur }),
       onKey(e) {
         if (done) return false;

@@ -2,7 +2,7 @@ import { L } from '../core/i18n';
 import type { Rng } from '../core/rng';
 import { byLevel, type PuzzleDef } from '../core/types';
 import { board, h, pad } from '../core/ui';
-import { lineHUnits, makeHint } from './sudokukit/hint';
+import { lineHUnits, makeCheck, makeHint, type HintOpts } from './sudokukit/hint';
 
 interface Shape {
   n: number;
@@ -217,7 +217,7 @@ export const sudoku: PuzzleDef = {
     );
     render();
 
-    const hint = makeHint({
+    const assist: HintOpts = {
       n,
       givens: puzzle,
       sol,
@@ -236,11 +236,12 @@ export const sudoku: PuzzleDef = {
         input(v);
       },
       scope: ['its row, column and box', 'sa rangée, sa colonne et son bloc'],
-    });
+    };
 
     return {
       snapshot: () => ({ vals, sel }),
-      hint,
+      hint: makeHint(assist),
+      check: makeCheck(assist),
       onKey(e) {
         const k = Number(e.key);
         if (k >= 1 && k <= n) {

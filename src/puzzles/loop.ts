@@ -2,6 +2,7 @@ import { L, P } from '../core/i18n';
 import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { h, s } from '../core/ui';
 import { capture } from './pathkit/grid';
+import { loopFault } from './gridkit/loopcheck';
 import { genLoop, isSingleLoop } from './gridkit/slither';
 import './loop.css';
 
@@ -62,7 +63,7 @@ export const loop: PuzzleDef = {
   create(ctx) {
     const { root, rng, difficulty: d } = ctx;
     const n = byLevel(d, [5, 6, 7, 8, 10]);
-    const { g, clue, sol } = genLoop(n, n, byLevel(d, [0.6, 0.45, 0.3, 0.15, 0]), rng);
+    const { g, clue, sol, unique } = genLoop(n, n, byLevel(d, [0.6, 0.45, 0.3, 0.15, 0]), rng);
     const { E, ea, eb, ve, ce } = g;
     const W = n + 1; // vertices per row
     const vx = (v: number) => v % W,
@@ -112,11 +113,13 @@ export const loop: PuzzleDef = {
     });
     const wrap = h('div', { class: 'lo-board' }, svg);
 
+    /** Set an SVG class only when it changes (render runs after every mark). */
+    const setCls = (el: Element, c: string) => el.getAttribute('class') !== c && el.setAttribute('class', c);
     const render = () => {
-      edgeEls.forEach((el, e) => el.setAttribute('class', `edge${st[e] === 1 ? ' on' : st[e] === 2 ? ' x' : ''}`));
+      edgeEls.forEach((el, e) => setCls(el, `edge${st[e] === 1 ? ' on' : st[e] === 2 ? ' x' : ''}`));
       dotEls.forEach((el, v) => {
         const deg = ve[v].filter((e) => st[e] === 1).length;
-        el.setAttribute('class', `vx${deg > 2 ? ' err' : deg ? ' on' : ''}`);
+        setCls(el, `vx${deg > 2 ? ' err' : deg ? ' on' : ''}`);
       });
       let good = 0,
         total = 0,
@@ -129,7 +132,7 @@ export const loop: PuzzleDef = {
         else ok = false;
         // A 0 only fades once its four sides are crossed out, so it stays visible as a hint.
         const settled = clue[c] > 0 || ce[c].every((e) => st[e] === 2);
-        el.setAttribute('class', `lo-n${k === clue[c] && settled ? ' done' : k > clue[c] ? ' err' : ''}`);
+        setCls(el, `lo-n${k === clue[c] && settled ? ' done' : k > clue[c] ? ' err' : ''}`);
       });
       ctx.status(`${good} / ${P(total, ['number', 'numbers'], ['nombre', 'nombres'])}`);
       return ok && isSingleLoop(g, (e) => st[e] === 1);
@@ -510,6 +513,95 @@ export const loop: PuzzleDef = {
         play: set([e], 1),
       };
     };
-    return { snapshot: () => ({ st }), hint, destroy: stopHold };
+    /** A mark that breaks a visible rule (branch, dead end, wrong count, early loop), else one off the unique loop. */
+    const check = (): Hint | null => {
+      if (done) return null;
+      const wrong = (e: number) => (st[e] === 1 && !sol[e]) || (st[e] === 2 && sol[e]);
+      const fix = (e: number, text: string, why: Element[]): Hint => ({
+        kind: 'fix',
+        text,
+        why,
+        at: [edgeEls[e]],
+        action: st[e] === 1 ? L('Remove the line', 'Enlever la ligne') : L('Clear the ✕', 'Effacer le ✕'),
+        play: () => {
+          if (!st[e]) return;
+          st[e] = 0;
+          after();
+          if (!done) render();
+        },
+      });
+      const f = loopFault(g, st, sol);
+      if (f?.kind === 'branch')
+        return fix(
+          f.e,
+          L(
+            `${f.es.length} lines meet at this dot, but the loop never branches. This one has to go.`,
+            `${f.es.length} lignes se rejoignent à ce point, mais la boucle ne se divise jamais. Celle-ci doit partir.`,
+          ),
+          [dotEls[f.v]],
+        );
+      for (let c = 0; c < clue.length; c++) {
+        const k = clue[c];
+        if (k < 0) continue;
+        const lines = ce[c].filter((e) => st[e] === 1).length;
+        const room = ce[c].filter((e) => st[e] !== 2).length;
+        const e =
+          lines > k ? ce[c].find((x) => st[x] === 1 && wrong(x)) : room < k ? ce[c].find((x) => st[x] === 2 && wrong(x)) : undefined;
+        if (e === undefined) continue;
+        return fix(
+          e,
+          lines > k
+            ? L(
+                `This ${k} has ${lines} lines around it, more than ${k}. This line doesn’t belong.`,
+                `Ce ${k} a ${lines} lignes autour de lui, plus que ${k}. Cette ligne est de trop.`,
+              )
+            : L(
+                `This ${k} can no longer get ${k} lines: too many of its sides are crossed out. This ✕ is the mistake.`,
+                `Ce ${k} ne peut plus avoir ${k} lignes : trop de ses côtés sont barrés. Ce ✕ est l’erreur.`,
+              ),
+          [numEls[c]!],
+        );
+      }
+      if (f?.kind === 'end')
+        return fix(
+          f.e,
+          st[f.e] === 1
+            ? L(
+                'This line ends at a dot where every other way is crossed out, and the loop never dead-ends. Remove it.',
+                'Cette ligne finit à un point dont les autres chemins sont barrés, et la boucle n’a pas de cul-de-sac. Enlevez-la.',
+              )
+            : L(
+                'The line reaching this dot has nowhere to go: every other way is crossed out. This ✕ is the mistake.',
+                'La ligne qui arrive à ce point n’a nulle part où aller : les autres chemins sont barrés. Ce ✕ est l’erreur.',
+              ),
+          [dotEls[f.v]],
+        );
+      if (f?.kind === 'closed')
+        return fix(
+          f.e,
+          L(
+            'These lines close a loop of their own, but there is only one loop and it must agree with every number. This line doesn’t belong.',
+            'Ces lignes ferment leur propre boucle, mais il n’y a qu’une boucle et elle doit respecter tous les nombres. Cette ligne est de trop.',
+          ),
+          f.es.map((e) => edgeEls[e]),
+        );
+      if (!unique) return null;
+      const e = st.findIndex((_, x) => wrong(x));
+      if (e < 0) return null;
+      return fix(
+        e,
+        st[e] === 1
+          ? L(
+              'This line breaks no rule yet, but it leads to a dead end: the loop doesn’t pass here. Remove it.',
+              'Cette ligne ne brise encore aucune règle, mais elle mène à une impasse : la boucle ne passe pas ici. Enlevez-la.',
+            )
+          : L(
+              'This ✕ breaks no rule yet, but it leads to a dead end: the loop does pass here. Clear it.',
+              'Ce ✕ ne brise encore aucune règle, mais il mène à une impasse : la boucle passe bien ici. Effacez-le.',
+            ),
+        [],
+      );
+    };
+    return { snapshot: () => ({ st }), hint, check, destroy: stopHold };
   },
 };

@@ -3,7 +3,7 @@ import { byLevel, type Hint, type PuzzleDef } from '../core/types';
 import { board, btn, h, s, shake } from '../core/ui';
 import { keyDir } from './movekit/kit';
 import { adjacent, capture, cellAt, nbrs, pts, stepsToward } from './pathkit/grid';
-import { genTrail, wallKey } from './playkit/trail-gen';
+import { finishTrail, genTrail, wallKey } from './playkit/trail-gen';
 import './trail.css';
 
 export const trail: PuzzleDef = {
@@ -129,7 +129,7 @@ export const trail: PuzzleDef = {
       );
       return head === end && !missed;
     };
-    const check = () => {
+    const check0 = () => {
       if (render() && !finished) {
         finished = true;
         drawing = false;
@@ -151,7 +151,7 @@ export const trail: PuzzleDef = {
         if (step == null) break;
         path.push(step);
       }
-      check();
+      check0();
     };
     grid.addEventListener('pointerdown', (e) => {
       if (finished) return;
@@ -169,7 +169,7 @@ export const trail: PuzzleDef = {
       capture(grid, e.pointerId);
       e.preventDefault();
       dragTo(i);
-      check();
+      check0();
     });
     grid.addEventListener('pointermove', (e) => dragTo(cellAt(grid, n, n, e.clientX, e.clientY)));
     const stop = () => (drawing = false);
@@ -223,28 +223,81 @@ export const trail: PuzzleDef = {
       nbrs(from, n, n).filter(
         (j) => from !== end && open(from, j) && !on.has(j) && (!marks[j] || marks[j] === next) && (j !== end || on.size === N - 1),
       );
-    /** A full solution continuing the current path (the generated one if we're on it, else a bounded search). */
-    const solve = (): number[] | null => {
-      if (path.every((x, k) => P.path[k] === x)) return P.path;
-      const cur = path.slice();
-      const on = new Set(cur);
-      let budget = 200000;
-      const go = (next: number): boolean => {
-        if (--budget < 0) return false;
-        const head = cur[cur.length - 1];
-        if (cur.length === N) return head === end;
-        for (const j of options(head, on, next)) {
-          on.add(j);
-          if (!strandedBy(j, on).length) {
-            cur.push(j);
-            if (go(marks[j] ? next + 1 : next)) return true;
-            cur.pop();
-          }
-          on.delete(j);
-        }
-        return false;
+    /** Solver results per path, kept across calls (check() then hint(), and cutting back). */
+    const solved = new Map<string, number[] | null | undefined>();
+    const finishFrom = (pre: number[], budget = 30000) => {
+      if (pre.every((x, k) => P.path[k] === x)) return P.path;
+      const key = pre.join(',');
+      if (!solved.has(key)) {
+        if (solved.size > 200) solved.clear();
+        solved.set(key, finishTrail(P, pre, budget));
+      }
+      return solved.get(key);
+    };
+    /** A full solution continuing the current path; null when proven impossible, undefined if unsure. */
+    const solve = () => finishFrom(path);
+    /** Why the path can't be finished, when it's visible: cut-off cells, a cell with one way in, the end reached early. */
+    const reason = (): { en: string; fr: string; why: number[] } => {
+      const on = new Set(path);
+      const head = path[path.length - 1];
+      if (head === end)
+        return {
+          en: `The path reached the last number with ${N - path.length === 1 ? 'a cell' : `${N - path.length} cells`} still uncovered, and it must end there.`,
+          fr: `Le chemin a atteint le dernier numéro avec encore ${N - path.length === 1 ? 'une case' : `${N - path.length} cases`} à couvrir, et il doit finir là.`,
+          why: [...Array(N).keys()].filter((i) => !on.has(i)),
+        };
+      const cut = strandedBy(head, on);
+      if (cut.length)
+        return {
+          en: `${cut.length === 1 ? 'This cell is' : `These ${cut.length} cells are`} cut off from the end of the path: it can never come back for ${cut.length === 1 ? 'it' : 'them'}.`,
+          fr: `${cut.length === 1 ? 'Cette case est coupée' : `Ces ${cut.length} cases sont coupées`} du bout du chemin : il ne pourra plus ${cut.length === 1 ? 'y' : 'y'} revenir.`,
+          why: cut,
+        };
+      for (let y = 0; y < N; y++) {
+        if (on.has(y) || y === end) continue;
+        const deg = freeNb(y, on).length + (adjacent(head, y, n) && open(head, y) ? 1 : 0);
+        if (deg < 2)
+          return {
+            en: 'This cell has only one way in left, so the path would get stuck in it before the end.',
+            fr: 'Cette case n’a plus qu’un seul accès : le chemin y resterait coincé avant la fin.',
+            why: [y],
+          };
+      }
+      return {
+        en: 'It breaks no rule yet, but no way on covers every cell and passes the numbers in order.',
+        fr: 'Il ne brise encore aucune règle, mais aucune suite ne couvre toutes les cases en passant les numéros dans l’ordre.',
+        why: [],
       };
-      return go(nextMark()) ? cur : null;
+    };
+    /** A path that can't be finished: cut it back to the longest start that still can (same as tapping that cell). */
+    const check = (): Hint | null => {
+      if (finished || path.length < 2 || solve() !== null) return null;
+      let k = 0;
+      while (k + 1 < path.length && P.path[k + 1] === path[k + 1]) k++;
+      // Longest start that still works (a few tries; the generated solution's start always does).
+      for (let j = path.length - 2, tries = 0; j > k && tries < 6; j--, tries++) {
+        const r = finishFrom(path.slice(0, j + 1), 8000);
+        if (r) {
+          k = j;
+          break;
+        }
+        if (r === undefined) break;
+      }
+      const x = reason();
+      return {
+        kind: 'fix',
+        text: L(
+          `This path can’t cover every cell any more. ${x.en} Cut it back here.`,
+          `Ce chemin ne peut plus couvrir toutes les cases. ${x.fr} Coupez-le ici.`,
+        ),
+        why: x.why.map((i) => cells[i]),
+        at: [cells[path[k]]],
+        action: L('Cut back', 'Couper ici'),
+        play: () => {
+          path.length = k + 1;
+          check0();
+        },
+      };
     };
     const DIRS_EN = ['up', 'right', 'down', 'left'];
     const DIRS_FR = ['vers le haut', 'vers la droite', 'vers le bas', 'vers la gauche'];
@@ -255,7 +308,7 @@ export const trail: PuzzleDef = {
     /** Same as pressing the arrow keys: extend the path one cell at a time. */
     const extend = (add: number[]) => () => {
       for (const j of add) if (canEnter(path[path.length - 1], j)) path.push(j);
-      check();
+      check0();
     };
     // Index into `rules` (rebuilt on every call, so the closures themselves can't be compared).
     let lastRule = -1;
@@ -265,7 +318,7 @@ export const trail: PuzzleDef = {
       const head = path[path.length - 1];
       const next = nextMark();
       const sol = solve();
-      if (!sol) {
+      if (sol === null) {
         // Off track: cut the path back to the last cell that agrees with the solution.
         let k = 0;
         while (k + 1 < path.length && P.path[k + 1] === path[k + 1]) k++;
@@ -277,7 +330,7 @@ export const trail: PuzzleDef = {
           at: [cells[path[k]]],
           play: () => {
             path.length = k + 1;
-            check();
+            check0();
           },
         };
       }
@@ -364,8 +417,8 @@ export const trail: PuzzleDef = {
         };
       };
       const checkpoint = (): Hint | null => {
-        const j = sol[path.length];
-        if (marks[j] !== next || !cps[next]) return null;
+        const j = sol?.[path.length];
+        if (j == null || marks[j] !== next || !cps[next]) return null;
         return {
           text: pre(
             `Numbers are passed in order, and ${next} is next. It sits right beside the end of the path: step onto it.`,
@@ -387,6 +440,20 @@ export const trail: PuzzleDef = {
         }
       }
       lastRule = -1;
+      if (!sol) {
+        // The search gave up: a step that cuts nothing off, without claiming it's the only one.
+        const j = opts.find((x) => !strandedBy(x, new Set([...on, x])).length) ?? opts[0];
+        if (j == null) return null;
+        return {
+          text: pre(
+            `Head ${way(head, j)}: it keeps every cell left connected to the end of the path, so the path can still reach them all.`,
+            `Allez ${way(head, j)} : toutes les cases qui restent demeurent reliées au bout du chemin, qui peut encore les atteindre.`,
+          ),
+          why: [cells[head]],
+          at: [cells[j]],
+          play: extend([j]),
+        };
+      }
       const j = sol[path.length];
       if (j == null) return null;
       return {
@@ -404,6 +471,7 @@ export const trail: PuzzleDef = {
     render();
     return {
       snapshot: () => ({ path }),
+      check,
       hint,
       onKey(e) {
         const dir = keyDir(e);
@@ -417,7 +485,7 @@ export const trail: PuzzleDef = {
         if (path.length > 1 && path[path.length - 2] === j) path.pop();
         else if (canEnter(head, j)) path.push(j);
         else shake(grid);
-        check();
+        check0();
         return true;
       },
     };
