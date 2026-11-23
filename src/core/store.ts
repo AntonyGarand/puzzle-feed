@@ -94,6 +94,12 @@ export interface Profile {
    * their recent solves (the last 30 per game) filled in at 10 XP each, matching the starting XP.
    */
   xpDays?: Record<string, Record<string, number>>;
+  /** Weekly solve target (absent = 20, 0 = off). */
+  weekly?: number;
+  /** Unlocked goals: id → when (0 = already earned when goals arrived). Absent until the first check. */
+  goals?: Record<string, number>;
+  /** Monday (`dayKey`) of the last week whose weekly target was reached and announced. */
+  weeklyDone?: string;
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -167,11 +173,18 @@ function save() {
 export const getProfile = () => profile;
 
 export function update(
-  patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'taste' | 'startLevel'>>,
+  patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'taste' | 'startLevel' | 'weekly'>>,
 ) {
   Object.assign(profile, patch);
   save();
   emit('profile');
+}
+
+/** Store goal unlocks (see core/goals.ts). Saves without notifying: nothing else depends on them. */
+export function setGoalState(goals: Record<string, number>, weeklyDone: string | undefined) {
+  profile.goals = goals;
+  if (weeklyDone) profile.weeklyDone = weeklyDone;
+  save();
 }
 
 export function prefs(id: string): TypePrefs {

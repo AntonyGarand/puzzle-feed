@@ -1,0 +1,152 @@
+/* Goals: the notices (toasts), the weekly target bar and the Goals list on the Profile tab. */
+
+/* ---------- toasts ---------- */
+.notices {
+  position: fixed;
+  top: calc(var(--head) + 10px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  width: min(92vw, 380px);
+  pointer-events: none;
+}
+.notice {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--hi);
+  color: var(--on-tone);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+  text-decoration: none;
+  cursor: pointer;
+  animation: notice-in 0.25s ease-out;
+}
+.notice.out {
+  animation: notice-out 0.2s ease-in forwards;
+}
+.notice-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.notice-text {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+}
+.notice-text strong {
+  font-size: 15px;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+}
+@keyframes notice-out {
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice,
+  .notice.out {
+    animation: none;
+  }
+}
+
+/* ---------- progress bars ---------- */
+.goal-bar {
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell-alt);
+  overflow: hidden;
+}
+.goal-bar > i {
+  display: block;
+  height: 100%;
+  width: calc(var(--v) * 100%);
+  background: var(--p3);
+}
+.goal.done .goal-bar > i,
+.weekly.done .goal-bar > i {
+  background: var(--good);
+}
+
+/* ---------- weekly target ---------- */
+.weekly {
+  margin-top: 20px;
+  padding: 12px 14px;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+  display: grid;
+  gap: 8px;
+}
+.weekly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+}
+.weekly .goal-bar {
+  height: 14px;
+}
+
+/* ---------- goals list ---------- */
+.goal-group h4 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.goals {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 156px), 1fr));
+  gap: 8px;
+}
+.goal {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--cell);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-cell);
+}
+.goal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.goal-head .num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.goal.done .goal-head .num {
+  color: var(--good-ink);
+}
+.goal-desc {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.goals-done summary {
+  cursor: pointer;
+  margin-top: 16px;
+  font-weight: 600;
+}

@@ -3,6 +3,7 @@ import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
 import { h, segmented } from '../ui/dom';
 import { L, LOCALES, P, locale, setLocale, type Locale } from '../core/i18n';
 import { analyticsEnabled, setAnalyticsEnabled } from '../core/analytics';
+import { DEFAULT_WEEKLY, WEEKLY_CHOICES } from '../core/goals';
 
 export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
   const p = getProfile();
@@ -111,6 +112,25 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
           ],
           p.zen ? 1 : 0,
           (v) => update({ zen: v === 1 }),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
+          h('div', null, L('Weekly goal', 'Objectif de la semaine')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L('Puzzles to solve each week, shown on your profile.', 'Parties à réussir chaque semaine, affichées dans votre profil.'),
+          ),
+        ),
+        segmented<number>(
+          WEEKLY_CHOICES.map((n) => ({ label: n ? String(n) : L('Off', 'Non'), value: n })),
+          p.weekly ?? DEFAULT_WEEKLY,
+          (v) => update({ weekly: v }),
         ),
       ),
       h(
