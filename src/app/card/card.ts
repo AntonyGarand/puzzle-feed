@@ -15,7 +15,7 @@ import { fitBoard } from './fit';
 import { HintPopup } from './hint-popup';
 import { celebrate, confettiOver, makePeekable, resultLine, resultPanel, type Outcome } from './result';
 import { openGameSettings } from './settings-sheet';
-import { openCodeSheet, shareButton } from './share';
+import { openCodeSheet, shareButton, shareOffline } from './share';
 import { UndoHistory } from './undo-history';
 
 export interface CardOptions {
@@ -254,22 +254,25 @@ export class Card {
     if (!solve || !root) return;
     clearTimeout(this.advanceTimer);
     // Loaded on first use: the picture code (and its screenshot and QR libraries) stays out of the main bundle.
-    void import('../../ui/share-image').then(({ openShareImage }) =>
-      openShareImage({
-        board: root,
-        theme: this.el,
-        puzzle: this.def.id,
-        code: this.code,
-        name: this.def.name,
-        level: LEVEL_NAMES[this.level],
-        tag: this.opts.daily ? L('Daily', 'Quotidien') : this.opts.pack ? `${L('Pack', 'Série')} ${this.opts.pack.index + 1}` : undefined,
-        ms: solve.ms,
-        mistakes: this.mistakes,
-        hints: this.hints,
-        parMs: this.def.par(this.level) * 1000,
-        stars: solve.stars,
-        zen: !!getProfile().zen,
-      }),
+    // The service worker precaches it in the background, so it also works offline.
+    import('../../ui/share-image').then(
+      ({ openShareImage }) =>
+        openShareImage({
+          board: root,
+          theme: this.el,
+          puzzle: this.def.id,
+          code: this.code,
+          name: this.def.name,
+          level: LEVEL_NAMES[this.level],
+          tag: this.opts.daily ? L('Daily', 'Quotidien') : this.opts.pack ? `${L('Pack', 'Série')} ${this.opts.pack.index + 1}` : undefined,
+          ms: solve.ms,
+          mistakes: this.mistakes,
+          hints: this.hints,
+          parMs: this.def.par(this.level) * 1000,
+          stars: solve.stars,
+          zen: !!getProfile().zen,
+        }),
+      shareOffline,
     );
   }
 
