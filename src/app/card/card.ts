@@ -4,7 +4,7 @@ import { Rng } from '../../core/rng';
 import { finishPack, type PackRef } from '../../core/packs';
 import { clearSave, dailySaveKey, packSaveKey, putSave, type Save, type Slot } from '../../core/saves';
 import { encodeCode } from '../../core/share';
-import { getProfile, prefs, record, recordDaily, setLevel, stats, type RecordOutcome } from '../../core/store';
+import { getProfile, prefs, record, recordDaily, recordLeave, setLevel, stats, type RecordOutcome } from '../../core/store';
 import { LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from '../../core/types';
 import { xpLevel } from '../../core/xp';
 import { btn, cogIcon, fmtTime, h, undoBtn } from '../../ui/dom';
@@ -554,6 +554,8 @@ export class Card {
   left() {
     if (!this.mounted || this.done || this.reached || this.pristine || this.leftGen === this.gen) return;
     this.leftGen = this.gen;
+    // Feed puzzles (not Games-tab, daily or shared ones) teach the feed the player's taste.
+    if (this.interacted && !this.opts.lab && !this.opts.daily && !this.shared) recordLeave(this.def.id);
     telemetry.track('puzzle.leave', {
       ...this.trackAttrs(),
       'puzzle.started': this.interacted,

@@ -3,6 +3,7 @@ import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
 import { h, segmented } from '../ui/dom';
 import { L, LOCALES, P, locale, setLocale, type Locale } from '../core/i18n';
 import { analyticsEnabled, setAnalyticsEnabled } from '../core/analytics';
+import { DEFAULT_WEEKLY, WEEKLY_CHOICES } from '../core/goals';
 
 export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
   const p = getProfile();
@@ -119,6 +120,25 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         h(
           'div',
           null,
+          h('div', null, L('Weekly goal', 'Objectif de la semaine')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L('Puzzles to solve each week, shown on your profile.', 'Parties à réussir chaque semaine, affichées dans votre profil.'),
+          ),
+        ),
+        segmented<number>(
+          WEEKLY_CHOICES.map((n) => ({ label: n ? String(n) : L('Off', 'Non'), value: n })),
+          p.weekly ?? DEFAULT_WEEKLY,
+          (v) => update({ weekly: v }),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
           h('div', null, L('Colour symbols', 'Symboles de couleur')),
           h(
             'div',
@@ -165,6 +185,31 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         L(
           '. Auto raises the level when you solve quickly and cleanly, and eases off after misses. Picking a level yourself locks it.',
           '. Le mode Auto monte le niveau quand vous résolvez vite et sans faute, et le baisse après des échecs. Choisir un niveau vous-même le fixe.',
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
+          h('div', null, L('Learn what I like', 'Apprendre mes goûts')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'Games you often skip show up a bit less, games you finish a bit more.',
+              'Les jeux que vous passez souvent reviennent un peu moins, ceux que vous terminez un peu plus.',
+            ),
+          ),
+        ),
+        segmented(
+          [
+            { label: L('On', 'Oui'), value: 1 },
+            { label: L('Off', 'Non'), value: 0 },
+          ],
+          p.taste === false ? 0 : 1,
+          (v) => update({ taste: v === 1 }),
         ),
       ),
       h(

@@ -5,6 +5,7 @@ import { confirmSheet, noticeSheet } from '../ui/sheet';
 import { dayStreak, exportProfile, getProfile, importProfile, prefs, resetProfile, stats, totalXp, update } from '../core/store';
 import { xpLevel } from '../core/xp';
 import { xpProgress } from './xp-progress';
+import { goalsSection, weeklyBar } from './goals';
 import { LEVELS, LEVEL_NAMES } from '../core/types';
 import type { PuzzleDef } from '../core/types';
 import { btn, fmtTime, h } from '../ui/dom';
@@ -139,9 +140,11 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         tile(L('time solving', 'temps de jeu'), fmtTime(time)),
         tile(L('day streak', 'jours de suite'), dayStreak()),
       ),
+      weeklyBar(),
       h('h3', null, L('XP progress', 'Progression XP')),
       xpProgress(defs),
       ...dailySection,
+      ...goalsSection(defs),
       h('h3', null, L('By game', 'Par jeu')),
       // Pinned header row and game column: the table scrolls inside its own box.
       h(
