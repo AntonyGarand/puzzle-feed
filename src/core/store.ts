@@ -20,6 +20,8 @@ export interface Result {
   sh?: true;
   /** A daily challenge puzzle: counts in stats, never in auto-levelling. */
   dy?: true;
+  /** A pack puzzle: counts in stats, never in auto-levelling. */
+  pk?: true;
 }
 
 /** One puzzle of a daily list, with the player's progress on it. */
@@ -39,6 +41,16 @@ export interface DailyEntry {
 
 /** A day's daily lists, one per difficulty, stored the first time the player opens one. */
 type DailyDay = Partial<Record<Difficulty, DailyEntry[]>>;
+
+/** Stars of a solved pack puzzle (see core/packs.ts). */
+export type PackStars = 1 | 2 | 3;
+
+/** Best result on one pack puzzle. */
+export interface PackEntry {
+  s: PackStars;
+  ms: number;
+  m: number;
+}
 
 export interface TypePrefs {
   level: Difficulty;
@@ -62,6 +74,8 @@ export interface TypeStats {
   xp?: number;
   /** Day (`dayKey`) of the last solve, for the first-of-the-day bonus. */
   day?: string;
+  /** When the player last scrolled away from a started, unfinished feed puzzle (latest 10), for the feed's taste. */
+  left?: number[];
 }
 
 export interface Profile {
@@ -76,6 +90,8 @@ export interface Profile {
   symbols?: boolean;
   /** Zen mode: no timer, mistakes, lives, streak or XP on screen, and lives never run out. */
   zen?: boolean;
+  /** The feed learns which games the player finishes or skips (absent = on). */
+  taste?: boolean;
   startLevel: Difficulty;
   types: Record<string, TypePrefs>;
   stats: Record<string, TypeStats>;
@@ -90,6 +106,14 @@ export interface Profile {
    * their recent solves (the last 30 per game) filled in at 10 XP each, matching the starting XP.
    */
   xpDays?: Record<string, Record<string, number>>;
+  /** Weekly solve target (absent = 20, 0 = off). */
+  weekly?: number;
+  /** Unlocked goals: id → when (0 = already earned when goals arrived). Absent until the first check. */
+  goals?: Record<string, number>;
+  /** Monday (`dayKey`) of the last week whose weekly target was reached and announced. */
+  weeklyDone?: string;
+  /** Pack progress per game and tier: the best result of each solved puzzle (null = not solved yet). */
+  packs?: Record<string, Partial<Record<Difficulty, (PackEntry | null)[]>>>;
   /** Puzzle Rush records per mode and duration (`rushKey`, e.g. `race-3`). */
   rush?: Record<string, RushRecord>;
 }
@@ -171,10 +195,19 @@ function save() {
 
 export const getProfile = () => profile;
 
-export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'startLevel'>>) {
+export function update(
+  patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'taste' | 'startLevel' | 'weekly'>>,
+) {
   Object.assign(profile, patch);
   save();
   emit('profile');
+}
+
+/** Store goal unlocks (see core/goals.ts). Saves without notifying: nothing else depends on them. */
+export function setGoalState(goals: Record<string, number>, weeklyDone: string | undefined) {
+  profile.goals = goals;
+  if (weeklyDone) profile.weeklyDone = weeklyDone;
+  save();
 }
 
 export function prefs(id: string): TypePrefs {
@@ -244,6 +277,14 @@ export function resetAllToAuto() {
   emit('level');
 }
 
+/** The player scrolled away from a started feed puzzle of this game without finishing it. */
+export function recordLeave(id: string) {
+  const left = (stats(id).left ??= []);
+  left.push(Date.now());
+  if (left.length > 10) left.splice(0, left.length - 10);
+  save();
+}
+
 /** A "day" for streaks and the activity chart starts at 4 am, so a late-night session counts as one day. */
 const DAY_START_HOURS = 4;
 export const dayKey = (t = Date.now()) => new Date(t - DAY_START_HOURS * 3_600_000).toLocaleDateString('en-CA');
@@ -254,6 +295,8 @@ export interface RecordOutcome {
   best?: boolean;
   /** Best time at this level before this result, if any. */
   prevBest?: number | undefined;
+  /** Stars earned by a solved pack puzzle. */
+  stars?: PackStars;
   /** XP earned by a solve. */
   xp?: XpOutcome;
 }
@@ -311,8 +354,8 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
   s.recent.push(res);
   if (s.recent.length > 30) s.recent.splice(0, s.recent.length - 30);
 
-  if (!p.manual && !r.sh && !r.dy) {
-    const rel = s.recent.filter((x) => x.d === p.level && x.at >= p.since && !x.sh && !x.dy);
+  if (!p.manual && !r.sh && !r.dy && !r.pk) {
+    const rel = s.recent.filter((x) => x.d === p.level && x.at >= p.since && !x.sh && !x.dy && !x.pk);
     const last3 = rel.slice(-3);
     const last2 = rel.slice(-2);
     const good = (x: Result) => x.o === 'solved' && x.ms <= parMs && x.m <= 1 && !x.hn;
@@ -356,6 +399,19 @@ export function recordDaily(date: string, level: Difficulty, index: number, o: '
   }
   save();
   emit('record');
+}
+
+/** Best results of `id`'s pack tier `level`, by puzzle index (missing or null = not solved). */
+export const packEntries = (id: string, level: Difficulty): readonly (PackEntry | null | undefined)[] => profile.packs?.[id]?.[level] ?? [];
+
+/** Keep the best of a pack puzzle's results: most stars, fastest time, fewest mistakes. */
+export function recordPack(id: string, level: Difficulty, index: number, r: PackEntry) {
+  const tier = (((profile.packs ??= {})[id] ??= {})[level] ??= []);
+  while (tier.length <= index) tier.push(null);
+  const e = tier[index];
+  tier[index] = e ? { s: Math.max(e.s, r.s) as PackStars, ms: Math.min(e.ms, r.ms), m: Math.min(e.m, r.m) } : { ...r };
+  save();
+  emit('record', id);
 }
 
 /** A finished Rush run of `key` (`rushKey`) scoring `score`. `best`: it beat the previous best. */

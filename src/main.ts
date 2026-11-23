@@ -1,7 +1,7 @@
 // oxlint-disable-next-line import/no-unassigned-import -- must run before any module reads localStorage
 import './core/migrate-storage';
 import { telemetry } from './core/analytics';
-import { L, localeTag } from './core/i18n';
+import { L, localeTag, P } from './core/i18n';
 import '@fontsource-variable/space-grotesk';
 import './styles/index.css';
 import { Feed } from './app/feed';
@@ -12,6 +12,8 @@ import { LabView } from './pages/lab';
 import { renderDaily } from './pages/daily';
 import { dailyDate, getDaily } from './core/daily';
 import { renderLabs } from './pages/labs';
+import { renderPacks } from './pages/packs';
+import { nextInTier, PACK_SIZE, tierUnlocked } from './core/packs';
 import { renderSettings } from './pages/settings';
 import { renderStats } from './pages/stats';
 import { renderRush } from './pages/rush';
@@ -23,6 +25,8 @@ import { setupUpdates } from './app/update';
 import { closeSheet } from './ui/sheet';
 import { navigate, onNavigate, upgradeHashRoute } from './app/nav';
 import { isReload, sessionGet, sessionSet } from './core/session';
+import { checkGoals } from './core/goals';
+import { toast } from './ui/toast';
 
 const app = document.getElementById('app')!;
 telemetry.track('app.open', {
@@ -92,7 +96,7 @@ function updateStreak() {
   streak.textContent = n > 1 ? L(`${n} day streak`, `${n} jours de suite`) : '';
 }
 
-type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings' | 'rush' | 'rushPlay';
+type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings' | 'packs' | 'rush' | 'rushPlay';
 let labOpen: string | null = null;
 /** The Rush run on screen (`<mode>-<minutes>`): navigating away drops it. */
 let rushOpen: string | null = null;
@@ -118,7 +122,8 @@ function route() {
   const sharedOk = shared && 'def' in shared ? shared : undefined;
   const def = sharedOk?.def ?? PUZZLES.find((p) => p.id === arg);
   // /games (alias /labs) lists games; /game/<id> (alias /lab/<id>) opens one.
-  let view: View = r === 'stats' || r === 'settings' || r === 'daily' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
+  let view: View =
+    r === 'stats' || r === 'settings' || r === 'daily' || r === 'packs' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
   if (((r === 'lab' || r === 'game') && def) || sharedOk) view = 'lab';
   // /rush sets up a Puzzle Rush; /rush/play/<mode>/<minutes> plays one.
   const rushRun = r === 'rush' && arg === 'play' ? parseRush(sub, lvl) : undefined;
@@ -140,6 +145,13 @@ function route() {
   const daily = dailyLevel && sub ? openDaily(dailyLevel, Number(sub) - 1) : false;
   if (daily) view = 'lab';
 
+  // /packs lists every game's pack; /packs/<id> shows one; /packs/<id>/<level>/<n> plays its n-th puzzle.
+  const packDef = r === 'packs' ? PUZZLES.find((p) => p.id === arg) : undefined;
+  if (r === 'packs' && arg && !packDef) history.replaceState(null, '', '/packs');
+  const packLevel = packDef && LEVELS.includes(Number(sub) as Difficulty) ? (Number(sub) as Difficulty) : undefined;
+  const pack = packDef && packLevel && lvl ? openPack(packDef.id, packLevel, Number(lvl) - 1) : false;
+  if (pack) view = 'lab';
+
   // Feed (optionally a single-puzzle "endless" feed)
   const only = r === 'play' && def ? def.id : null;
   if (view === 'feed') feed.setOnly(only);
@@ -147,8 +159,8 @@ function route() {
   if (only && def) practice.replaceChildren(h('span', { class: 'swatchlet', 'data-puzzle': def.id }), `${def.name} ✕`);
 
   // Lab: /game/<id> resumes (or starts) · /game/<id>/new/<level> starts fresh
-  if (daily) {
-    // opened by openDaily()
+  if (daily || pack) {
+    // opened by openDaily() / openPack()
   } else if (sharedOk) {
     const key = `s:${sharedOk.code.id}-${sharedOk.code.level}-${sharedOk.code.seed}`;
     if (labOpen !== key) {
@@ -166,7 +178,7 @@ function route() {
     lab.setShown(false);
   }
 
-  const activeTab = daily ? 'daily' : view === 'lab' || view === 'rush' || view === 'rushPlay' ? 'labs' : view;
+  const activeTab = daily ? 'daily' : view === 'lab' || view === 'packs' || view === 'rush' || view === 'rushPlay' ? 'labs' : view;
   for (const [k, a] of Object.entries(tabs)) a.classList.toggle('on', k === activeTab && !(k === 'feed' && only));
 
   feed.el.hidden = view !== 'feed';
@@ -178,6 +190,7 @@ function route() {
   rush.setShown(view === 'rushPlay');
   if (view === 'daily') renderDaily(page, PUZZLES, dailyLevel);
   if (view === 'labs') renderLabs(page, PUZZLES, codeError);
+  if (view === 'packs') renderPacks(page, PUZZLES, packDef);
   if (view === 'rush') renderRush(page);
   if (view === 'stats') renderStats(page, PUZZLES);
   if (view === 'settings') renderSettings(page, PUZZLES);
@@ -211,10 +224,45 @@ function openDaily(level: Difficulty, index: number): boolean {
   return true;
 }
 
+/** Open puzzle `index` of `id`'s pack tier `level` in the lab view. False (back to the pack) when locked or out of range. */
+function openPack(id: string, level: Difficulty, index: number): boolean {
+  const def = PUZZLES.find((p) => p.id === id)!;
+  if (!(index >= 0 && index < PACK_SIZE) || !tierUnlocked(id, level)) {
+    history.replaceState(null, '', `/packs/${id}`);
+    return false;
+  }
+  const key = `p:${id}:${level}:${index}`;
+  if (labOpen !== key) {
+    lab.openPack(def, { level, index }, () => {
+      // Next: the tier's following unsolved puzzle, or back to the pack once they're all solved.
+      const next = nextInTier(id, level, index);
+      navigate(next == null ? `/packs/${id}` : `/packs/${id}/${level}/${next + 1}`);
+    });
+    labOpen = key;
+  }
+  return true;
+}
+
 onChange((kind) => {
   if (kind === 'profile') applyTheme();
+  if (kind === 'record') announceGoals();
   updateStreak();
 });
+
+/** A toast for each goal a result just completed, and for reaching the weekly target (not in Zen mode). */
+function announceGoals() {
+  const news = checkGoals(PUZZLES);
+  if (getProfile().zen) return;
+  for (const g of news.unlocked) toast(L('Goal reached', 'Objectif atteint'), `${g.name()} · ${g.desc()}`, { icon: '🏆', href: '/stats' });
+  const w = news.weekly;
+  if (w)
+    toast(
+      L('Weekly goal reached', 'Objectif de la semaine atteint'),
+      `${P(w.solved, ['puzzle', 'puzzles'], ['partie réussie', 'parties réussies'])}${L(' solved this week.', ' cette semaine.')}`,
+      { icon: '🎯', href: '/stats' },
+    );
+}
+checkGoals(PUZZLES, Date.now(), true);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 onNavigate(route);
 // Android app: the system back button asks here first (MainActivity.java). An open sheet closes;

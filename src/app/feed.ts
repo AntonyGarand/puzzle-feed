@@ -3,7 +3,8 @@ import { L } from '../core/i18n';
 import { Card, isUndoKey } from './card/card';
 import { getSave } from '../core/saves';
 import { isReload, sessionGet, sessionSet } from '../core/session';
-import { onChange, prefs } from '../core/store';
+import { getProfile, onChange, prefs } from '../core/store';
+import { affinity, tasteWeights } from '../core/taste';
 import { LEVELS, type Difficulty, type PuzzleDef } from '../core/types';
 import { h } from '../ui/dom';
 
@@ -154,6 +155,15 @@ export class Feed {
   private pick(): PuzzleDef | null {
     const pool = this.defs.filter((d) => this.enabled(d)).map((d) => ({ d, w: this.only ? 1 : WEIGHTS[prefs(d.id).weight] }));
     if (!pool.length) return null;
+    // Mixed feed: lean towards games the player finishes, and away from the previous card's category.
+    if (!this.only) {
+      const prev = this.defs.find((d) => d.id === this.recentTypes.at(-1));
+      const now = Date.now();
+      tasteWeights(pool, {
+        prevCategory: prev?.category,
+        affinity: getProfile().taste === false ? undefined : (d) => affinity(getProfile().stats[d.id], now),
+      });
+    }
     // Avoid immediate repeats (and soften repeats from the last few cards) when there is variety.
     for (const x of pool) {
       const idx = this.recentTypes.lastIndexOf(x.d.id);

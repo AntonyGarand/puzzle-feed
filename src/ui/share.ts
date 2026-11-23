@@ -3,7 +3,7 @@ import { h } from './dom';
 
 const shareLink = (code: string) => `${location.origin}/s/${code}`;
 
-async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
+async function copyText(text: string, fallback: HTMLInputElement | HTMLTextAreaElement): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -15,6 +15,28 @@ async function copyText(text: string, fallback: HTMLInputElement): Promise<boole
     const ok = document.execCommand('copy');
     fallback.value = prev;
     return ok;
+  }
+}
+
+/**
+ * Share a short text: the system share sheet when there is one, else the clipboard. A share sheet the
+ * player dismisses counts as `failed` (nothing to announce).
+ */
+export async function shareText(text: string, title: string): Promise<'shared' | 'copied' | 'failed'> {
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title, text });
+      return 'shared';
+    } catch {
+      return 'failed';
+    }
+  }
+  const area = h('textarea', { style: 'position:fixed;left:-9999px;opacity:0', readonly: true, 'aria-hidden': 'true', tabindex: '-1' });
+  document.body.append(area);
+  try {
+    return (await copyText(text, area)) ? 'copied' : 'failed';
+  } finally {
+    area.remove();
   }
 }
 

@@ -4,13 +4,16 @@ import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
 import { navigate } from '../app/nav';
 import { encodeCode, resolveCode } from '../core/share';
-import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
+import { getProfile, prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
+import { affinity } from '../core/taste';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { cogIcon, fmtTime, h, segmented } from '../ui/dom';
+import { btn, cogIcon, fmtTime, h, segmented } from '../ui/dom';
 import { openSheet } from '../ui/sheet';
 import { destroyThumbs, thumb } from '../ui/thumb';
 import { levelHex } from '../ui/win';
 import { xpLevel } from '../core/xp';
+import { packProgress } from '../core/packs';
+import { packSummary } from './packs';
 import { rushBanner } from './rush';
 
 const ago = (t: number) => {
@@ -20,6 +23,20 @@ const ago = (t: number) => {
   const hrs = Math.round(m / 60);
   return hrs < 24 ? L(`${hrs}h ago`, `il y a ${hrs} h`) : L(`${Math.round(hrs / 24)}d ago`, `il y a ${Math.round(hrs / 24)} j`);
 };
+
+/** "Shown a bit more/less often", when the feed's taste has moved this game's weight noticeably. */
+function tasteNote(id: string): HTMLElement | null {
+  if (getProfile().taste === false || prefs(id).weight === 0) return null;
+  const a = affinity(getProfile().stats[id]);
+  if (Math.abs(a - 1) < 0.15) return null;
+  return h(
+    'p',
+    { class: 'muted small' },
+    a > 1
+      ? L('Shown a bit more often: you usually finish it.', 'Revient un peu plus souvent : vous le terminez d’habitude.')
+      : L('Shown a bit less often: you often skip it.', 'Revient un peu moins souvent : vous le passez souvent.'),
+  );
+}
 
 let filter: CategoryId | 'all' = 'all';
 let query = '';
@@ -95,6 +112,17 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         levelBox,
         h('h3', null, L('In the feed', 'Dans le fil')),
         segmented(weights(), pr.weight, (v) => setWeight(d.id, v)),
+        tasteNote(d.id),
+        h('h3', null, L('Packs', 'Séries')),
+        h(
+          'p',
+          { class: 'row pack-link' },
+          h('span', { class: 'small' }, packSummary(packProgress(d.id))),
+          btn(L('Open packs', 'Voir les séries'), () => {
+            close();
+            navigate(`/packs/${d.id}`);
+          }),
+        ),
         save
           ? h(
               'p',
@@ -131,6 +159,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
     const pr = prefs(d.id);
     const href = save ? `/game/${d.id}` : `/game/${d.id}/new/${pr.level}`;
     const best = st.best[pr.level];
+    const pack = packProgress(d.id);
     const lvl = levelHex(xpLevel(st.xp!).level, 'sm');
     const chips = save
       ? [
@@ -144,6 +173,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           `${pr.manual ? '' : 'Auto · '}${LEVEL_NAMES[pr.level]}`,
           st.solved ? P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']) : null,
           best != null ? `${L('best', 'record')} ${fmtTime(best)}` : null,
+          pack.solved ? `${L('packs', 'séries')} ${pack.solved} / ${pack.total}` : null,
         ];
     const cog = h(
       'button',
@@ -318,6 +348,12 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           `${defs.length} games. Tap one to play — unfinished games are saved automatically. The cog sets its level and how often it shows up in the Feed tab.`,
           `${defs.length} jeux. Touchez un jeu pour jouer — les parties en cours sont sauvegardées automatiquement. La roue dentée règle son niveau et sa fréquence dans l’onglet Fil.`,
         ),
+      ),
+      h(
+        'a',
+        { class: 'btn packs-link', href: '/packs' },
+        L('Packs', 'Séries'),
+        h('span', { class: 'small' }, L(' · set puzzles in five levels, with stars', ' · parties fixes en cinq niveaux, avec étoiles')),
       ),
       rushBanner(),
       codeForm,

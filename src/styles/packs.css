@@ -1,0 +1,157 @@
+/* Packs: set puzzles per game in five tiers, with stars. */
+.packs-link {
+  margin-bottom: 14px;
+  text-decoration: none;
+}
+.packs .back {
+  margin-bottom: 10px;
+  text-decoration: none;
+}
+.packs h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pack-tier {
+  margin-top: 18px;
+}
+.pack-tier h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pack-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.pack-badge {
+  padding: 1px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--hi);
+  color: var(--on-tone);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pack-badge.perfect {
+  background: var(--accent);
+}
+.pack-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+@media (max-width: 420px) {
+  .pack-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.pack-tile {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--cell);
+  color: var(--fg);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+  text-decoration: none;
+  font-size: 16px;
+}
+a.pack-tile:hover {
+  background: var(--cell-alt);
+}
+.pack-tile.is-solved {
+  background: color-mix(in srgb, var(--accent) 30%, var(--cell));
+}
+.pack-tile.is-perfect {
+  background: var(--accent);
+  color: var(--on-tone);
+}
+.pack-tile.is-locked {
+  color: var(--faint);
+  box-shadow: none;
+  border-style: dashed;
+}
+.pack-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+}
+.pack-stars {
+  display: flex;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.pack-stars i {
+  font-style: normal;
+  color: var(--faint);
+}
+.pack-stars i.on {
+  color: var(--fg);
+}
+.is-perfect .pack-stars i.on {
+  color: var(--on-tone);
+}
+.pack-bar {
+  display: block;
+  height: 6px;
+  margin-top: 4px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cell-alt);
+  overflow: hidden;
+}
+.pack-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.pack-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.win-stars {
+  margin: 0;
+  display: flex;
+  gap: 4px;
+  font-size: 28px;
+  line-height: 1;
+}
+.win-stars span {
+  color: var(--faint);
+}
+.win-stars span.on {
+  color: var(--accent-ink);
+  animation: win-star 0.35s ease-out backwards;
+}
+.win-stars span.on:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.win-stars span.on:nth-child(3) {
+  animation-delay: 0.24s;
+}
+@keyframes win-star {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-stars span.on {
+    animation: none;
+  }
+}
