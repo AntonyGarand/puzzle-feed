@@ -151,10 +151,20 @@ function winScores(w: WinInfo): (HTMLElement | null)[] {
       tile(L('Par', 'Normale'), fmtTime(w.parMs)),
       tile(L('Solves', 'Réussites'), String(w.solved)),
     ),
+    res?.streak && res.streak.n > 1 ? streakPill(res.streak) : null,
     w.levelUp ? levelPill(w.levelUp) : null,
     res?.xp ? xpSection(res.xp, w.name) : null,
   ];
 }
+
+/** Solves in a row across every game, tagged when it's the longest run yet. */
+const streakPill = (st: { n: number; best: boolean }) =>
+  h(
+    'div',
+    { class: 'win-streak' },
+    L(`${st.n} solves in a row`, `${st.n} réussites de suite`),
+    st.best ? h('span', { class: 'win-tag' }, L('Best streak', 'Meilleure série')) : null,
+  );
 
 /** A pack solve's stars, out of three. */
 function starRow(n: number) {

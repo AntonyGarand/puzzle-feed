@@ -547,6 +547,7 @@ export class Card {
         ...(this.shared ? { sh: true as const } : {}),
         ...(daily ? { dy: true as const } : {}),
         ...(this.opts.pack ? { pk: true as const } : {}),
+        ...(this.opts.lab && !this.shared && !daily && !this.opts.pack ? { lb: true as const } : {}),
       },
       this.def.par(this.level) * 1000,
     );

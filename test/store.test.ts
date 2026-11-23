@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
-import { addPlayTime, prefs, record, resetProfile, setLevel, stats } from '../src/core/store';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { addPlayTime, getProfile, prefs, record, resetProfile, setLevel, solveRun, stats } from '../src/core/store';
 
 const PAR = 30_000;
 const solve = (id: string, ms = 10_000, m = 0) => record(id, { d: prefs(id).level, o: 'solved', ms, m }, PAR);
@@ -85,5 +85,40 @@ describe('play time', () => {
     addPlayTime('a', 10_000.4);
     expect(stats('a').playTime).toBe(100_000);
     expect(stats('a').time).toBe(0);
+  });
+});
+
+describe('solve streak', () => {
+  beforeEach(() => resetProfile());
+
+  it('counts solves in a row across games, and a failure or give-up ends it', () => {
+    expect(solve('a').streak).toEqual({ n: 1, best: true });
+    expect(solve('b').streak).toEqual({ n: 2, best: true });
+    expect(fail('a').streak).toBeUndefined();
+    expect(solveRun()).toEqual({ cur: 0, best: 2 });
+    expect(solve('a').streak).toEqual({ n: 1, best: false });
+    record('b', { d: 1, o: 'skipped', ms: 1_000, m: 0 }, PAR);
+    expect(solveRun()).toEqual({ cur: 0, best: 2 });
+  });
+
+  it('only counts feed puzzles', () => {
+    solve('a');
+    for (const flag of ['dy', 'pk', 'sh', 'lb'] as const) {
+      expect(record('a', { d: 1, o: 'solved', ms: 1_000, m: 0, [flag]: true }, PAR).streak).toBeUndefined();
+      record('a', { d: 1, o: 'failed', ms: 1_000, m: 0, [flag]: true }, PAR);
+    }
+    expect(solveRun()).toEqual({ cur: 1, best: 1 });
+  });
+
+  it('rebuilds a missing streak from recent results', () => {
+    vi.useFakeTimers();
+    const lab = () => record('a', { d: 1, o: 'failed', ms: 1_000, m: 0, lb: true }, PAR);
+    for (const step of [() => solve('a'), () => fail('b'), () => solve('b'), lab, () => solve('a')]) {
+      vi.advanceTimersByTime(1_000);
+      step();
+    }
+    vi.useRealTimers();
+    delete getProfile().run;
+    expect(solveRun()).toEqual({ cur: 2, best: 2 });
   });
 });
