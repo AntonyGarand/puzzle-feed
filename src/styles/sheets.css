@@ -416,6 +416,29 @@ dialog.sheet::backdrop {
   min-height: 1.3em;
   margin: 8px 0 0;
 }
+/* "Share your solve": the picture, then Share image / Save image */
+.share-image-preview {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  margin-bottom: 12px;
+}
+.share-image-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 55dvh;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+}
+.share-image-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.share-image-actions .btn {
+  flex: 1;
+  text-align: center;
+}
 .lab-bar .small {
   flex: 1;
   text-align: center;
