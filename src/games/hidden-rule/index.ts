@@ -154,10 +154,10 @@ export const hiddenRule: PuzzleDef = {
         ctx.mistake();
         shake(stage);
       }
-      if (lives <= 0 || answers.length === tests.length) over = true;
+      if ((lives <= 0 && !ctx.zen) || answers.length === tests.length) over = true;
       render();
       if (over) {
-        if (lives > 0) ctx.solved();
+        if (lives > 0 || ctx.zen) ctx.solved();
         else ctx.failed();
       }
     };
@@ -168,7 +168,7 @@ export const hiddenRule: PuzzleDef = {
       for (const x of sv.a) {
         if (typeof x !== 'boolean' || answers.length >= tests.length - 1) break;
         const wrong = rule.test(tests[answers.length]) !== x;
-        if (wrong && lives <= 1) break;
+        if (wrong && lives <= 1 && !ctx.zen) break;
         if (wrong) lives--;
         answers.push(x);
       }

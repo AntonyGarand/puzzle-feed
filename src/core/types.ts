@@ -90,6 +90,11 @@ export interface PuzzleCtx {
   status: (text: string) => void;
   /** Extra buttons shown in the card footer. */
   controls: (...els: HTMLElement[]) => void;
+  /**
+   * Zen mode is on: lives are hidden and must never run out. Games with lives keep counting mistakes
+   * but never call `failed()` for a lost life (other failures, such as a move limit, still apply).
+   */
+  zen?: boolean;
   /** State previously returned by `snapshot()` when resuming; same seed, so generation matches. */
   saved?: unknown;
 }

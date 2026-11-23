@@ -94,6 +94,31 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
         h(
           'div',
           null,
+          h('div', null, L('Zen mode', 'Mode zen')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'No timer, mistakes, scores or streak, and lives never run out. Just the puzzle.',
+              'Sans chrono, erreurs, scores ni série, et des vies illimitées. Juste le casse-tête.',
+            ),
+          ),
+        ),
+        segmented(
+          [
+            { label: L('On', 'Oui'), value: 1 },
+            { label: L('Off', 'Non'), value: 0 },
+          ],
+          p.zen ? 1 : 0,
+          (v) => update({ zen: v === 1 }),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
           h('div', null, L('Colour symbols', 'Symboles de couleur')),
           h(
             'div',
