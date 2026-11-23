@@ -1,7 +1,7 @@
 // oxlint-disable-next-line import/no-unassigned-import -- must run before any module reads localStorage
 import './core/migrate-storage';
 import { telemetry } from './core/analytics';
-import { L, localeTag } from './core/i18n';
+import { L, localeTag, P } from './core/i18n';
 import '@fontsource-variable/space-grotesk';
 import './styles/index.css';
 import { Feed } from './app/feed';
@@ -20,6 +20,8 @@ import { setupUpdates } from './app/update';
 import { closeSheet } from './ui/sheet';
 import { navigate, onNavigate, upgradeHashRoute } from './app/nav';
 import { isReload, sessionGet, sessionSet } from './core/session';
+import { checkGoals } from './core/goals';
+import { toast } from './ui/toast';
 
 const app = document.getElementById('app')!;
 telemetry.track('app.open', {
@@ -192,8 +194,24 @@ function openDaily(level: Difficulty, index: number): boolean {
 
 onChange((kind) => {
   if (kind === 'profile') applyTheme();
+  if (kind === 'record') announceGoals();
   updateStreak();
 });
+
+/** A toast for each goal a result just completed, and for reaching the weekly target (not in Zen mode). */
+function announceGoals() {
+  const news = checkGoals(PUZZLES);
+  if (getProfile().zen) return;
+  for (const g of news.unlocked) toast(L('Goal reached', 'Objectif atteint'), `${g.name()} · ${g.desc()}`, { icon: '🏆', href: '/stats' });
+  const w = news.weekly;
+  if (w)
+    toast(
+      L('Weekly goal reached', 'Objectif de la semaine atteint'),
+      `${P(w.solved, ['puzzle', 'puzzles'], ['partie réussie', 'parties réussies'])}${L(' solved this week.', ' cette semaine.')}`,
+      { icon: '🎯', href: '/stats' },
+    );
+}
+checkGoals(PUZZLES, Date.now(), true);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 onNavigate(route);
 // Android app: the system back button asks here first (MainActivity.java). An open sheet closes;
