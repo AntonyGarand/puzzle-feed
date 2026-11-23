@@ -4,7 +4,8 @@ import { CATEGORIES, type CategoryId } from '../core/categories';
 import { allSaves, clearSave, type Save } from '../core/saves';
 import { navigate } from '../app/nav';
 import { encodeCode, resolveCode } from '../core/share';
-import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
+import { getProfile, prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
+import { affinity } from '../core/taste';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
 import { cogIcon, fmtTime, h, segmented } from '../ui/dom';
 import { openSheet } from '../ui/sheet';
@@ -19,6 +20,20 @@ const ago = (t: number) => {
   const hrs = Math.round(m / 60);
   return hrs < 24 ? L(`${hrs}h ago`, `il y a ${hrs} h`) : L(`${Math.round(hrs / 24)}d ago`, `il y a ${Math.round(hrs / 24)} j`);
 };
+
+/** "Shown a bit more/less often", when the feed's taste has moved this game's weight noticeably. */
+function tasteNote(id: string): HTMLElement | null {
+  if (getProfile().taste === false || prefs(id).weight === 0) return null;
+  const a = affinity(getProfile().stats[id]);
+  if (Math.abs(a - 1) < 0.15) return null;
+  return h(
+    'p',
+    { class: 'muted small' },
+    a > 1
+      ? L('Shown a bit more often: you usually finish it.', 'Revient un peu plus souvent : vous le terminez d’habitude.')
+      : L('Shown a bit less often: you often skip it.', 'Revient un peu moins souvent : vous le passez souvent.'),
+  );
+}
 
 let filter: CategoryId | 'all' = 'all';
 let query = '';
@@ -94,6 +109,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         levelBox,
         h('h3', null, L('In the feed', 'Dans le fil')),
         segmented(weights(), pr.weight, (v) => setWeight(d.id, v)),
+        tasteNote(d.id),
         save
           ? h(
               'p',

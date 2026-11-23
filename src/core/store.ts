@@ -62,6 +62,8 @@ export interface TypeStats {
   xp?: number;
   /** Day (`dayKey`) of the last solve, for the first-of-the-day bonus. */
   day?: string;
+  /** When the player last scrolled away from a started, unfinished feed puzzle (latest 10), for the feed's taste. */
+  left?: number[];
 }
 
 export interface Profile {
@@ -76,6 +78,8 @@ export interface Profile {
   symbols?: boolean;
   /** Zen mode: no timer, mistakes, lives, streak or XP on screen, and lives never run out. */
   zen?: boolean;
+  /** The feed learns which games the player finishes or skips (absent = on). */
+  taste?: boolean;
   startLevel: Difficulty;
   types: Record<string, TypePrefs>;
   stats: Record<string, TypeStats>;
@@ -162,7 +166,9 @@ function save() {
 
 export const getProfile = () => profile;
 
-export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'startLevel'>>) {
+export function update(
+  patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'taste' | 'startLevel'>>,
+) {
   Object.assign(profile, patch);
   save();
   emit('profile');
@@ -233,6 +239,14 @@ export function resetAllToAuto() {
   for (const p of Object.values(profile.types)) p.manual = false;
   save();
   emit('level');
+}
+
+/** The player scrolled away from a started feed puzzle of this game without finishing it. */
+export function recordLeave(id: string) {
+  const left = (stats(id).left ??= []);
+  left.push(Date.now());
+  if (left.length > 10) left.splice(0, left.length - 10);
+  save();
 }
 
 /** A "day" for streaks and the activity chart starts at 4 am, so a late-night session counts as one day. */
