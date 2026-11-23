@@ -22,6 +22,8 @@ export interface Result {
   dy?: true;
   /** A pack puzzle: counts in stats, never in auto-levelling. */
   pk?: true;
+  /** Played outside the feed (Games tab): counts in stats and auto-levelling, never in the solve streak. */
+  lb?: true;
 }
 
 /** One puzzle of a daily list, with the player's progress on it. */
@@ -121,6 +123,17 @@ export interface Profile {
   packs?: Record<string, Partial<Record<Difficulty, (PackEntry | null)[]>>>;
   /** Puzzle Rush records per mode and duration (`rushKey`, e.g. `race-3`). */
   rush?: Record<string, RushRecord>;
+  /**
+   * Feed solve streak across every game: solves in a row (`cur`) and the longest run (`best`). A failure or
+   * a give-up ends it; puzzles played outside the feed (Games tab, daily, packs, shared) don't count.
+   * Absent until the first result, then filled in from the stored recent results.
+   */
+  run?: SolveRun;
+}
+
+export interface SolveRun {
+  cur: number;
+  best: number;
 }
 
 /** Best score of a Rush mode and duration, when it was set, and how many runs were finished. */
@@ -313,6 +326,8 @@ export interface RecordOutcome {
   stars?: PackStars;
   /** XP earned by a solve. */
   xp?: XpOutcome;
+  /** Feed solves in a row after this result (see `Profile.run`), and whether it beat the longest run. Feed results only. */
+  streak?: { n: number; best: boolean };
 }
 
 /**
@@ -325,6 +340,16 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
   const p = prefs(id);
   const res: Result = { ...r, at: Date.now() };
   const out: RecordOutcome = {};
+
+  if (inFeed(r)) {
+    const run = solveRun();
+    if (r.o === 'solved') {
+      run.cur++;
+      const best = run.cur > run.best;
+      if (best) run.best = run.cur;
+      out.streak = { n: run.cur, best };
+    } else run.cur = 0;
+  }
 
   s.played++;
   if (r.o === 'solved') {
@@ -441,6 +466,29 @@ export function recordRush(key: string, score: number): { best: boolean; prev: n
 }
 
 export const rushRecord = (key: string): RushRecord | undefined => profile.rush?.[key];
+
+/** A result played in the feed: not a daily, pack, shared or Games-tab puzzle. */
+const inFeed = (r: Omit<Result, 'at'>) => !r.sh && !r.dy && !r.pk && !r.lb;
+
+/**
+ * The feed solve streak (see `Profile.run`). Profiles from before it get one rebuilt from every game's recent
+ * feed results (the last 30 per game), so a long streak may start out shorter than it really was.
+ */
+export function solveRun(): SolveRun {
+  if (!profile.run) {
+    const all = Object.values(profile.stats)
+      .flatMap((s) => s.recent.filter(inFeed))
+      .sort((a, b) => a.at - b.at);
+    let cur = 0;
+    let best = 0;
+    for (const r of all) {
+      cur = r.o === 'solved' ? cur + 1 : 0;
+      best = Math.max(best, cur);
+    }
+    profile.run = { cur, best };
+  }
+  return profile.run;
+}
 
 export function dayStreak(): number {
   const d = new Date();

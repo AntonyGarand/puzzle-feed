@@ -2,7 +2,7 @@ import { dailyStats } from '../core/daily';
 import { L, localeTag } from '../core/i18n';
 import { clearAllSaves } from '../core/saves';
 import { confirmSheet, noticeSheet } from '../ui/sheet';
-import { dayStreak, exportProfile, getProfile, importProfile, prefs, resetProfile, stats, totalXp, update } from '../core/store';
+import { dayStreak, exportProfile, getProfile, importProfile, prefs, resetProfile, solveRun, stats, totalXp, update } from '../core/store';
 import { xpLevel } from '../core/xp';
 import { xpProgress } from './xp-progress';
 import { goalsSection, weeklyBar } from './goals';
@@ -18,6 +18,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
   const time = all.reduce((a, x) => a + x.s.playTime!, 0);
   const xp = totalXp();
   const pl = xpLevel(xp);
+  const run = solveRun();
 
   const tile = (label: string, value: string | number) =>
     h('div', { class: 'stat' }, h('div', { class: 'stat-v' }, value), h('div', { class: 'stat-l' }, label));
@@ -139,6 +140,8 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         tile(L('solve rate', 'taux de réussite'), played ? `${Math.round((100 * solved) / played)}%` : '—'),
         tile(L('play time', 'temps de jeu'), fmtTime(time)),
         tile(L('day streak', 'jours de suite'), dayStreak()),
+        tile(L('feed streak', 'série du fil'), run.cur),
+        tile(L('best feed streak', 'record du fil'), run.best),
       ),
       weeklyBar(),
       h('h3', null, L('XP progress', 'Progression XP')),
