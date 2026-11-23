@@ -1,7 +1,7 @@
 import { L } from '../core/i18n';
 import { fmtTime, h } from './dom';
 import { openSheet } from './sheet';
-import { shareSection } from './share';
+import { shareSection, textLink } from './share';
 
 /** A finished puzzle to turn into a picture: the board, how it went, and a link to the same puzzle. */
 export interface ShareImageInfo {
@@ -340,7 +340,7 @@ export function openShareImage(info: ShareImageInfo, onClose?: () => void) {
     title: L('Share your solve', 'Partager votre réussite'),
     puzzle: info.puzzle,
     className: 'share-sheet',
-    body: [preview, actions, shareSection(info.code, info.name)],
+    body: [preview, actions, shareSection(info.code, info.name, false)],
     onClose: () => {
       if (url) URL.revokeObjectURL(url);
       onClose?.();
@@ -359,21 +359,25 @@ export function openShareImage(info: ShareImageInfo, onClose?: () => void) {
         }),
       );
       const save = h('a', { class: 'btn ghost', href: url, download: fileName }, L('Save image', 'Enregistrer l’image'));
-      const canShare = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-      const share = canShare
-        ? h(
-            'button',
-            {
-              type: 'button',
-              class: 'btn primary',
-              onclick: () => {
-                navigator.share({ files: [file], text: `${shareMessage(info)} ${linkFor(info.code)}` }).catch(() => {});
+      const text = `${shareMessage(info)} ${linkFor(info.code)}`;
+      const files = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+      // The system share sheet (with the picture when the browser can send files), else a text message.
+      const share =
+        typeof navigator.share === 'function'
+          ? h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn primary',
+                onclick: () => {
+                  navigator.share(files ? { files: [file], text } : { title: info.name, text }).catch(() => {});
+                },
               },
-            },
-            L('Share image…', 'Partager l’image…'),
-          )
-        : null;
-      actions.replaceChildren(...[share, save].filter((n) => !!n));
+              files ? L('Share image…', 'Partager l’image…') : L('Share…', 'Partager…'),
+            )
+          : null;
+      const sms = textLink(text, !share);
+      actions.replaceChildren(...[share, sms, save].filter((n) => !!n));
     },
     (err: unknown) => {
       console.error(err);

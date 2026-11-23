@@ -106,7 +106,10 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* Pinned to the dynamic viewport's bottom rather than at bottom 0: Firefox on Android lays fixed
+       elements out against the toolbar-hidden viewport, which pushed the bar under the screen edge
+       while its address bar was showing. */
+    top: calc(100dvh - var(--tabs));
     height: var(--tabs);
     padding: 5px 10px env(safe-area-inset-bottom);
     background: var(--bg);

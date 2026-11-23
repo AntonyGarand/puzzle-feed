@@ -223,6 +223,15 @@
   margin: 0 auto;
   padding: 6px 10px 0;
 }
+.lab-bar .btn {
+  white-space: nowrap;
+}
+/* Phones: the Games-tab bar has four buttons; its note repeats the card's own subtitle, so drop it. */
+@media (max-width: 520px) {
+  .lab-bar:has(> :nth-child(5)) > .small {
+    display: none;
+  }
+}
 .lab .card {
   height: auto;
   flex: 1;

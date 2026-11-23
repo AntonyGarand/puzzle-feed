@@ -40,8 +40,18 @@ export async function shareText(text: string, title: string): Promise<'shared' |
   }
 }
 
+/**
+ * "Text a friend": an `sms:` link opens the messaging app with the message filled in, so the player
+ * only picks a contact. Phones only (desktops have no messaging app to open).
+ */
+export function textLink(text: string, primary: boolean): HTMLAnchorElement | null {
+  if (typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches) return null;
+  // `?&body=` is read by both Android (`?body=`) and iOS (`&body=`).
+  return h('a', { class: `btn ${primary ? 'primary' : 'ghost'}`, href: `sms:?&body=${encodeURIComponent(text)}` }, L('Text', 'Texto'));
+}
+
 /** "Share this puzzle" block: the code in a read-only field, with Copy code and Share/Copy link buttons. */
-export function shareSection(code: string, title: string): HTMLElement {
+export function shareSection(code: string, title: string, sms = true): HTMLElement {
   const link = shareLink(code);
   const field = h('input', {
     class: 'input inline share-code',
@@ -71,5 +81,8 @@ export function shareSection(code: string, title: string): HTMLElement {
     }
     void copyText(link, field).then((ok) => flash(linkBtn, linkLabel, ok));
   });
-  return h('div', { class: 'share' }, h('div', { class: 'share-row' }, field, codeBtn, linkBtn), note);
+  // No system share sheet (e.g. Firefox Focus): a text message is the next best way to reach a contact.
+  const smsLink =
+    canShare || !sms ? null : textLink(L(`Try this puzzle: ${title} ${link}`, `Essayez cette partie : ${title} ${link}`), false);
+  return h('div', { class: 'share' }, h('div', { class: 'share-row' }, field, codeBtn, smsLink, linkBtn), note);
 }

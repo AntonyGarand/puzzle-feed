@@ -122,6 +122,7 @@ dialog.sheet::backdrop {
 .sheet-body {
   overflow: auto;
   padding: 4px 18px 12px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
   overscroll-behavior: contain;
 }
 .sheet-body h3 {
@@ -426,7 +427,7 @@ dialog.sheet::backdrop {
 .share-image-preview img {
   display: block;
   max-width: 100%;
-  max-height: 55dvh;
+  max-height: 48dvh;
   border: var(--bw) solid var(--ink);
   border-radius: var(--r);
 }
