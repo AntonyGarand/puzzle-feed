@@ -114,6 +114,15 @@ export interface Profile {
   weeklyDone?: string;
   /** Pack progress per game and tier: the best result of each solved puzzle (null = not solved yet). */
   packs?: Record<string, Partial<Record<Difficulty, (PackEntry | null)[]>>>;
+  /** Puzzle Rush records per mode and duration (`rushKey`, e.g. `race-3`). */
+  rush?: Record<string, RushRecord>;
+}
+
+/** Best score of a Rush mode and duration, when it was set, and how many runs were finished. */
+export interface RushRecord {
+  best: number;
+  at: number;
+  runs: number;
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -404,6 +413,20 @@ export function recordPack(id: string, level: Difficulty, index: number, r: Pack
   save();
   emit('record', id);
 }
+
+/** A finished Rush run of `key` (`rushKey`) scoring `score`. `best`: it beat the previous best. */
+export function recordRush(key: string, score: number): { best: boolean; prev: number | undefined } {
+  const all = (profile.rush ??= {});
+  const r = all[key];
+  const prev = r?.best;
+  const best = score > 0 && (prev == null || score > prev);
+  all[key] = { best: best ? score : (prev ?? 0), at: best ? Date.now() : (r?.at ?? Date.now()), runs: (r?.runs ?? 0) + 1 };
+  save();
+  emit('record');
+  return { best, prev };
+}
+
+export const rushRecord = (key: string): RushRecord | undefined => profile.rush?.[key];
 
 export function dayStreak(): number {
   const d = new Date();

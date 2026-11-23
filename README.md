@@ -80,6 +80,15 @@ The **Daily** tab has one list of 5 puzzles per difficulty, new every day at loc
 
 Every game has a **pack**: 12 set puzzles per difficulty, the same for everyone (seeds from a preset seed mixed with the game, level and number, `src/core/packs.ts`). A solve earns ★, ★★ under par, or ★★★ under par with no mistakes or hints; the best result of each puzzle is kept. Easy is open from the start, and solving 9 of a level's 12 unlocks the next one. Pack puzzles have their own save slot and count in the regular stats and XP, but never in auto-levelling. They live at `/packs` (every game's progress), `/packs/<id>` and `/packs/<id>/<level>/<n>`, reached from the Games tab.
 
+## Rush
+
+**Rush** (on the Games tab, `/rush`) is a timed run: solve as many puzzles as you can in 1, 3 or 5 minutes. Only quick games are dealt (par time within a limit at the dealt level), never one of the last three, and rarely two from the same category in a row (`src/core/rush.ts`).
+
+- **Classic** deals each game at your level, capped at Hard.
+- **Race** starts on Easy and goes up a level every two solves, up to Master.
+
+A solve scores a point and deals the next puzzle; a lost puzzle moves on with no point; Skip costs 5 seconds. There are no hints, and the clock pauses while the help sheet is open or the app is hidden. Leaving the run abandons it. Rush puzzles never touch per-game stats, auto-levelling, XP or saves: only the best score per mode and duration is kept.
+
 ## Difficulty
 
 Each game starts on **Auto**:

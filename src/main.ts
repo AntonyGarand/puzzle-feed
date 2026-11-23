@@ -16,6 +16,9 @@ import { renderPacks } from './pages/packs';
 import { nextInTier, PACK_SIZE, tierUnlocked } from './core/packs';
 import { renderSettings } from './pages/settings';
 import { renderStats } from './pages/stats';
+import { renderRush } from './pages/rush';
+import { RushView } from './pages/rush-play';
+import { parseRush } from './core/rush';
 import { resolveCode } from './core/share';
 import { PUZZLES } from './games';
 import { setupUpdates } from './app/update';
@@ -66,8 +69,9 @@ const header = h(
 );
 const feed = new Feed(PUZZLES);
 const lab = new LabView();
+const rush = new RushView(PUZZLES);
 const page = h('div', { class: 'page-wrap' });
-app.append(header, feed.el, lab.el, page);
+app.append(header, feed.el, lab.el, rush.el, page);
 
 function applyTheme() {
   const t = getProfile().theme;
@@ -92,8 +96,10 @@ function updateStreak() {
   streak.textContent = n > 1 ? L(`${n} day streak`, `${n} jours de suite`) : '';
 }
 
-type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings' | 'packs';
+type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings' | 'packs' | 'rush' | 'rushPlay';
 let labOpen: string | null = null;
+/** The Rush run on screen (`<mode>-<minutes>`): navigating away drops it. */
+let rushOpen: string | null = null;
 
 const safeDecode = (str: string) => {
   try {
@@ -119,6 +125,18 @@ function route() {
   let view: View =
     r === 'stats' || r === 'settings' || r === 'daily' || r === 'packs' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
   if (((r === 'lab' || r === 'game') && def) || sharedOk) view = 'lab';
+  // /rush sets up a Puzzle Rush; /rush/play/<mode>/<minutes> plays one.
+  const rushRun = r === 'rush' && arg === 'play' ? parseRush(sub, lvl) : undefined;
+  if (r === 'rush') view = rushRun ? 'rushPlay' : 'rush';
+  if (r === 'rush' && arg && !rushRun) history.replaceState(null, '', '/rush');
+  if (rushRun) {
+    const key = `${rushRun.mode}-${rushRun.minutes}`;
+    if (rushOpen !== key) rush.start(rushRun.mode, rushRun.minutes);
+    rushOpen = key;
+  } else if (rushOpen) {
+    rush.close();
+    rushOpen = null;
+  }
   // Leaving the lab drops a shared puzzle's word list before the feed deals any cards.
   if (view !== 'lab') lab.setShown(false);
 
@@ -160,17 +178,20 @@ function route() {
     lab.setShown(false);
   }
 
-  const activeTab = daily ? 'daily' : view === 'lab' || view === 'packs' ? 'labs' : view;
+  const activeTab = daily ? 'daily' : view === 'lab' || view === 'packs' || view === 'rush' || view === 'rushPlay' ? 'labs' : view;
   for (const [k, a] of Object.entries(tabs)) a.classList.toggle('on', k === activeTab && !(k === 'feed' && only));
 
   feed.el.hidden = view !== 'feed';
   lab.el.hidden = view !== 'lab';
-  page.hidden = view === 'feed' || view === 'lab';
+  rush.el.hidden = view !== 'rushPlay';
+  page.hidden = view === 'feed' || view === 'lab' || view === 'rushPlay';
   feed.setShown(view === 'feed');
   lab.setShown(view === 'lab');
+  rush.setShown(view === 'rushPlay');
   if (view === 'daily') renderDaily(page, PUZZLES, dailyLevel);
   if (view === 'labs') renderLabs(page, PUZZLES, codeError);
   if (view === 'packs') renderPacks(page, PUZZLES, packDef);
+  if (view === 'rush') renderRush(page);
   if (view === 'stats') renderStats(page, PUZZLES);
   if (view === 'settings') renderSettings(page, PUZZLES);
   if (!page.hidden) page.scrollTop = 0;

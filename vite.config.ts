@@ -19,7 +19,7 @@ function buildVersion() {
 }
 
 /** Top-level routes served as real files, so a fresh visit gets a 200 instead of the 404 fallback. */
-const SHELL_ROUTES = ['games', 'daily', 'packs', 'stats', 'settings'];
+const SHELL_ROUTES = ['games', 'daily', 'packs', 'rush', 'stats', 'settings'];
 
 /**
  * GitHub Pages has no rewrites: copy the app shell to 404.html (served for any unknown path, e.g.

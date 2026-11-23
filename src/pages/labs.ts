@@ -14,6 +14,7 @@ import { levelHex } from '../ui/win';
 import { xpLevel } from '../core/xp';
 import { packProgress } from '../core/packs';
 import { packSummary } from './packs';
+import { rushBanner } from './rush';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -354,6 +355,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         L('Packs', 'Séries'),
         h('span', { class: 'small' }, L(' · set puzzles in five levels, with stars', ' · parties fixes en cinq niveaux, avec étoiles')),
       ),
+      rushBanner(),
       codeForm,
       h(
         'div',
