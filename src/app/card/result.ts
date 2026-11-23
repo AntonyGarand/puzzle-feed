@@ -1,8 +1,10 @@
 import { L, P } from '../../core/i18n';
-import type { RecordOutcome } from '../../core/store';
+import { getProfile, stats, type RecordOutcome } from '../../core/store';
+import { LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../../core/types';
 import { xpLevel } from '../../core/xp';
 import { confetti } from '../../ui/confetti';
 import { h } from '../../ui/dom';
+import { lostCard, winCard } from '../../ui/win';
 
 export type Outcome = 'solved' | 'failed' | 'skipped';
 
@@ -68,4 +70,36 @@ export function makePeekable(panel: HTMLElement, onPeek: () => void) {
     panel.classList.toggle('peek');
     onPeek();
   });
+}
+
+/** The win or loss panel over the board (a skip has none). `res` is null when the outcome isn't known. */
+export function resultPanel(
+  o: Outcome,
+  def: PuzzleDef,
+  level: Difficulty,
+  run: {
+    daily: boolean;
+    ms: number;
+    mistakes: number;
+    hints: number;
+    res: RecordOutcome | null;
+    levelUp: LevelUp | undefined;
+    advanceMs: number | undefined;
+  },
+): HTMLElement | null {
+  const common = {
+    name: def.name,
+    level: LEVEL_NAMES[level],
+    daily: run.daily,
+    ms: run.ms,
+    mistakes: run.mistakes,
+    hints: run.hints,
+    levelUp: run.levelUp,
+    zen: !!getProfile().zen,
+  };
+  const st = stats(def.id);
+  if (o === 'solved')
+    return winCard({ ...common, parMs: def.par(level) * 1000, solved: st.solved, res: run.res, advanceMs: run.advanceMs });
+  if (o === 'failed') return lostCard({ ...common, best: st.best[level], played: st.solved + st.failed, solved: st.solved });
+  return null;
 }

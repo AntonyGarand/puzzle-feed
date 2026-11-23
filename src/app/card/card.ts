@@ -9,14 +9,13 @@ import { LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, typ
 import { xpLevel } from '../../core/xp';
 import { btn, cogIcon, fmtTime, h, undoBtn } from '../../ui/dom';
 import { helpButton } from '../../ui/help';
-import { shareSection } from '../../ui/share';
-import { openSheet } from '../../ui/sheet';
-import { levelHex, lostCard, winCard } from '../../ui/win';
+import { levelHex } from '../../ui/win';
 import { Clock, PlayTime } from './clock';
 import { fitBoard } from './fit';
 import { HintPopup } from './hint-popup';
-import { celebrate, confettiOver, makePeekable, resultLine, type Outcome } from './result';
+import { celebrate, confettiOver, makePeekable, resultLine, resultPanel, type Outcome } from './result';
 import { openGameSettings } from './settings-sheet';
+import { openCodeSheet, shareButton } from './share';
 import { UndoHistory } from './undo-history';
 
 export interface CardOptions {
@@ -107,6 +106,8 @@ export class Card {
   private seed = 0;
   /** Opened from a share code (until the player starts another puzzle on this card). */
   shared = false;
+  /** The finished solve, for the share picture. */
+  private solve: { ms: number; stars?: number | undefined } | null = null;
   private saveTimer = 0;
   private advanceTimer = 0;
   private launch: Launch | null;
@@ -244,25 +245,32 @@ export class Card {
 
   /** Sheet with this puzzle's share code and link. */
   openShare() {
-    const resume = this.pauseWhile();
-    openSheet({
-      title: L('Share this puzzle', 'Partager cette partie'),
-      puzzle: this.def.id,
-      className: 'share-sheet',
-      body: [
-        h(
-          'p',
-          { class: 'muted small' },
-          `${this.def.name} · ${LEVEL_NAMES[this.level]}. `,
-          L(
-            'Send the code or the link: the other person gets the same puzzle at the same level.',
-            'Envoyez le code ou le lien : l’autre personne obtient la même partie, au même niveau.',
-          ),
-        ),
-        shareSection(this.code, this.def.name),
-      ],
-      onClose: resume,
-    });
+    openCodeSheet(this.def, this.level, this.code, this.pauseWhile());
+  }
+
+  /** Sheet with a picture of the finished board, the result and a QR code to the same puzzle. */
+  shareSolve() {
+    const { solve, root } = this;
+    if (!solve || !root) return;
+    clearTimeout(this.advanceTimer);
+    // Loaded on first use: the picture code (and its screenshot and QR libraries) stays out of the main bundle.
+    void import('../../ui/share-image').then(({ openShareImage }) =>
+      openShareImage({
+        board: root,
+        theme: this.el,
+        puzzle: this.def.id,
+        code: this.code,
+        name: this.def.name,
+        level: LEVEL_NAMES[this.level],
+        tag: this.opts.daily ? L('Daily', 'Quotidien') : this.opts.pack ? `${L('Pack', 'Série')} ${this.opts.pack.index + 1}` : undefined,
+        ms: solve.ms,
+        mistakes: this.mistakes,
+        hints: this.hints,
+        parMs: this.def.par(this.level) * 1000,
+        stars: solve.stars,
+        zen: !!getProfile().zen,
+      }),
+    );
   }
 
   private makeHelpButton() {
@@ -322,6 +330,7 @@ export class Card {
     this.shared = !!launch?.shared;
     this.mounted = true;
     this.done = false;
+    this.solve = null;
     this.reached = resume?.reached ? { ms: resume.elapsed, res: null } : null;
     this.interacted = !!resume;
     this.mistakes = resume?.mistakes ?? 0;
@@ -618,11 +627,20 @@ export class Card {
     // An endless game already celebrated when its goal was reached.
     if (o === 'solved' && known && !early && !zen && celebrate(res)) confettiOver(this.stage, res);
 
+    if (o === 'solved') this.solve = { ms, stars: res.stars };
     const daily = !!(this.opts.daily ?? this.opts.pack);
     const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
     const advanceMs = res.best || res.prevBest == null || res.levelChange ? 3200 : 2400;
     const levelUp = res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] };
-    const panel = this.resultPanel(o, ms, known ? res : null, levelUp, advance ? advanceMs : undefined);
+    const panel = resultPanel(o, this.def, this.level, {
+      daily: !!this.opts.daily,
+      ms,
+      mistakes: this.mistakes,
+      hints: this.hints,
+      res: known ? res : null,
+      levelUp,
+      advanceMs: advance ? advanceMs : undefined,
+    });
     if (panel) {
       makePeekable(panel, () => clearTimeout(this.advanceTimer));
       this.stage.append(panel);
@@ -633,7 +651,12 @@ export class Card {
       h(
         'div',
         { class: 'actions' },
-        this.opts.lab ? btn(L('Share', 'Partager'), () => this.openShare(), 'ghost') : null,
+        shareButton(
+          o,
+          !!this.opts.lab,
+          () => this.shareSolve(),
+          () => openCodeSheet(this.def, this.level, this.code, () => {}),
+        ),
         daily && o !== 'solved' ? btn(L('Try again', 'Réessayer'), () => this.mount(), 'ghost') : null,
         this.opts.lab ? null : btn(L('Again', 'Rejouer'), () => this.mount(), 'ghost'),
         btn(
@@ -651,33 +674,6 @@ export class Card {
     } else if (o === 'skipped') {
       this.onNext(this);
     }
-  }
-
-  /** The win or loss panel over the board (a skip has none). `res` is null when the outcome isn't known. */
-  private resultPanel(
-    o: Outcome,
-    ms: number,
-    res: RecordOutcome | null,
-    levelUp: { up: boolean; to: string } | undefined,
-    advanceMs: number | undefined,
-  ): HTMLElement | null {
-    const common = {
-      name: this.def.name,
-      level: LEVEL_NAMES[this.level],
-      daily: !!this.opts.daily,
-      ms,
-      mistakes: this.mistakes,
-      hints: this.hints,
-      levelUp,
-      zen: !!getProfile().zen,
-    };
-    if (o === 'solved')
-      return winCard({ ...common, parMs: this.def.par(this.level) * 1000, solved: stats(this.def.id).solved, res, advanceMs });
-    if (o === 'failed') {
-      const st = stats(this.def.id);
-      return lostCard({ ...common, best: st.best[this.level], played: st.solved + st.failed, solved: st.solved });
-    }
-    return null;
   }
 
   destroy() {

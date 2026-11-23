@@ -39,7 +39,7 @@ The same commands are available as mise tasks (`mise run check`, `mise run fix`,
 src/
   main.ts            app shell: tabs, path routing (/, /daily, /daily/<level>/<n>, /games, /packs, /packs/<id>/<level>/<n>, /game/<id>, /play/<id>, /s/<share code>, /stats, /settings; old #/ links redirect)
   core/              logic and storage, no rendering: types, rng, i18n, store (profile/stats/auto-levelling), saves, daily, packs, xp, share codes
-  ui/                DOM building blocks: h/s/btn/pad (dom.ts), sheets, help dialog, win/lost panels, confetti, hint overlay, share widget
+  ui/                DOM building blocks: h/s/btn/pad (dom.ts), sheets, help dialog, win/lost panels, confetti, hint overlay, share widget and solve picture (board, result, QR code)
   app/               the shell: feed, path routing (nav.ts), update banner, and card/ (one puzzle card: clock, undo history, hint popup, settings sheet, result)
   pages/             Games, single-game view, Daily, Packs, Profile, Settings
   games/<id>/        one game per folder: index.ts (auto-registered, see docs/ADDING_GAMES.md), style.css, and its own pure logic (gen.ts, rules.ts…)
