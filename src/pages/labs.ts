@@ -6,11 +6,13 @@ import { navigate } from '../app/nav';
 import { encodeCode, resolveCode } from '../core/share';
 import { prefs, setLevel, setWeight, stats, type Weight } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type PuzzleDef } from '../core/types';
-import { cogIcon, fmtTime, h, segmented } from '../ui/dom';
+import { btn, cogIcon, fmtTime, h, segmented } from '../ui/dom';
 import { openSheet } from '../ui/sheet';
 import { destroyThumbs, thumb } from '../ui/thumb';
 import { levelHex } from '../ui/win';
 import { xpLevel } from '../core/xp';
+import { packProgress } from '../core/packs';
+import { packSummary } from './packs';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -94,6 +96,16 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
         levelBox,
         h('h3', null, L('In the feed', 'Dans le fil')),
         segmented(weights(), pr.weight, (v) => setWeight(d.id, v)),
+        h('h3', null, L('Packs', 'Séries')),
+        h(
+          'p',
+          { class: 'row pack-link' },
+          h('span', { class: 'small' }, packSummary(packProgress(d.id))),
+          btn(L('Open packs', 'Voir les séries'), () => {
+            close();
+            navigate(`/packs/${d.id}`);
+          }),
+        ),
         save
           ? h(
               'p',
@@ -130,6 +142,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
     const pr = prefs(d.id);
     const href = save ? `/game/${d.id}` : `/game/${d.id}/new/${pr.level}`;
     const best = st.best[pr.level];
+    const pack = packProgress(d.id);
     const lvl = levelHex(xpLevel(st.xp!).level, 'sm');
     const chips = save
       ? [
@@ -143,6 +156,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           `${pr.manual ? '' : 'Auto · '}${LEVEL_NAMES[pr.level]}`,
           st.solved ? P(st.solved, ['solved', 'solved'], ['réussi', 'réussis']) : null,
           best != null ? `${L('best', 'record')} ${fmtTime(best)}` : null,
+          pack.solved ? `${L('packs', 'séries')} ${pack.solved} / ${pack.total}` : null,
         ];
     const cog = h(
       'button',
@@ -317,6 +331,12 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           `${defs.length} games. Tap one to play — unfinished games are saved automatically. The cog sets its level and how often it shows up in the Feed tab.`,
           `${defs.length} jeux. Touchez un jeu pour jouer — les parties en cours sont sauvegardées automatiquement. La roue dentée règle son niveau et sa fréquence dans l’onglet Fil.`,
         ),
+      ),
+      h(
+        'a',
+        { class: 'btn packs-link', href: '/packs' },
+        L('Packs', 'Séries'),
+        h('span', { class: 'small' }, L(' · set puzzles in five levels, with stars', ' · parties fixes en cinq niveaux, avec étoiles')),
       ),
       codeForm,
       h(

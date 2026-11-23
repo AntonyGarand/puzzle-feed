@@ -20,6 +20,8 @@ export interface Result {
   sh?: true;
   /** A daily challenge puzzle: counts in stats, never in auto-levelling. */
   dy?: true;
+  /** A pack puzzle: counts in stats, never in auto-levelling. */
+  pk?: true;
 }
 
 /** One puzzle of a daily list, with the player's progress on it. */
@@ -39,6 +41,16 @@ export interface DailyEntry {
 
 /** A day's daily lists, one per difficulty, stored the first time the player opens one. */
 type DailyDay = Partial<Record<Difficulty, DailyEntry[]>>;
+
+/** Stars of a solved pack puzzle (see core/packs.ts). */
+export type PackStars = 1 | 2 | 3;
+
+/** Best result on one pack puzzle. */
+export interface PackEntry {
+  s: PackStars;
+  ms: number;
+  m: number;
+}
 
 export interface TypePrefs {
   level: Difficulty;
@@ -90,6 +102,8 @@ export interface Profile {
    * their recent solves (the last 30 per game) filled in at 10 XP each, matching the starting XP.
    */
   xpDays?: Record<string, Record<string, number>>;
+  /** Pack progress per game and tier: the best result of each solved puzzle (null = not solved yet). */
+  packs?: Record<string, Partial<Record<Difficulty, (PackEntry | null)[]>>>;
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -245,6 +259,8 @@ export interface RecordOutcome {
   best?: boolean;
   /** Best time at this level before this result, if any. */
   prevBest?: number | undefined;
+  /** Stars earned by a solved pack puzzle. */
+  stars?: PackStars;
   /** XP earned by a solve. */
   xp?: XpOutcome;
 }
@@ -302,8 +318,8 @@ export function record(id: string, r: Omit<Result, 'at'>, parMs: number): Record
   s.recent.push(res);
   if (s.recent.length > 30) s.recent.splice(0, s.recent.length - 30);
 
-  if (!p.manual && !r.sh && !r.dy) {
-    const rel = s.recent.filter((x) => x.d === p.level && x.at >= p.since && !x.sh && !x.dy);
+  if (!p.manual && !r.sh && !r.dy && !r.pk) {
+    const rel = s.recent.filter((x) => x.d === p.level && x.at >= p.since && !x.sh && !x.dy && !x.pk);
     const last3 = rel.slice(-3);
     const last2 = rel.slice(-2);
     const good = (x: Result) => x.o === 'solved' && x.ms <= parMs && x.m <= 1 && !x.hn;
@@ -347,6 +363,19 @@ export function recordDaily(date: string, level: Difficulty, index: number, o: '
   }
   save();
   emit('record');
+}
+
+/** Best results of `id`'s pack tier `level`, by puzzle index (missing or null = not solved). */
+export const packEntries = (id: string, level: Difficulty): readonly (PackEntry | null | undefined)[] => profile.packs?.[id]?.[level] ?? [];
+
+/** Keep the best of a pack puzzle's results: most stars, fastest time, fewest mistakes. */
+export function recordPack(id: string, level: Difficulty, index: number, r: PackEntry) {
+  const tier = (((profile.packs ??= {})[id] ??= {})[level] ??= []);
+  while (tier.length <= index) tier.push(null);
+  const e = tier[index];
+  tier[index] = e ? { s: Math.max(e.s, r.s) as PackStars, ms: Math.min(e.ms, r.ms), m: Math.min(e.m, r.m) } : { ...r };
+  save();
+  emit('record', id);
 }
 
 export function dayStreak(): number {
