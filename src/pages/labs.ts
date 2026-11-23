@@ -11,6 +11,7 @@ import { openSheet } from '../ui/sheet';
 import { destroyThumbs, thumb } from '../ui/thumb';
 import { levelHex } from '../ui/win';
 import { xpLevel } from '../core/xp';
+import { rushBanner } from './rush';
 
 const ago = (t: number) => {
   const m = Math.round((Date.now() - t) / 60000);
@@ -318,6 +319,7 @@ export function renderLabs(el: HTMLElement, defs: PuzzleDef[], codeError?: { inp
           `${defs.length} jeux. Touchez un jeu pour jouer — les parties en cours sont sauvegardées automatiquement. La roue dentée règle son niveau et sa fréquence dans l’onglet Fil.`,
         ),
       ),
+      rushBanner(),
       codeForm,
       h(
         'div',

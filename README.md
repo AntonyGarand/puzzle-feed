@@ -76,6 +76,15 @@ Each language's dictionary is a lazily loaded chunk.
 
 The **Daily** tab has one list of 5 puzzles per difficulty, new every day at local midnight. Lists come from a preset seed mixed with the date and level (`src/core/daily.ts`), so everyone gets the same puzzles on the same day; the first time a player opens a list it's stored in their profile, so it stays put even if a new version adds games. Each puzzle can be retried until it's solved. Daily results count in the regular stats but never in auto-levelling. A day counts toward the daily streak when at least one list is complete; the Profile tab shows streaks and completed lists per difficulty.
 
+## Rush
+
+**Rush** (on the Games tab, `/rush`) is a timed run: solve as many puzzles as you can in 1, 3 or 5 minutes. Only quick games are dealt (par time within a limit at the dealt level), never one of the last three, and rarely two from the same category in a row (`src/core/rush.ts`).
+
+- **Classic** deals each game at your level, capped at Hard.
+- **Race** starts on Easy and goes up a level every two solves, up to Master.
+
+A solve scores a point and deals the next puzzle; a lost puzzle moves on with no point; Skip costs 5 seconds. There are no hints, and the clock pauses while the help sheet is open or the app is hidden. Leaving the run abandons it. Rush puzzles never touch per-game stats, auto-levelling, XP or saves: only the best score per mode and duration is kept.
+
 ## Difficulty
 
 Each game starts on **Auto**:

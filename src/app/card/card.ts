@@ -36,6 +36,11 @@ export interface CardOptions {
    * has its own save slot, results go to the daily list and never move auto-levelling.
    */
   daily?: DailyRef;
+  /**
+   * A Puzzle Rush puzzle (with `level` and `seed`): no save, no stats, no hints, no settings and no
+   * result panel. The run gets the outcome; an endless game ends at its goal.
+   */
+  rush?: (o: Outcome) => void;
 }
 
 export interface DailyRef {
@@ -173,6 +178,7 @@ export class Card {
       cogIcon(),
     );
     settings.addEventListener('click', () => this.openSettings());
+    settings.hidden = !!this.opts.rush;
     this.el.replaceChildren(
       h(
         'header',
@@ -338,7 +344,7 @@ export class Card {
     this.statusEl.textContent = '';
     this.controlsEl.replaceChildren();
     const live = () => igen === this.igen && !this.done;
-    const zen = !!getProfile().zen;
+    const zen = !!getProfile().zen && !this.opts.rush;
     const root = h('div', { class: 'puzzle' });
     this.root = root;
     this.stage.append(root);
@@ -349,7 +355,7 @@ export class Card {
         root,
         saved,
         zen,
-        solved: (opts) => live() && (opts?.keepPlaying ? this.reach() : this.finish('solved')),
+        solved: (opts) => live() && (opts?.keepPlaying && !this.opts.rush ? this.reach() : this.finish('solved')),
         failed: () => live() && this.finish('failed'),
         mistake: () => {
           if (!live()) return;
@@ -370,7 +376,7 @@ export class Card {
           if (igen === this.igen) this.controlsEl.append(...els);
         },
       }) || {};
-    this.hint.button.hidden = !this.inst.hint && !this.inst.check;
+    this.hint.button.hidden = (!this.inst.hint && !this.inst.check) || !!this.opts.rush;
     // Any pointer interaction inside the stage counts as starting; progress is saved shortly after.
     root.addEventListener('pointerdown', () => (this.interacted = true), { capture: true });
     root.addEventListener('pointerup', () => this.queueSave());
@@ -421,7 +427,7 @@ export class Card {
   /** Save in-progress state so it can be resumed from Labs. */
   persist() {
     clearTimeout(this.saveTimer);
-    if (!this.mounted || this.done || !this.interacted) return;
+    if (!this.mounted || this.done || !this.interacted || this.opts.rush) return;
     let state: unknown;
     try {
       state = this.inst.snapshot?.();
@@ -500,7 +506,8 @@ export class Card {
 
   private recordResult(o: Outcome, ms: number) {
     const daily = this.opts.daily;
-    const res = record(
+    // A rush puzzle reports to its run only: nothing goes into the game's stats.
+    const res = (this.opts.rush ? noRecord : record)(
       this.def.id,
       {
         d: this.level,
@@ -521,7 +528,7 @@ export class Card {
       'puzzle.hints': this.hints,
       'puzzle.auto_level': !this.opts.lab && !this.shared && !prefs(this.def.id).manual,
       'puzzle.personal_best': !!res.best,
-      'puzzle.first_clear': o === 'solved' && res.prevBest == null,
+      'puzzle.first_clear': o === 'solved' && 'prevBest' in res && res.prevBest == null,
       'puzzle.level_change': res.levelChange ? res.levelChange.to - res.levelChange.from : 0,
     });
     if (daily) recordDaily(daily.date, daily.level, daily.index, o, ms, this.mistakes);
@@ -533,7 +540,7 @@ export class Card {
       'puzzle.id': this.def.id,
       'puzzle.difficulty': this.level,
       'puzzle.difficulty_name': LEVEL_IDS[this.level],
-      'puzzle.mode': this.opts.daily ? 'daily' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
+      'puzzle.mode': this.opts.rush ? 'rush' : this.opts.daily ? 'daily' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
     };
   }
 
@@ -560,7 +567,7 @@ export class Card {
     const ms = early ? early.ms : Math.round(this.time());
     this.done = true;
     this.hint.close();
-    clearSave(this.saveId, this.seed, this.slot);
+    if (!this.opts.rush) clearSave(this.saveId, this.seed, this.slot);
     this.setActive(false);
     this.active = true; // still the visible card; just stop the clock
     for (const c of this.stage.children) (c as HTMLElement).inert = true;
@@ -569,6 +576,7 @@ export class Card {
 
     // A resumed run that had already reached its goal has no outcome in memory: skip the record line.
     const res: RecordOutcome = early ? (early.res ?? {}) : this.recordResult(o, ms);
+    if (this.opts.rush) return this.opts.rush(o);
     this.syncLevelSel();
     const known = !early || !!early.res;
     const zen = !!getProfile().zen;
@@ -647,6 +655,8 @@ export class Card {
     this.igen++;
   }
 }
+
+const noRecord = (): RecordOutcome => ({});
 
 /** Ctrl+Z / Cmd+Z: the card's Undo (games with `def.undo`). */
 export const isUndoKey = (e: KeyboardEvent) => (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z';

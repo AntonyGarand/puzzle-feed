@@ -1,0 +1,257 @@
+/* Puzzle Rush: the Games tab banner, the setup page and the timed run. */
+
+/* ---------- Games tab banner ---------- */
+.rush-banner {
+  display: flex;
+  align-items: stretch;
+  margin-top: 18px;
+  color: inherit;
+  text-decoration: none;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+  overflow: hidden;
+  transition: transform 0.08s;
+}
+.rush-banner:hover {
+  transform: translate(-1px, -1px);
+}
+.rush-banner:active {
+  transform: translate(var(--sh), var(--sh));
+  box-shadow: 0 0 0 var(--drop);
+}
+.rush-banner-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  font-size: 26px;
+  background: var(--hi);
+  color: var(--on-tone);
+  border-right: var(--bw) solid var(--ink);
+}
+.rush-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+}
+.rush-banner-text strong {
+  font-size: 18px;
+}
+.rush-banner .tile-go {
+  background: var(--hi);
+}
+
+/* ---------- setup page ---------- */
+.rush-setup .back {
+  display: inline-flex;
+  margin-bottom: 14px;
+}
+.rush-setup h1 {
+  display: table;
+}
+.rush-mode-blurb {
+  margin: 8px 0 18px;
+}
+.rush-start {
+  display: flex;
+  font-size: 18px;
+  padding: 10px 18px;
+  justify-content: center;
+  width: 100%;
+  max-width: 360px;
+  text-decoration: none;
+}
+.rush-bests {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.rush-bests th,
+.rush-bests td {
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  text-align: center;
+}
+.rush-bests thead th,
+.rush-bests tbody th {
+  background: var(--cell-alt);
+}
+.rush-bests td {
+  background: var(--cell);
+  font-weight: 700;
+}
+.rush-rules {
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+
+/* ---------- the run ---------- */
+.rush-bar {
+  padding-bottom: 4px;
+}
+.rush-hud {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rush-clock {
+  min-width: 80px;
+  padding: 2px 12px;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+}
+.rush-clock.urgent {
+  background: var(--bad);
+  color: var(--on-tone);
+  animation: rush-pulse 1s ease-in-out infinite;
+}
+@keyframes rush-pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+.rush-score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.rush-score {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.rush-note {
+  align-self: center;
+  min-height: 0;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.rush-note.on {
+  opacity: 1;
+  background: var(--hi);
+  color: var(--on-tone);
+  border: 2px solid var(--ink);
+}
+.rush-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rush-stage > .card {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.rush-play.flash-solved .rush-stage > .card {
+  animation: rush-flash-good 0.4s ease-out;
+}
+.rush-play.flash-failed .rush-stage > .card {
+  animation: rush-flash-bad 0.7s ease-out;
+}
+@keyframes rush-flash-good {
+  0% {
+    box-shadow: 0 0 0 6px var(--good);
+  }
+}
+@keyframes rush-flash-bad {
+  0% {
+    box-shadow: 0 0 0 6px var(--bad);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rush-clock.urgent,
+  .rush-play.flash-solved .rush-stage > .card,
+  .rush-play.flash-failed .rush-stage > .card {
+    animation: none;
+  }
+}
+
+/* ---------- end of the run ---------- */
+.rush-end {
+  width: 100%;
+  max-width: 560px;
+  margin: 12px auto 0;
+  padding: 18px 16px 24px;
+  overflow-y: auto;
+  text-align: center;
+  background: var(--cell);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh) var(--sh) 0 var(--drop);
+}
+.rush-end-kicker {
+  margin: 0;
+  font-weight: 700;
+  color: var(--muted);
+}
+.rush-end-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4px 0;
+}
+.rush-end-score strong {
+  font-size: 64px;
+  line-height: 1;
+}
+.rush-end-best {
+  margin: 6px 0 14px;
+  font-weight: 700;
+}
+.rush-end-best.new {
+  display: inline-block;
+  padding: 3px 12px;
+  background: var(--hi);
+  color: var(--on-tone);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+.rush-log {
+  list-style: none;
+  margin: 0 auto 16px;
+  padding: 0;
+  max-width: 360px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+.rush-log li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rush-log-name {
+  flex: 1;
+}
+.rush-mark {
+  width: 1.2em;
+  font-weight: 700;
+  text-align: center;
+}
+.rush-log .is-solved .rush-mark {
+  color: var(--good-ink);
+}
+.rush-log .is-failed .rush-mark {
+  color: var(--bad-ink);
+}
+.rush-log .is-skipped .rush-mark {
+  color: var(--muted);
+}
+.rush-end-actions {
+  justify-content: center;
+  gap: 10px;
+}

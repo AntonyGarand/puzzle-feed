@@ -90,6 +90,15 @@ export interface Profile {
    * their recent solves (the last 30 per game) filled in at 10 XP each, matching the starting XP.
    */
   xpDays?: Record<string, Record<string, number>>;
+  /** Puzzle Rush records per mode and duration (`rushKey`, e.g. `race-3`). */
+  rush?: Record<string, RushRecord>;
+}
+
+/** Best score of a Rush mode and duration, when it was set, and how many runs were finished. */
+export interface RushRecord {
+  best: number;
+  at: number;
+  runs: number;
 }
 
 const KEY = 'puzzle-feed:v1';
@@ -348,6 +357,20 @@ export function recordDaily(date: string, level: Difficulty, index: number, o: '
   save();
   emit('record');
 }
+
+/** A finished Rush run of `key` (`rushKey`) scoring `score`. `best`: it beat the previous best. */
+export function recordRush(key: string, score: number): { best: boolean; prev: number | undefined } {
+  const all = (profile.rush ??= {});
+  const r = all[key];
+  const prev = r?.best;
+  const best = score > 0 && (prev == null || score > prev);
+  all[key] = { best: best ? score : (prev ?? 0), at: best ? Date.now() : (r?.at ?? Date.now()), runs: (r?.runs ?? 0) + 1 };
+  save();
+  emit('record');
+  return { best, prev };
+}
+
+export const rushRecord = (key: string): RushRecord | undefined => profile.rush?.[key];
 
 export function dayStreak(): number {
   const d = new Date();
