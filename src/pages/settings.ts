@@ -189,6 +189,31 @@ export function renderSettings(el: HTMLElement, defs: PuzzleDef[]) {
       ),
       h(
         'div',
+        { class: 'setting' },
+        h(
+          'div',
+          null,
+          h('div', null, L('Learn what I like', 'Apprendre mes goûts')),
+          h(
+            'div',
+            { class: 'muted small' },
+            L(
+              'Games you often skip show up a bit less, games you finish a bit more.',
+              'Les jeux que vous passez souvent reviennent un peu moins, ceux que vous terminez un peu plus.',
+            ),
+          ),
+        ),
+        segmented(
+          [
+            { label: L('On', 'Oui'), value: 1 },
+            { label: L('Off', 'Non'), value: 0 },
+          ],
+          p.taste === false ? 0 : 1,
+          (v) => update({ taste: v === 1 }),
+        ),
+      ),
+      h(
+        'div',
         { class: 'row settings-games' },
         h(
           'button',

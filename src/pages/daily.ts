@@ -3,7 +3,9 @@ import { L, localeTag, P } from '../core/i18n';
 import { dailySaveKey, getSave } from '../core/saves';
 import { getProfile } from '../core/store';
 import { LEVELS, LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
-import { fmtTime, h } from '../ui/dom';
+import { btn, fmtTime, h } from '../ui/dom';
+import { dailyShareText } from '../core/daily-share';
+import { shareText } from '../ui/share';
 
 let selected: Difficulty | null = null;
 
@@ -96,6 +98,31 @@ export function renderDaily(el: HTMLElement, defs: PuzzleDef[], level?: Difficul
     complete && st.byLevel[lvl].bestTotal != null ? ` · ${L('best', 'record')} ${fmtTime(st.byLevel[lvl].bestTotal)}` : '',
   );
 
+  // Share the list's results (spoiler-free squares) once something was played.
+  let share: HTMLElement | null = null;
+  if (list.some((e) => e.o)) {
+    const note = h('span', { class: 'muted small', role: 'status' });
+    const label = L('Share results', 'Partager les résultats');
+    const b = btn(
+      label,
+      () => {
+        const text = dailyShareText(list, {
+          level: lvl,
+          date: fmtDate(date, { month: 'short', day: 'numeric' }),
+          origin: location.origin,
+          fmtTime,
+        });
+        void shareText(text, L('Daily results', 'Résultats du défi')).then((r) => {
+          if (r === 'copied') note.textContent = L('Copied. Paste it anywhere.', 'Copié. Collez-le où vous voulez.');
+          else if (r === 'failed' && typeof navigator.share !== 'function')
+            note.textContent = L('Couldn’t copy the results.', 'Impossible de copier les résultats.');
+        });
+      },
+      'ghost',
+    );
+    share = h('div', { class: 'daily-share' }, b, note);
+  }
+
   // Last 4 weeks: how many lists were completed each day.
   const days: HTMLElement[] = [];
   for (let i = 27; i >= 0; i--) {
@@ -140,6 +167,7 @@ export function renderDaily(el: HTMLElement, defs: PuzzleDef[], level?: Difficul
       levelPicker,
       h('ol', { class: 'daily-list' }, ...rows),
       summary,
+      share,
       h('h3', null, L('Last 4 weeks', '4 dernières semaines')),
       h('div', { class: 'days' }, ...days),
       h(
