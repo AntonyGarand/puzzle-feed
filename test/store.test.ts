@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { prefs, record, resetProfile, setLevel, stats } from '../src/core/store';
+import { addPlayTime, prefs, record, resetProfile, setLevel, stats } from '../src/core/store';
 
 const PAR = 30_000;
 const solve = (id: string, ms = 10_000, m = 0) => record(id, { d: prefs(id).level, o: 'solved', ms, m }, PAR);
@@ -73,5 +73,17 @@ describe('shared puzzles', () => {
     // ...and don't count towards a later level change either.
     expect(solve('a', 1_000).levelChange).toBeUndefined();
     expect(solve('a', 1_000).levelChange?.to).toBe(2);
+  });
+});
+
+describe('play time', () => {
+  beforeEach(() => resetProfile());
+
+  it('adds up time on every outcome, apart from solve times', () => {
+    addPlayTime('a', 90_000);
+    fail('a');
+    addPlayTime('a', 10_000.4);
+    expect(stats('a').playTime).toBe(100_000);
+    expect(stats('a').time).toBe(0);
   });
 });

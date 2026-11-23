@@ -15,7 +15,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
   const all = defs.map((d) => ({ d, s: stats(d.id), pr: prefs(d.id) }));
   const played = all.reduce((a, x) => a + x.s.played, 0);
   const solved = all.reduce((a, x) => a + x.s.solved, 0);
-  const time = all.reduce((a, x) => a + x.s.time, 0);
+  const time = all.reduce((a, x) => a + x.s.playTime!, 0);
   const xp = totalXp();
   const pl = xpLevel(xp);
 
@@ -137,7 +137,7 @@ export function renderStats(el: HTMLElement, defs: PuzzleDef[]) {
         tile(L('solved', 'réussis'), solved),
         tile(L('played', 'joués'), played),
         tile(L('solve rate', 'taux de réussite'), played ? `${Math.round((100 * solved) / played)}%` : '—'),
-        tile(L('time solving', 'temps de jeu'), fmtTime(time)),
+        tile(L('play time', 'temps de jeu'), fmtTime(time)),
         tile(L('day streak', 'jours de suite'), dayStreak()),
       ),
       weeklyBar(),

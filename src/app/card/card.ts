@@ -4,7 +4,7 @@ import { Rng } from '../../core/rng';
 import { finishPack, type PackRef } from '../../core/packs';
 import { clearSave, dailySaveKey, packSaveKey, putSave, type Save, type Slot } from '../../core/saves';
 import { encodeCode } from '../../core/share';
-import { getProfile, prefs, record, recordDaily, recordLeave, setLevel, stats, type RecordOutcome } from '../../core/store';
+import { addPlayTime, getProfile, prefs, record, recordDaily, recordLeave, setLevel, stats, type RecordOutcome } from '../../core/store';
 import { LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from '../../core/types';
 import { xpLevel } from '../../core/xp';
 import { btn, cogIcon, fmtTime, h, undoBtn } from '../../ui/dom';
@@ -12,7 +12,7 @@ import { helpButton } from '../../ui/help';
 import { shareSection } from '../../ui/share';
 import { openSheet } from '../../ui/sheet';
 import { levelHex, lostCard, winCard } from '../../ui/win';
-import { Clock } from './clock';
+import { Clock, PlayTime } from './clock';
 import { fitBoard } from './fit';
 import { HintPopup } from './hint-popup';
 import { celebrate, confettiOver, makePeekable, resultLine, type Outcome } from './result';
@@ -89,6 +89,8 @@ export class Card {
   interacted = false;
   private active = false;
   private clock = new Clock();
+  /** Time toward the profile's play time (idle stretches capped), banked whenever the clock stops. */
+  private play = new PlayTime();
   private mistakes = 0;
   /** Hints shown on this puzzle (the hint button gave a step, a fix or a dead end). */
   private hints = 0;
@@ -154,6 +156,9 @@ export class Card {
     this.statusEl = h('span', { class: 'status' });
     this.controlsEl = h('div', { class: 'controls' });
     this.foot = h('footer', { class: 'card-foot' });
+    const poke = () => this.play.poke();
+    for (const type of ['pointerdown', 'pointermove', 'keydown', 'wheel'])
+      this.el.addEventListener(type, poke, { capture: true, passive: true });
     this.hint = new HintPopup({
       card: this.el,
       stage: this.stage,
@@ -323,6 +328,7 @@ export class Card {
     this.hints = resume?.hints ?? 0;
     this.hint.close();
     this.clock.reset(resume?.elapsed ?? 0, this.active);
+    if (this.active) this.play.start();
     this.el.classList.remove('is-solved', 'is-failed', 'is-skipped');
     this.stage.inert = false;
     this.livesEl.hidden = true;
@@ -469,16 +475,22 @@ export class Card {
     if (!this.mounted) this.mount();
     if (on && !this.done) {
       this.clock.start();
+      this.play.start();
       this.fit();
       this.inst.activate?.();
     } else if (!on) {
       this.hint.close();
       this.persist();
       this.clock.stop();
+      this.bankPlayTime();
       // Don't let a focused input keep swallowing keys meant for the next card.
       const f = document.activeElement as HTMLElement | null;
       if (f && this.el.contains(f)) f.blur();
     }
+  }
+
+  private bankPlayTime() {
+    addPlayTime(this.def.id, this.play.take());
   }
 
   tick() {
@@ -487,6 +499,7 @@ export class Card {
 
   onKey(e: KeyboardEvent): boolean {
     if (this.done) return false;
+    this.play.poke();
     if (isUndoKey(e)) {
       if (!this.def.undo) return false; // modifier keys never reach the games
       this.undo();
@@ -669,6 +682,7 @@ export class Card {
 
   destroy() {
     this.persist();
+    this.bankPlayTime();
     this.listen?.abort();
     clearTimeout(this.trackTimer);
     this.resize.disconnect();

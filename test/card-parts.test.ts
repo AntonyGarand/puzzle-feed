@@ -1,6 +1,6 @@
 // The pure parts of a card: play clock, undo history, and when a solve deserves confetti.
 import { describe, expect, it } from 'vitest';
-import { Clock } from '../src/app/card/clock';
+import { Clock, PlayTime } from '../src/app/card/clock';
 import { celebrate } from '../src/app/card/result';
 import { UndoHistory } from '../src/app/card/undo-history';
 import type { XpGain, XpOutcome } from '../src/core/xp';
@@ -44,6 +44,38 @@ describe('clock', () => {
     c.start();
     now = 1250;
     expect(c.time()).toBe(350);
+  });
+});
+
+describe('play time', () => {
+  let now = 0;
+  const play = () => new PlayTime(120_000, () => now);
+
+  it('counts active stretches and caps a gap without input at 2 minutes', () => {
+    now = 0;
+    const p = play();
+    p.start();
+    now = 30_000;
+    p.poke();
+    now = 30_000 + 10 * 60_000; // left alone for 10 minutes
+    p.poke();
+    now += 5_000;
+    expect(p.take()).toBe(30_000 + 120_000 + 5_000);
+  });
+
+  it('hands over each stretch once and ignores input while stopped', () => {
+    now = 0;
+    const p = play();
+    p.start();
+    now = 1_000;
+    expect(p.take()).toBe(1_000);
+    now = 50_000;
+    p.poke();
+    expect(p.take()).toBe(0);
+    p.start();
+    p.start(); // starting twice doesn't reset the stretch
+    now = 52_000;
+    expect(p.take()).toBe(2_000);
   });
 });
 

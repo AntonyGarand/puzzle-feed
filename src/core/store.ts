@@ -68,6 +68,11 @@ export interface TypeStats {
   skipped: number;
   /** Total time spent on solved puzzles (ms). */
   time: number;
+  /**
+   * Time spent playing (ms): every outcome and unfinished puzzles too, but a stretch without input counts
+   * 2 minutes at most. Profiles from before it start from `time`.
+   */
+  playTime?: number;
   best: Partial<Record<Difficulty, number>>;
   recent: Result[];
   /** Experience earned in this game (profiles from before XP get 10 per past solve). */
@@ -217,7 +222,16 @@ export function prefs(id: string): TypePrefs {
 export function stats(id: string): TypeStats {
   const s = (profile.stats[id] ??= { played: 0, solved: 0, failed: 0, skipped: 0, time: 0, best: {}, recent: [] });
   s.xp ??= s.solved * 10;
+  s.playTime ??= s.time;
   return s;
+}
+
+/** Add play time to a game (see `TypeStats.playTime`). */
+export function addPlayTime(id: string, ms: number) {
+  if (ms < 1) return;
+  const s = stats(id);
+  s.playTime = s.playTime! + Math.round(ms);
+  save();
 }
 
 /** XP earned per day: one game's, or every game's (`id` omitted). Days without XP are absent. */
