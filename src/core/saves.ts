@@ -18,14 +18,15 @@ export interface Save {
 
 /**
  * Where a save lives. `own` is your game (one per puzzle type). Puzzles opened from a share code and
- * daily puzzles each get their own slot, so they never overwrite your own game.
+ * daily and pack puzzles each get their own slot, so they never overwrite your own game.
  */
-export type Slot = 'own' | 'shared' | 'daily';
+export type Slot = 'own' | 'shared' | 'daily' | 'pack';
 
 const KEYS: Record<Slot, string> = {
   own: 'puzzle-feed:saves:v1',
   shared: 'puzzle-feed:shared:v1',
   daily: 'puzzle-feed:daily-saves:v1',
+  pack: 'puzzle-feed:pack-saves:v1',
 };
 
 function read(slot: Slot = 'own'): Record<string, Save> {
@@ -46,6 +47,9 @@ function write(all: Record<string, Save>, slot: Slot = 'own') {
 
 /** Save key of a daily puzzle: `<date>:<level>:<index>`. Older days are pruned on write. */
 export const dailySaveKey = (date: string, level: Difficulty, index: number) => `${date}:${level}:${index}`;
+
+/** Save key of a pack puzzle: `<game>:<level>:<index>`. */
+export const packSaveKey = (id: string, level: Difficulty, index: number) => `${id}:${level}:${index}`;
 
 export const getSave = (id: string, slot: Slot = 'own'): Save | undefined => read(slot)[id];
 export const allSaves = () => read();

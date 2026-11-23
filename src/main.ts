@@ -12,6 +12,8 @@ import { LabView } from './pages/lab';
 import { renderDaily } from './pages/daily';
 import { dailyDate, getDaily } from './core/daily';
 import { renderLabs } from './pages/labs';
+import { renderPacks } from './pages/packs';
+import { nextInTier, PACK_SIZE, tierUnlocked } from './core/packs';
 import { renderSettings } from './pages/settings';
 import { renderStats } from './pages/stats';
 import { resolveCode } from './core/share';
@@ -90,7 +92,7 @@ function updateStreak() {
   streak.textContent = n > 1 ? L(`${n} day streak`, `${n} jours de suite`) : '';
 }
 
-type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings';
+type View = 'feed' | 'daily' | 'labs' | 'lab' | 'stats' | 'settings' | 'packs';
 let labOpen: string | null = null;
 
 const safeDecode = (str: string) => {
@@ -114,7 +116,8 @@ function route() {
   const sharedOk = shared && 'def' in shared ? shared : undefined;
   const def = sharedOk?.def ?? PUZZLES.find((p) => p.id === arg);
   // /games (alias /labs) lists games; /game/<id> (alias /lab/<id>) opens one.
-  let view: View = r === 'stats' || r === 'settings' || r === 'daily' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
+  let view: View =
+    r === 'stats' || r === 'settings' || r === 'daily' || r === 'packs' ? r : r === 'labs' || r === 'games' || codeError ? 'labs' : 'feed';
   if (((r === 'lab' || r === 'game') && def) || sharedOk) view = 'lab';
   // Leaving the lab drops a shared puzzle's word list before the feed deals any cards.
   if (view !== 'lab') lab.setShown(false);
@@ -124,6 +127,13 @@ function route() {
   const daily = dailyLevel && sub ? openDaily(dailyLevel, Number(sub) - 1) : false;
   if (daily) view = 'lab';
 
+  // /packs lists every game's pack; /packs/<id> shows one; /packs/<id>/<level>/<n> plays its n-th puzzle.
+  const packDef = r === 'packs' ? PUZZLES.find((p) => p.id === arg) : undefined;
+  if (r === 'packs' && arg && !packDef) history.replaceState(null, '', '/packs');
+  const packLevel = packDef && LEVELS.includes(Number(sub) as Difficulty) ? (Number(sub) as Difficulty) : undefined;
+  const pack = packDef && packLevel && lvl ? openPack(packDef.id, packLevel, Number(lvl) - 1) : false;
+  if (pack) view = 'lab';
+
   // Feed (optionally a single-puzzle "endless" feed)
   const only = r === 'play' && def ? def.id : null;
   if (view === 'feed') feed.setOnly(only);
@@ -131,8 +141,8 @@ function route() {
   if (only && def) practice.replaceChildren(h('span', { class: 'swatchlet', 'data-puzzle': def.id }), `${def.name} ✕`);
 
   // Lab: /game/<id> resumes (or starts) · /game/<id>/new/<level> starts fresh
-  if (daily) {
-    // opened by openDaily()
+  if (daily || pack) {
+    // opened by openDaily() / openPack()
   } else if (sharedOk) {
     const key = `s:${sharedOk.code.id}-${sharedOk.code.level}-${sharedOk.code.seed}`;
     if (labOpen !== key) {
@@ -150,7 +160,7 @@ function route() {
     lab.setShown(false);
   }
 
-  const activeTab = daily ? 'daily' : view === 'lab' ? 'labs' : view;
+  const activeTab = daily ? 'daily' : view === 'lab' || view === 'packs' ? 'labs' : view;
   for (const [k, a] of Object.entries(tabs)) a.classList.toggle('on', k === activeTab && !(k === 'feed' && only));
 
   feed.el.hidden = view !== 'feed';
@@ -160,6 +170,7 @@ function route() {
   lab.setShown(view === 'lab');
   if (view === 'daily') renderDaily(page, PUZZLES, dailyLevel);
   if (view === 'labs') renderLabs(page, PUZZLES, codeError);
+  if (view === 'packs') renderPacks(page, PUZZLES, packDef);
   if (view === 'stats') renderStats(page, PUZZLES);
   if (view === 'settings') renderSettings(page, PUZZLES);
   if (!page.hidden) page.scrollTop = 0;
@@ -186,6 +197,25 @@ function openDaily(level: Difficulty, index: number): boolean {
         (i) => list[i].o !== 'solved' && PUZZLES.some((p) => p.id === list[i].id),
       );
       navigate(next == null ? `/daily/${level}` : `/daily/${level}/${next + 1}`);
+    });
+    labOpen = key;
+  }
+  return true;
+}
+
+/** Open puzzle `index` of `id`'s pack tier `level` in the lab view. False (back to the pack) when locked or out of range. */
+function openPack(id: string, level: Difficulty, index: number): boolean {
+  const def = PUZZLES.find((p) => p.id === id)!;
+  if (!(index >= 0 && index < PACK_SIZE) || !tierUnlocked(id, level)) {
+    history.replaceState(null, '', `/packs/${id}`);
+    return false;
+  }
+  const key = `p:${id}:${level}:${index}`;
+  if (labOpen !== key) {
+    lab.openPack(def, { level, index }, () => {
+      // Next: the tier's following unsolved puzzle, or back to the pack once they're all solved.
+      const next = nextInTier(id, level, index);
+      navigate(next == null ? `/packs/${id}` : `/packs/${id}/${level}/${next + 1}`);
     });
     labOpen = key;
   }

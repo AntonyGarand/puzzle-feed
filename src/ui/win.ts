@@ -135,6 +135,7 @@ function winScores(w: WinInfo): (HTMLElement | null)[] {
       ? h('span', { class: 'win-tag' }, L('First clear', 'Première fois'))
       : null;
   return [
+    res?.stars ? starRow(res.stars) : null,
     h(
       'div',
       { class: 'win-time' },
@@ -153,6 +154,15 @@ function winScores(w: WinInfo): (HTMLElement | null)[] {
     w.levelUp ? levelPill(w.levelUp) : null,
     res?.xp ? xpSection(res.xp, w.name) : null,
   ];
+}
+
+/** A pack solve's stars, out of three. */
+function starRow(n: number) {
+  return h(
+    'p',
+    { class: 'win-stars', 'aria-label': `${P(n, ['star', 'stars'], ['étoile', 'étoiles'])} ${L('of 3', 'sur 3')}` },
+    ...[1, 2, 3].map((i) => h('span', { class: i <= n ? 'on' : '', 'aria-hidden': 'true' }, '★')),
+  );
 }
 
 function reason(g: XpGain, game: string): string {

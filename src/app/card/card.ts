@@ -1,7 +1,8 @@
 import { telemetry } from '../../core/analytics';
 import { L, P, wordLocale } from '../../core/i18n';
 import { Rng } from '../../core/rng';
-import { clearSave, dailySaveKey, putSave, type Save, type Slot } from '../../core/saves';
+import { finishPack, type PackRef } from '../../core/packs';
+import { clearSave, dailySaveKey, packSaveKey, putSave, type Save, type Slot } from '../../core/saves';
 import { encodeCode } from '../../core/share';
 import { getProfile, prefs, record, recordDaily, recordLeave, setLevel, stats, type RecordOutcome } from '../../core/store';
 import { LEVEL_IDS, LEVEL_NAMES, type Difficulty, type Hint, type PuzzleDef, type PuzzleInstance } from '../../core/types';
@@ -36,6 +37,8 @@ export interface CardOptions {
    * has its own save slot, results go to the daily list and never move auto-levelling.
    */
   daily?: DailyRef;
+  /** A pack puzzle (with `level` and `seed`): like `daily`, a fixed puzzle in its own save slot; solves earn stars. */
+  pack?: PackRef;
 }
 
 export interface DailyRef {
@@ -124,11 +127,12 @@ export class Card {
 
   /** Where this card's progress is saved, and under which key. */
   private get slot(): Slot {
-    return this.opts.daily ? 'daily' : this.shared ? 'shared' : 'own';
+    return this.opts.daily ? 'daily' : this.opts.pack ? 'pack' : this.shared ? 'shared' : 'own';
   }
   private get saveId(): string {
     const d = this.opts.daily;
-    return d ? dailySaveKey(d.date, d.level, d.index) : this.def.id;
+    const p = this.opts.pack;
+    return d ? dailySaveKey(d.date, d.level, d.index) : p ? packSaveKey(this.def.id, p.level, p.index) : this.def.id;
   }
 
   /** Not yet started: safe to regenerate or drop. */
@@ -214,7 +218,7 @@ export class Card {
       level: this.level,
       done: this.done,
       lab,
-      daily: !!this.opts.daily,
+      daily: !!(this.opts.daily ?? this.opts.pack),
       code: this.code,
       pause: () => this.pauseWhile(),
       pickLevel: (v) => {
@@ -262,11 +266,13 @@ export class Card {
     const auto = !this.opts.lab && !this.shared && !prefs(this.def.id).manual;
     const tag = this.opts.daily
       ? ` · ${L('daily', 'du jour')} ${this.opts.daily.index + 1}`
-      : this.shared
-        ? ` · ${L('shared', 'partagée')}`
-        : auto
-          ? ' · auto'
-          : '';
+      : this.opts.pack
+        ? ` · ${L('pack', 'série')} ${this.opts.pack.index + 1}`
+        : this.shared
+          ? ` · ${L('shared', 'partagée')}`
+          : auto
+            ? ' · auto'
+            : '';
     const xp = stats(this.def.id).xp!;
     this.levelEl.replaceChildren(levelHex(xpLevel(xp).level, 'sm'), LEVEL_NAMES[this.level] + tag);
   }
@@ -294,8 +300,9 @@ export class Card {
 
   mount(first: Launch | null = this.launch) {
     this.launch = null; // the launch options only apply to the first mount
-    // A daily card always replays its own puzzle.
-    const launch = this.opts.daily ? { level: this.opts.daily.level, seed: this.opts.seed, resume: first?.resume } : first;
+    // A daily or pack card always replays its own puzzle.
+    const fixed = this.opts.daily ?? this.opts.pack;
+    const launch = fixed ? { level: fixed.level, seed: this.opts.seed, resume: first?.resume } : first;
     this.gen++;
     // Word games generate from the locale's word list: a save from the other language can't be resumed.
     const resume = launch?.resume && (!this.def.localized || (launch.resume.locale ?? 'en') === wordLocale()) ? launch.resume : undefined;
@@ -510,6 +517,7 @@ export class Card {
         ...(this.hints ? { hn: this.hints } : {}),
         ...(this.shared ? { sh: true as const } : {}),
         ...(daily ? { dy: true as const } : {}),
+        ...(this.opts.pack ? { pk: true as const } : {}),
       },
       this.def.par(this.level) * 1000,
     );
@@ -525,6 +533,8 @@ export class Card {
       'puzzle.level_change': res.levelChange ? res.levelChange.to - res.levelChange.from : 0,
     });
     if (daily) recordDaily(daily.date, daily.level, daily.index, o, ms, this.mistakes);
+    if (this.opts.pack && o === 'solved')
+      res.stars = finishPack(this.def.id, this.opts.pack, { ms, parMs: this.def.par(this.level) * 1000, m: this.mistakes, hn: this.hints });
     return res;
   }
 
@@ -533,7 +543,7 @@ export class Card {
       'puzzle.id': this.def.id,
       'puzzle.difficulty': this.level,
       'puzzle.difficulty_name': LEVEL_IDS[this.level],
-      'puzzle.mode': this.opts.daily ? 'daily' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
+      'puzzle.mode': this.opts.daily ? 'daily' : this.opts.pack ? 'pack' : this.opts.lab ? 'lab' : this.shared ? 'shared' : 'feed',
     };
   }
 
@@ -577,7 +587,7 @@ export class Card {
     // An endless game already celebrated when its goal was reached.
     if (o === 'solved' && known && !early && !zen && celebrate(res)) confettiOver(this.stage, res);
 
-    const daily = !!this.opts.daily;
+    const daily = !!(this.opts.daily ?? this.opts.pack);
     const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
     const advanceMs = res.best || res.prevBest == null || res.levelChange ? 3200 : 2400;
     const levelUp = res.levelChange && { up: res.levelChange.to > res.levelChange.from, to: LEVEL_NAMES[res.levelChange.to] };

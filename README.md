@@ -37,11 +37,11 @@ The same commands are available as mise tasks (`mise run check`, `mise run fix`,
 
 ```
 src/
-  main.ts            app shell: tabs, path routing (/, /daily, /daily/<level>/<n>, /games, /game/<id>, /play/<id>, /s/<share code>, /stats, /settings; old #/ links redirect)
-  core/              logic and storage, no rendering: types, rng, i18n, store (profile/stats/auto-levelling), saves, daily, xp, share codes
+  main.ts            app shell: tabs, path routing (/, /daily, /daily/<level>/<n>, /games, /packs, /packs/<id>/<level>/<n>, /game/<id>, /play/<id>, /s/<share code>, /stats, /settings; old #/ links redirect)
+  core/              logic and storage, no rendering: types, rng, i18n, store (profile/stats/auto-levelling), saves, daily, packs, xp, share codes
   ui/                DOM building blocks: h/s/btn/pad (dom.ts), sheets, help dialog, win/lost panels, confetti, hint overlay, share widget
   app/               the shell: feed, path routing (nav.ts), update banner, and card/ (one puzzle card: clock, undo history, hint popup, settings sheet, result)
-  pages/             Games, single-game view, Daily, Profile, Settings
+  pages/             Games, single-game view, Daily, Packs, Profile, Settings
   games/<id>/        one game per folder: index.ts (auto-registered, see docs/ADDING_GAMES.md), style.css, and its own pure logic (gen.ts, rules.ts…)
   kits/<name>/       engines shared by two or more games (sudoku, latin, logic, grid, path, move, push, card, chess, word, sweep, …)
   styles/            design tokens and shared components (neo-brutalist), imported in cascade order by index.css
@@ -75,6 +75,10 @@ Each language's dictionary is a lazily loaded chunk.
 ## Daily challenges
 
 The **Daily** tab has one list of 5 puzzles per difficulty, new every day at local midnight. Lists come from a preset seed mixed with the date and level (`src/core/daily.ts`), so everyone gets the same puzzles on the same day; the first time a player opens a list it's stored in their profile, so it stays put even if a new version adds games. Each puzzle can be retried until it's solved. Daily results count in the regular stats but never in auto-levelling. A day counts toward the daily streak when at least one list is complete; the Profile tab shows streaks and completed lists per difficulty.
+
+## Packs
+
+Every game has a **pack**: 12 set puzzles per difficulty, the same for everyone (seeds from a preset seed mixed with the game, level and number, `src/core/packs.ts`). A solve earns ★, ★★ under par, or ★★★ under par with no mistakes or hints; the best result of each puzzle is kept. Easy is open from the start, and solving 9 of a level's 12 unlocks the next one. Pack puzzles have their own save slot and count in the regular stats and XP, but never in auto-levelling. They live at `/packs` (every game's progress), `/packs/<id>` and `/packs/<id>/<level>/<n>`, reached from the Games tab.
 
 ## Difficulty
 

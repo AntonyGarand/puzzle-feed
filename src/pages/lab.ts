@@ -1,12 +1,13 @@
 import { confirmSheet, openSheet, sheetOpen } from '../ui/sheet';
 import { L, locale, setLocale, setWordLocale, wordLocale, type Locale } from '../core/i18n';
 import { Card, isUndoKey, type DailyRef } from '../app/card/card';
-import { dailySaveKey, getSave, type Save } from '../core/saves';
+import { dailySaveKey, getSave, packSaveKey, type Save } from '../core/saves';
+import { PACK_SIZE, packSeed, type PackRef } from '../core/packs';
 import type { DailyEntry } from '../core/store';
 import { setPath } from '../app/nav';
 import { prefs } from '../core/store';
 import type { ShareCode } from '../core/share';
-import type { Difficulty, PuzzleDef } from '../core/types';
+import { LEVEL_NAMES, type Difficulty, type PuzzleDef } from '../core/types';
 import { btn, h } from '../ui/dom';
 
 /** A single puzzle opened from Labs: resume or new, outside the feed. */
@@ -80,6 +81,7 @@ export class LabView {
           h('a', { class: 'btn ghost', href: '/games' }, L('← Games', '← Jeux')),
           note,
           btn(L('New game', 'Nouvelle partie'), () => void newGame(card), 'ghost'),
+          h('a', { class: 'btn ghost', href: `/packs/${def.id}` }, L('Pack', 'Séries')),
           btn(L('Share', 'Partager'), () => card.openShare(), 'ghost'),
         ),
         card.el,
@@ -142,6 +144,42 @@ export class LabView {
     card.mount();
     card.setActive(this.shown && !document.hidden);
   }
+  /** Play puzzle `ref.index` of `def`'s pack tier `ref.level` (resuming it if it was started). `next` runs on "Next". */
+  openPack(def: PuzzleDef, ref: PackRef, next: () => void) {
+    this.close();
+    const seed = packSeed(def.id, ref.level, ref.index);
+    const saved = getSave(packSaveKey(def.id, ref.level, ref.index), 'pack');
+    const resume =
+      saved && saved.seed === seed && saved.level === ref.level && (!def.localized || (saved.locale ?? 'en') === locale())
+        ? saved
+        : undefined;
+    const note = h('span', { class: 'small muted' });
+    const card = new Card(def, next, {
+      lab: true,
+      level: ref.level,
+      seed,
+      resume,
+      pack: ref,
+      onMount: (c) => {
+        note.textContent = `${LEVEL_NAMES[ref.level]} · ${ref.index + 1}/${PACK_SIZE}`;
+        if (c.interacted) note.textContent += ` · ${L('Resumed', 'Reprise')}`;
+      },
+    });
+    this.card = card;
+    this.el.replaceChildren(
+      h(
+        'div',
+        { class: 'lab-bar' },
+        h('a', { class: 'btn ghost', href: `/packs/${def.id}` }, L('← Pack', '← Séries')),
+        note,
+        btn(L('Share', 'Partager'), () => card.openShare(), 'ghost'),
+      ),
+      card.el,
+    );
+    card.mount();
+    card.setActive(this.shown && !document.hidden);
+  }
+
   setShown(shown: boolean) {
     this.shown = shown;
     // The feed and the rest of the app always use the interface language's words.
