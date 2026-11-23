@@ -69,7 +69,7 @@ Every game follows the same rules, so a player who knows one game knows how all 
   - An answer the game rejects as wrong, such as a word, a pair, a check, or a move that isn't mate.
   - A lost life.
   - These never count: drawing or erasing lines, marks (✕, flags, dots), exploratory moves in move and card games, and attempts in guess-limited games (each guess is information).
-- **Lives**: call `ctx.lives(left, max)` on every render. The card shows the hearts in its header, so don't repeat them in the status. Losing a life also calls `mistake()` and shakes.
+- **Lives**: call `ctx.lives(left, max)` on every render. The card shows the hearts in its header, so don't repeat them in the status. Losing a life also calls `mistake()` and shakes. In Zen mode (`ctx.zen`) lives never run out: keep counting mistakes, but don't call `failed()` when the last one goes.
 - **Failure** (`ctx.failed()`): only when a hard budget runs out (lives, guesses, a move limit) or the player sets off a mine.
 - **Dead ends**: a dead end in a game with Undo is not a failure. Say so in the status, ending with `· undo` / `· annulez`, and have `check()` return a `stuck` hint. The player can always skip.
 

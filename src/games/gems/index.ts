@@ -193,7 +193,7 @@ export const gems: PuzzleDef = {
         anim(token, [{ transform: xy(at) }, { transform: xy(end), offset: 0.45 }, { transform: xy(at) }], 200 + s.length * 50);
         anim(cells[end], [{ transform: 'scale(1)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1)' }], 260);
         shake(grid);
-        if (boom >= LIVES) {
+        if (boom >= LIVES && !ctx.zen) {
           finished = true;
           hit = end;
           render();

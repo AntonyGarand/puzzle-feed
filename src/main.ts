@@ -74,6 +74,8 @@ function applyTheme() {
   else delete document.documentElement.dataset['oled'];
   if (getProfile().symbols) document.documentElement.dataset['symbols'] = '';
   else delete document.documentElement.dataset['symbols'];
+  if (getProfile().zen) document.documentElement.dataset['zen'] = '';
+  else delete document.documentElement.dataset['zen'];
   const style = getProfile().style ?? 'neo';
   if (style === 'neo') delete document.documentElement.dataset['style'];
   else document.documentElement.dataset['style'] = style;

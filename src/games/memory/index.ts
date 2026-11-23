@@ -93,8 +93,8 @@ export const memory: PuzzleDef = {
         ctx.mistake();
         cells[i].classList.add('miss');
         status();
-        if (lives > 0) shake(grid);
-        if (lives === 0) {
+        if (lives > 0 || ctx.zen) shake(grid);
+        if (lives <= 0 && !ctx.zen) {
           phase = 'over';
           targets.forEach((t) => !found.has(t) && cells[t].classList.add('hint'));
           ctx.failed();

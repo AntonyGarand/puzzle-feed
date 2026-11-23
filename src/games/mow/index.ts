@@ -121,7 +121,7 @@ export const mow: PuzzleDef = {
         lives--;
         ctx.mistake();
         shake(grid);
-        if (lives <= 0) {
+        if (lives <= 0 && !ctx.zen) {
           over = 'lost';
           render();
           ctx.failed();

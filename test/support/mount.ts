@@ -12,6 +12,8 @@ export interface PlayOptions {
   attach?: boolean;
   /** Append the footer controls to the board, so they can be found and clicked like the real card. */
   controlsInRoot?: boolean;
+  /** Play in Zen mode (lives never run out). */
+  zen?: boolean;
 }
 
 export interface Played {
@@ -48,6 +50,7 @@ export function mountGame(game: PuzzleDef | string, difficulty: Difficulty, seed
     rng: new Rng(seed),
     root,
     saved: opts.saved,
+    zen: !!opts.zen,
     solved: (o) => {
       g.events.push(o?.keepPlaying ? 'reached' : 'solved');
       g.outcome ||= 'solved';

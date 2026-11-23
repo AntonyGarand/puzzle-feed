@@ -20,6 +20,8 @@ export interface WinInfo {
   levelUp?: { up: boolean; to: string } | undefined;
   /** Auto-advance delay: shows a draining bar along the bottom of the panel. */
   advanceMs?: number | undefined;
+  /** Zen mode: no time, counts, records or XP. */
+  zen?: boolean;
 }
 
 /** A failed attempt: the "Not this time" panel's subset of {@link WinInfo}. */
@@ -37,11 +39,23 @@ export interface LostInfo {
   played: number;
   solved: number;
   levelUp?: { up: boolean; to: string } | undefined;
+  /** Zen mode: no time, counts or records. */
+  zen?: boolean;
 }
 
 function crossIcon() {
   return s('svg', { viewBox: '0 0 24 24', class: 'win-check', 'aria-hidden': 'true' }, s('path', { d: 'M7 7l10 10M17 7L7 17' }));
 }
+
+/** Game, level, daily tag and hints used (Zen mode keeps only the game and level). */
+const subtitle = (w: { name: string; level: string; daily?: boolean; hints?: number; zen?: boolean }) =>
+  h(
+    'p',
+    { class: 'win-sub' },
+    [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : '', w.hints && !w.zen ? P(w.hints, ['hint', 'hints'], ['indice', 'indices']) : '']
+      .filter(Boolean)
+      .join(' · '),
+  );
 
 const tile = (label: string, value: string) => h('div', { class: 'win-tile' }, h('span', null, label), h('strong', null, value));
 
@@ -55,6 +69,24 @@ const levelPill = (l: { up: boolean; to: string }) =>
 /** The "Not this time" panel laid over a failed board: the solved panel's twin, without the rewards. */
 export function lostCard(w: LostInfo): HTMLElement {
   const rate = w.played ? Math.round((100 * w.solved) / w.played) : 0;
+  const scores = w.zen
+    ? []
+    : [
+        h(
+          'div',
+          { class: 'win-time' },
+          h('div', { class: 'win-label' }, h('span', null, L('Time', 'Temps'))),
+          h('strong', { class: 'win-clock' }, fmtTime(w.ms)),
+        ),
+        h(
+          'div',
+          { class: 'win-stats' },
+          tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
+          tile(L('Best', 'Record'), w.best == null ? '—' : fmtTime(w.best)),
+          tile(L('Solves', 'Réussites'), String(w.solved)),
+          tile(L('Win rate', 'Taux'), `${rate}%`),
+        ),
+      ];
   return h(
     'div',
     { class: 'win lost', role: 'dialog', 'aria-label': L('Puzzle failed', 'Casse-tête raté') },
@@ -63,27 +95,8 @@ export function lostCard(w: LostInfo): HTMLElement {
       { class: 'win-card' },
       h('div', { class: 'win-badge' }, crossIcon()),
       h('h3', { class: 'win-title' }, L('Not this time', 'Pas cette fois')),
-      h(
-        'p',
-        { class: 'win-sub' },
-        [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : '', w.hints ? P(w.hints, ['hint', 'hints'], ['indice', 'indices']) : '']
-          .filter(Boolean)
-          .join(' · '),
-      ),
-      h(
-        'div',
-        { class: 'win-time' },
-        h('div', { class: 'win-label' }, h('span', null, L('Time', 'Temps'))),
-        h('strong', { class: 'win-clock' }, fmtTime(w.ms)),
-      ),
-      h(
-        'div',
-        { class: 'win-stats' },
-        tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
-        tile(L('Best', 'Record'), w.best == null ? '—' : fmtTime(w.best)),
-        tile(L('Solves', 'Réussites'), String(w.solved)),
-        tile(L('Win rate', 'Taux'), `${rate}%`),
-      ),
+      subtitle(w),
+      ...scores,
       w.levelUp ? levelPill(w.levelUp) : null,
       h('p', { class: 'win-hint' }, L('Tap to see the board', 'Touchez pour voir la grille')),
     ),
@@ -96,15 +109,6 @@ function checkIcon() {
 
 /** The "Solved!" panel laid over a finished board: time, mistakes, best, par, level change. */
 export function winCard(w: WinInfo): HTMLElement {
-  const res = w.res;
-  const first = !!res && res.prevBest == null;
-  const best = res?.prevBest != null ? Math.min(res.prevBest, w.ms) : res ? w.ms : null;
-  const tag = res?.best
-    ? h('span', { class: 'win-tag' }, L('New best', 'Nouveau record'))
-    : first
-      ? h('span', { class: 'win-tag' }, L('First clear', 'Première fois'))
-      : null;
-
   return h(
     'div',
     { class: 'win', role: 'dialog', 'aria-label': L('Puzzle solved', 'Casse-tête réussi') },
@@ -113,33 +117,42 @@ export function winCard(w: WinInfo): HTMLElement {
       { class: 'win-card' },
       h('div', { class: 'win-badge' }, checkIcon()),
       h('h3', { class: 'win-title' }, L('Solved!', 'Réussi!')),
-      h(
-        'p',
-        { class: 'win-sub' },
-        [w.name, w.level, w.daily ? L('Daily', 'Quotidien') : '', w.hints ? P(w.hints, ['hint', 'hints'], ['indice', 'indices']) : '']
-          .filter(Boolean)
-          .join(' · '),
-      ),
-      h(
-        'div',
-        { class: 'win-time' },
-        h('div', { class: 'win-label' }, h('span', null, L('Time', 'Temps')), tag),
-        h('strong', { class: 'win-clock' }, fmtTime(w.ms)),
-        res?.best ? h('div', { class: 'win-was' }, `${L('was', 'avant')} ${fmtTime(res.prevBest!)}`) : null,
-      ),
-      h(
-        'div',
-        { class: 'win-stats' },
-        tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
-        tile(L('Best', 'Record'), best == null ? '—' : fmtTime(best)),
-        tile(L('Par', 'Normale'), fmtTime(w.parMs)),
-        tile(L('Solves', 'Réussites'), String(w.solved)),
-      ),
-      w.levelUp ? levelPill(w.levelUp) : null,
-      res?.xp ? xpSection(res.xp, w.name) : null,
+      subtitle(w),
+      ...(w.zen ? [w.levelUp ? levelPill(w.levelUp) : null] : winScores(w)),
       w.advanceMs ? h('div', { class: 'win-advance', style: `animation-duration:${w.advanceMs}ms` }) : null,
     ),
   );
+}
+
+/** The solved panel's numbers: time, mistakes, best, par, solves and XP (none of them in Zen mode). */
+function winScores(w: WinInfo): (HTMLElement | null)[] {
+  const res = w.res;
+  const first = !!res && res.prevBest == null;
+  const best = res?.prevBest != null ? Math.min(res.prevBest, w.ms) : res ? w.ms : null;
+  const tag = res?.best
+    ? h('span', { class: 'win-tag' }, L('New best', 'Nouveau record'))
+    : first
+      ? h('span', { class: 'win-tag' }, L('First clear', 'Première fois'))
+      : null;
+  return [
+    h(
+      'div',
+      { class: 'win-time' },
+      h('div', { class: 'win-label' }, h('span', null, L('Time', 'Temps')), tag),
+      h('strong', { class: 'win-clock' }, fmtTime(w.ms)),
+      res?.best ? h('div', { class: 'win-was' }, `${L('was', 'avant')} ${fmtTime(res.prevBest!)}`) : null,
+    ),
+    h(
+      'div',
+      { class: 'win-stats' },
+      tile(L('Mistakes', 'Erreurs'), String(w.mistakes)),
+      tile(L('Best', 'Record'), best == null ? '—' : fmtTime(best)),
+      tile(L('Par', 'Normale'), fmtTime(w.parMs)),
+      tile(L('Solves', 'Réussites'), String(w.solved)),
+    ),
+    w.levelUp ? levelPill(w.levelUp) : null,
+    res?.xp ? xpSection(res.xp, w.name) : null,
+  ];
 }
 
 function reason(g: XpGain, game: string): string {

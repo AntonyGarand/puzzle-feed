@@ -186,7 +186,7 @@ export const arrowsPuzzle: PuzzleDef = {
       lives--;
       shake(wrap);
       render();
-      if (lives <= 0) {
+      if (lives <= 0 && !ctx.zen) {
         over = true;
         ctx.failed();
       }

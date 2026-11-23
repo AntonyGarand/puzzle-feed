@@ -338,6 +338,7 @@ export class Card {
     this.statusEl.textContent = '';
     this.controlsEl.replaceChildren();
     const live = () => igen === this.igen && !this.done;
+    const zen = !!getProfile().zen;
     const root = h('div', { class: 'puzzle' });
     this.root = root;
     this.stage.append(root);
@@ -347,6 +348,7 @@ export class Card {
         rng: new Rng(this.seed),
         root,
         saved,
+        zen,
         solved: (opts) => live() && (opts?.keepPlaying ? this.reach() : this.finish('solved')),
         failed: () => live() && this.finish('failed'),
         mistake: () => {
@@ -359,7 +361,7 @@ export class Card {
           if (live()) this.interacted = true;
         },
         lives: (left, max) => {
-          if (igen === this.igen) this.syncLives(left, max);
+          if (igen === this.igen && !zen) this.syncLives(left, max);
         },
         status: (t) => {
           if (igen === this.igen) this.statusEl.textContent = t;
@@ -493,7 +495,7 @@ export class Card {
     this.reached = { ms, res };
     this.syncLevelSel();
     this.queueSave();
-    if (celebrate(res)) confettiOver(this.stage, res);
+    if (!getProfile().zen && celebrate(res)) confettiOver(this.stage, res);
   }
 
   private recordResult(o: Outcome, ms: number) {
@@ -569,8 +571,9 @@ export class Card {
     const res: RecordOutcome = early ? (early.res ?? {}) : this.recordResult(o, ms);
     this.syncLevelSel();
     const known = !early || !!early.res;
+    const zen = !!getProfile().zen;
     // An endless game already celebrated when its goal was reached.
-    if (o === 'solved' && known && !early && celebrate(res)) confettiOver(this.stage, res);
+    if (o === 'solved' && known && !early && !zen && celebrate(res)) confettiOver(this.stage, res);
 
     const daily = !!this.opts.daily;
     const advance = !this.opts.lab && o === 'solved' && getProfile().autoAdvance;
@@ -583,7 +586,7 @@ export class Card {
     }
 
     this.foot.replaceChildren(
-      resultLine(o, this.mistakes, this.hints, levelUp),
+      resultLine(o, zen ? 0 : this.mistakes, zen ? 0 : this.hints, levelUp),
       h(
         'div',
         { class: 'actions' },
@@ -623,6 +626,7 @@ export class Card {
       mistakes: this.mistakes,
       hints: this.hints,
       levelUp,
+      zen: !!getProfile().zen,
     };
     if (o === 'solved')
       return winCard({ ...common, parMs: this.def.par(this.level) * 1000, solved: stats(this.def.id).solved, res, advanceMs });

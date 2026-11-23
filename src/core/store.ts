@@ -74,6 +74,8 @@ export interface Profile {
   autoAdvance: boolean;
   /** Shape symbols on colour-coded pieces (see core/symbols.ts). */
   symbols?: boolean;
+  /** Zen mode: no timer, mistakes, lives, streak or XP on screen, and lives never run out. */
+  zen?: boolean;
   startLevel: Difficulty;
   types: Record<string, TypePrefs>;
   stats: Record<string, TypeStats>;
@@ -160,7 +162,7 @@ function save() {
 
 export const getProfile = () => profile;
 
-export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'startLevel'>>) {
+export function update(patch: Partial<Pick<Profile, 'name' | 'theme' | 'style' | 'autoAdvance' | 'symbols' | 'zen' | 'startLevel'>>) {
   Object.assign(profile, patch);
   save();
   emit('profile');

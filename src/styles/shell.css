@@ -260,6 +260,10 @@
   border-radius: 999px;
   background: var(--cell);
 }
+/* Zen mode (Settings): no clock, counters, hearts, streak or XP badge around the puzzle. */
+:root[data-zen] :is(.card-head .timer, .card-head .mistakes, .card-head .lives, .card-head .lvl-hex, .top .streak) {
+  display: none;
+}
 .select {
   appearance: none;
   background-color: var(--cell);
