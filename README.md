@@ -59,11 +59,22 @@ There are 81 games in seven categories (`src/core/categories.ts`). The 22 marked
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze; _(opt-in)_ Mow, Zigzag
 - **Numbers:** Target, Merge; _(opt-in)_ Guess, Factory
 - **Words:** Anagram, Word Guess, Hunt, Tower; _(opt-in)_ Word Cover
-- **Moves:** Slide, Unblock, Push, Gems, Arrange, Arrows, Blocks, Flood, Pegs, Rings, Collapse; _(opt-in)_ Copy Paste, Counted Push, Echo, Ice Push, Tether, Tilt, Wall Rush, Worms, Wrap Push
+- **Moves:** Slide, Unblock, Push, Gems, Arrange, Arrows, Blocks, Flood, Pegs, Rings, Collapse, Swap; _(opt-in)_ Copy Paste, Counted Push, Echo, Ice Push, Tether, Tilt, Wall Rush, Worms, Wrap Push
 - **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2); _(opt-in)_ Capture Chess, Ladders
-- **Memory & eyes:** Memory, Pairs
+- **Memory & eyes:** Pairs
 
 Every game is generated from a seed, has five levels (Easy to Master), a how-to-play tutorial behind its "?" button and an in-game hint button. All games share the same controls, penalties and rewards (see [docs/ADDING_GAMES.md](docs/ADDING_GAMES.md#consistency-rules-actions-punishments-rewards)).
+
+### Which feed?
+
+Puzzle feed has a sister app, [arcade feed](https://github.com/AntonyGarand/arcade-feed), for real-time games. A game belongs in **arcade feed** if any of these is true:
+
+1. **Clock:** a timer or countdown can end the level or set the score.
+2. **Things move on their own:** the state changes without player input (falling, flowing, enemies, scrolling).
+3. **Timing or reflexes:** when you act matters (a timed reveal, sequence playback, tap windows).
+4. **Physical skill:** the result comes from continuous aim or power through a physics simulation.
+
+Otherwise it's a **puzzle** and belongs here: turn-based, discrete moves, and the board waits forever. Move limits, lives, random refills and hidden information are fine. Tie-break: if every animation were instant and the player took an hour per move, would the game play the same? If yes, it's a puzzle. The same genre may exist in both feeds only if the arcade version adds a real-time element (Swap here is turn-based match-3; Memory, which flashes tiles for a moment, lives in arcade feed).
 
 **Word data:**
 
