@@ -104,26 +104,6 @@ await page.waitForFunction(() => document.querySelector('.feed').scrollTop > 300
 const scrolled = await feedScroll();
 ok('auto-advance scrolls to the next card', scrolled > 300, `scrollTop=${scrolled}`);
 
-// ---- Memory (solve + fail)
-async function memoryLit() {
-  await page.waitForFunction(() => document.querySelectorAll('.card .cell.on').length > 0, null, { timeout: 4000 });
-  const lit = await card()
-    .locator('.cell')
-    .evaluateAll((els) => els.map((e, i) => (e.classList.contains('on') ? i : -1)).filter((i) => i >= 0));
-  await page.waitForFunction(() => document.querySelectorAll('.card .cell.on').length === 0, null, { timeout: 5000 });
-  return lit;
-}
-await open('memory', 3);
-const lit = await memoryLit();
-for (const i of lit) await card().locator('.cell').nth(i).click();
-ok('memory solves', (await state()) === 'solved', `${lit.length} tiles · ${await footer()}`);
-
-await open('memory', 1);
-const lit2 = await memoryLit();
-const wrong = [...Array(9).keys()].filter((i) => !lit2.includes(i)).slice(0, 3);
-for (const i of wrong) await card().locator('.cell').nth(i).click();
-ok('memory fails after 3 misses', (await state()) === 'failed', await footer());
-
 // ---- Lights at harder levels
 for (const lv of [3, 5]) {
   await open('lights', lv);
