@@ -1,5 +1,7 @@
 # Adding a game
 
+Only turn-based games belong here: check the game against [Which feed?](../README.md#which-feed) first (anything with a clock, things moving on their own, timing or physical skill goes to arcade feed).
+
 Each game is a `PuzzleDef` (see `src/core/types.ts`) in its own folder: `src/games/<id>/index.ts`. Any `index.ts` there that exports a `PuzzleDef` is registered automatically, so there's no list to edit.
 
 ## Where code goes
