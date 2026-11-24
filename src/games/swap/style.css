@@ -1,0 +1,42 @@
+[data-puzzle='swap'] {
+  --accent: var(--p5);
+}
+
+[data-puzzle='swap'] .swap-grid {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-puzzle='swap'] .cell.gem {
+  background: var(--c);
+  cursor: pointer;
+}
+/* A glint in the corner, so the tiles read as gems; it stays clear of the colour symbol in the middle. */
+[data-puzzle='swap'] .cell.gem::after {
+  content: '';
+  position: absolute;
+  top: 11%;
+  left: 11%;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--paper) 60%, transparent);
+  pointer-events: none;
+}
+/* The picked gem keeps its colour: a thick ring and a lift instead of the accent fill. */
+[data-puzzle='swap'] .cell.gem.sel {
+  background: var(--c);
+  box-shadow:
+    0 0 0 calc(var(--bw) + 1px) var(--cell),
+    0 0 0 calc(var(--bw) * 2 + 2px) var(--ink);
+  transform: translateY(-3px) scale(1.06);
+  z-index: 2;
+}
+[data-puzzle='swap'] .cell.gem.cur {
+  outline: 3px dashed var(--ink);
+  outline-offset: 2px;
+  z-index: 1;
+}
+[data-puzzle='swap'] .cell.gem.sel.cur {
+  outline-style: solid;
+}

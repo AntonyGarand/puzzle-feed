@@ -27,6 +27,8 @@ const MAY_NOT_FINISH: Record<string, string> = {
   freecell: 'cards strategy',
   // Random taps can end these before the button is pressed (out of moves, lost).
   flood: 'move limit',
+  // Random refills and a move limit: the guide plays sure points, which reaches the target on most boards only.
+  swap: 'random refills',
   // Random pieces and no undo: the planner keeps the board open but can't always survive Master.
   blocks: 'random pieces',
   'hidden-rule': 'random taps can lose',
