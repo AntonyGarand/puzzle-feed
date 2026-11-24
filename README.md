@@ -1,6 +1,6 @@
 # puzzle feed
 
-An endless, scroll-snapping feed of short puzzles: 82 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
+An endless, scroll-snapping feed of short puzzles: 83 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
 
 **Play:** https://puzzle.garand.dev — installable, and works fully offline once loaded (it's a PWA; a banner offers new versions).
 
@@ -53,9 +53,9 @@ Lint enforces the layers: `core` never imports `ui`, `app`, `games` or `kits`; `
 
 ## Games
 
-There are 82 games in seven categories (`src/core/categories.ts`). The 22 marked _(opt-in)_ start switched off in the mixed feed; turn them on in Settings, or play them from the Games tab.
+There are 83 games in seven categories (`src/core/categories.ts`). The 22 marked _(opt-in)_ start switched off in the mixed feed; turn them on in Settings, or play them from the Games tab.
 
-- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box; _(opt-in)_ Busy Week, Hidden Rule, Logic Grid, Minefield Mower, Shape Mines, Tetrominoes
+- **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box, Seats; _(opt-in)_ Busy Week, Hidden Rule, Logic Grid, Minefield Mower, Shape Mines, Tetrominoes
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze; _(opt-in)_ Mow, Zigzag
 - **Numbers:** Target, Merge; _(opt-in)_ Guess, Factory
 - **Words:** Anagram, Word Guess, Hunt, Tower; _(opt-in)_ Word Cover
