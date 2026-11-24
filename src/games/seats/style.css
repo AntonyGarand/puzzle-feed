@@ -1,0 +1,191 @@
+[data-puzzle='seats'] {
+  --accent: var(--p2);
+  --room: min(var(--board), 340px);
+}
+[data-puzzle='seats'] .st-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+/* The room: seats placed on the venue's own grid, with aisles and tables in between. */
+[data-puzzle='seats'] .st-room {
+  width: var(--room);
+  align-items: stretch;
+}
+[data-puzzle='seats'] .st-wall {
+  width: var(--room);
+  padding: 2px 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r) var(--r) var(--r-cell) var(--r-cell);
+  background: var(--cell-alt);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+[data-puzzle='seats'] .st-bottom {
+  border-radius: var(--r-cell) var(--r-cell) var(--r) var(--r);
+}
+[data-puzzle='seats'] .st-cinema ~ .st-wall,
+[data-puzzle='seats'] .st-wall:has(+ .st-cinema) {
+  border-radius: 50% 50% var(--r-cell) var(--r-cell) / 14px 14px var(--r-cell) var(--r-cell);
+}
+[data-puzzle='seats'] .st-aisle {
+  border-left: 2px dashed var(--faint);
+  border-right: 2px dashed var(--faint);
+  opacity: 0.6;
+}
+[data-puzzle='seats'] .st-diner .st-aisle {
+  border: none;
+}
+[data-puzzle='seats'] .st-table {
+  display: grid;
+  place-items: center;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-cell);
+  background: var(--accent-soft);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+[data-puzzle='seats'] .st-seat {
+  aspect-ratio: 1 / 0.9;
+  border-radius: var(--r) var(--r) var(--r-cell) var(--r-cell);
+  font-size: min(24px, calc(var(--room) / 8 * 0.55));
+  font-weight: 800;
+}
+[data-puzzle='seats'] .st-cinema .st-seat {
+  border-radius: var(--r-cell) var(--r-cell) var(--r) var(--r);
+}
+[data-puzzle='seats'] .st-seat.target {
+  border-style: dashed;
+}
+[data-puzzle='seats'] .st-seat.on {
+  background: color-mix(in srgb, var(--c) 40%, var(--cell));
+  color: var(--fg);
+}
+[data-puzzle='seats'] .st-seat.on.sel {
+  background: var(--accent);
+  color: var(--on-tone);
+  outline: 3px solid var(--ink);
+  outline-offset: 1px;
+}
+/* People who can't move (already there, or seated from the start) sit flat. */
+[data-puzzle='seats'] .st-seat.given,
+[data-puzzle='seats'] .st-p.given {
+  box-shadow: none;
+  transform: translate(var(--csh, 3px), var(--csh, 3px));
+  cursor: default;
+}
+[data-puzzle='seats'] .st-seat.dirty {
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--muted) 40%, var(--cell)) 0 4px, var(--cell) 4px 9px);
+  border-style: dashed;
+  border-color: var(--muted);
+  box-shadow: none;
+  color: var(--fg);
+}
+[data-puzzle='seats'] .st-seat .st-trait {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 38%;
+  height: 38%;
+  max-width: 16px;
+  max-height: 16px;
+}
+[data-puzzle='seats'] .st-seat.dirty .st-trait {
+  position: static;
+  width: 60%;
+  height: 60%;
+  max-width: 24px;
+  max-height: 24px;
+}
+[data-puzzle='seats'] .st-line {
+  width: var(--board);
+  min-height: 2.6em;
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: center;
+}
+[data-puzzle='seats'] .st-tip {
+  color: var(--faint);
+}
+[data-puzzle='seats'] .st-tray {
+  display: grid;
+  grid-template-columns: repeat(var(--tc), 1fr);
+  gap: 6px;
+  width: var(--board);
+}
+[data-puzzle='seats'] .st-p {
+  height: auto;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 2px 3px;
+  font-size: 14px;
+}
+[data-puzzle='seats'] .st-p.used {
+  border-style: dashed;
+  box-shadow: none;
+}
+[data-puzzle='seats'] .st-p.sel .st-tag {
+  background: var(--cell);
+}
+[data-puzzle='seats'] .st-p > .st-trait {
+  flex: none;
+}
+[data-puzzle='seats'] .st-tag {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 40%, var(--cell));
+  color: var(--fg);
+  font-weight: 800;
+}
+[data-puzzle='seats'] .st-ws {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1px;
+  min-width: 0;
+}
+[data-puzzle='seats'] .st-w {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+[data-puzzle='seats'] .st-w.ok,
+[data-puzzle='seats'] .st-w.void {
+  color: var(--faint);
+}
+[data-puzzle='seats'] .st-w.void {
+  text-decoration: line-through;
+}
+[data-puzzle='seats'] .st-w.err:not([data-hold]) {
+  background: var(--bad);
+  color: var(--on-tone);
+}
+[data-puzzle='seats'] .st-ico {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-puzzle='seats'] .st-trait {
+  color: var(--accent-ink);
+}
