@@ -1,0 +1,32 @@
+[data-puzzle='gradient'] {
+  --accent: var(--p5);
+}
+[data-puzzle='gradient'] .gradient {
+  touch-action: none;
+}
+/* The tile keeps its own colour when selected: it turns round and gets an outline instead. */
+[data-puzzle='gradient'] .cell.sel {
+  border-radius: 50%;
+  outline: var(--cbw) solid var(--fg);
+  outline-offset: 2px;
+  z-index: 1;
+}
+/* Pinned tiles carry a dot, ringed so it shows on light and dark colours alike. */
+[data-puzzle='gradient'] .cell.pin::after {
+  content: '';
+  width: 18%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--cell);
+}
+[data-puzzle='gradient'] .cell.lift {
+  z-index: 2;
+  transition: none;
+  pointer-events: none;
+  box-shadow: calc(var(--csh) + 4px) calc(var(--csh) + 4px) 0 var(--drop);
+}
+[data-puzzle='gradient'] .cell.drop {
+  outline: var(--cbw) dashed var(--fg);
+  outline-offset: 2px;
+}

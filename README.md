@@ -1,6 +1,6 @@
 # puzzle feed
 
-An endless, scroll-snapping feed of short puzzles: 81 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
+An endless, scroll-snapping feed of short puzzles: 82 games in English and Québec French. It's a static site with no backend; your profile, stats, preferences and unfinished games live in `localStorage`.
 
 **Play:** https://puzzle.garand.dev — installable, and works fully offline once loaded (it's a PWA; a banner offers new versions).
 
@@ -53,7 +53,7 @@ Lint enforces the layers: `core` never imports `ui`, `app`, `games` or `kits`; `
 
 ## Games
 
-There are 81 games in seven categories (`src/core/categories.ts`). The 22 marked _(opt-in)_ start switched off in the mixed feed; turn them on in Settings, or play them from the Games tab.
+There are 82 games in seven categories (`src/core/categories.ts`). The 22 marked _(opt-in)_ start switched off in the mixed feed; turn them on in Settings, or play them from the Games tab.
 
 - **Logic:** Sudoku, Jigsaw Sudoku, Killer Sudoku, Cross Sums, Unequal, Skyscrapers, Math Cages, Eclipse, Queens, Stars, Tents, Tiles, Mines, Bridges, Nonogram, Mosaic, Light Up, Singles, Dominoes, Lights, Code Breaker, Galaxies, Fill, Sightlines, Haunted, Black Box; _(opt-in)_ Busy Week, Hidden Rule, Logic Grid, Minefield Mower, Shape Mines, Tetrominoes
 - **Paths & links:** Pipes, Connect, Beehive, Tracks, Trail, Loop, Pearls, Untangle, Maze; _(opt-in)_ Mow, Zigzag
@@ -61,7 +61,7 @@ There are 81 games in seven categories (`src/core/categories.ts`). The 22 marked
 - **Words:** Anagram, Word Guess, Hunt, Tower; _(opt-in)_ Word Cover
 - **Moves:** Slide, Unblock, Push, Gems, Arrange, Arrows, Blocks, Flood, Pegs, Rings, Collapse, Swap; _(opt-in)_ Copy Paste, Counted Push, Echo, Ice Push, Tether, Tilt, Wall Rush, Worms, Wrap Push
 - **Cards & chess:** Solitaire, FreeCell, Spider, Pyramid, Chess (mate in 1 or 2); _(opt-in)_ Capture Chess, Ladders
-- **Memory & eyes:** Pairs
+- **Memory & eyes:** Pairs, Gradient
 
 Every game is generated from a seed, has five levels (Easy to Master), a how-to-play tutorial behind its "?" button and an in-game hint button. All games share the same controls, penalties and rewards (see [docs/ADDING_GAMES.md](docs/ADDING_GAMES.md#consistency-rules-actions-punishments-rewards)).
 
